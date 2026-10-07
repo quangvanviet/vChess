@@ -14,6 +14,15 @@ python3 -m http.server 8080
 
 Bỏ `?local=1` để chơi online qua Firebase (dự án `vchess-b0dcb` đã cấu hình sẵn trong `js/net/firebase-config.js`).
 
+## Đăng lên GitHub Pages
+
+1. Đẩy toàn bộ thư mục lên một repo GitHub (nhánh `main`).
+2. Repo → **Settings → Pages** → *Source: Deploy from a branch* → chọn `main` / `/ (root)` → Save.
+3. Sau 1–2 phút game chạy tại `https://<tên-tài-khoản>.github.io/<tên-repo>/`.
+4. Trong Firebase Console → **Authentication → Settings → Authorized domains** → thêm `<tên-tài-khoản>.github.io` (không có thì đăng nhập sẽ báo lỗi miền).
+
+Tệp `.nojekyll` đã có sẵn để GitHub Pages phục vụ nguyên trạng các tệp.
+
 ## Bật Firebase (một lần)
 
 1. **Authentication → Sign-in method**: bật **Email/Password** và **Anonymous** (chế độ khách).
@@ -46,18 +55,21 @@ js/core/bot.js             bot heuristic dùng chính lõi luật
 js/net/firebase-config.js  cấu hình dự án Firebase
 js/net/db.js               lớp lưu trữ: Firebase RTDB hoặc demo cục bộ (BroadcastChannel)
 js/net/service.js          tài khoản, hồ sơ, sảnh, phòng/ghế, chat, sổ lệnh
-js/ui/board.js             bàn cờ canvas + hoạt ảnh
+js/ui/board.js             bàn cờ 2D (dự phòng khi không có WebGL)
+js/ui/board3d.js           bàn cờ 3D Three.js: quân chibi theo tộc, môi trường, VFX, kéo-thả
 js/ui/app.js               đăng nhập, sảnh, phòng chờ
 js/ui/game.js              màn tải, xúc xắc, đồng bộ lượt, HUD, hoàn tác, hết giờ
-js/vendor/                 Firebase JS SDK 10.14 (compat) — chạy được cả khi mở file trực tiếp
+js/vendor/                 Firebase JS SDK 10.14 (compat) + Three.js r158 — không cần CDN
 tests/run-tests.js         `node tests/run-tests.js`: ca kiểm thử GDD 15.9 + 48 ván bot + replay
 database.rules.json        luật Realtime Database
 ```
 
 ## Điều khiển trong trận
 
-- **Mua**: bấm quân ở Cửa hàng → bấm ô sáng ở hàng spawn (bấm tiếp để mua thêm). Chuột phải/Esc để thôi.
-- **Đi/đánh**: bấm quân → ô xanh để đi, vòng đỏ để đánh. Đi tới ô có mục tiêu → hiện bóng mờ, bấm mục tiêu để đi-rồi-đánh, bấm lại bóng mờ để chỉ đi.
+- **Mua**: mở tab *Cửa hàng* ở góc dưới phải, **kéo** quân thả vào ô sáng vàng ở hàng spawn (hoặc bấm quân rồi bấm ô, bấm tiếp để mua thêm). Chuột phải/Esc để thôi.
+- **Đi/đánh**: **kéo** quân thả vào ô xanh (đi) hoặc mục tiêu đỏ (đánh); hoặc bấm quân → bấm ô. Đi tới ô có mục tiêu → hiện bóng mờ, bấm mục tiêu để đi-rồi-đánh, bấm lại bóng mờ để chỉ đi.
+- **Camera 3D**: kéo chỗ trống để xoay, lăn chuột để zoom, 4 nút góc nhìn ở giữa dưới. Nút menu (góc trên trái) → đổi đồ họa 3D/2D.
+- **Thu gọn**: dock Kỹ năng/Cửa hàng và khung Nhật ký/Chat đều có nút thu gọn.
 - **Q / W / E**: kỹ năng tộc. **Ctrl+Z**: hoàn tác. **Enter**: kết thúc lượt. **Space**: bỏ qua hiệu ứng chờ.
 - Rê chuột lên mục tiêu để xem trước sát thương và thưởng.
 
