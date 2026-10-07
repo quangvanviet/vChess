@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tứ Tộc Kỳ Chiến</title>
+<meta name="description" content="Tứ Tộc Kỳ Chiến — chiến thuật theo lượt trên bàn cờ, kinh tế kiểu Age of Empires, 2–4 người chơi online.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<canvas id="bg-fx" aria-hidden="true"></canvas>
+
+<!-- ============ ĐĂNG NHẬP ============ -->
+<section id="screen-auth" class="screen active">
+  <div class="auth-wrap">
+    <div class="logo-block">
+      <div class="logo-crests" id="logo-crests"></div>
+      <h1 class="logo">TỨ TỘC<span>KỲ CHIẾN</span></h1>
+      <p class="tagline">Một Vua. Mười vàng. Bốn tộc tranh bá trên bàn cờ.</p>
+    </div>
+    <div class="panel auth-panel">
+      <div class="tabs" id="auth-tabs">
+        <button data-tab="login" class="active">Đăng nhập</button>
+        <button data-tab="register">Đăng ký</button>
+        <button data-tab="guest">Chơi khách</button>
+      </div>
+      <form id="form-login" class="auth-form active" autocomplete="on">
+        <label>Email<input type="email" name="email" required autocomplete="username" placeholder="ban@vidu.com"></label>
+        <label>Mật khẩu<input type="password" name="password" required autocomplete="current-password" minlength="6" placeholder="••••••"></label>
+        <label class="check"><input type="checkbox" name="remember" checked> Ghi nhớ đăng nhập</label>
+        <button class="btn gold big" type="submit">Vào trận</button>
+      </form>
+      <form id="form-register" class="auth-form" autocomplete="on">
+        <label>Tên hiển thị<input name="name" required maxlength="20" minlength="2" placeholder="Thống soái"></label>
+        <label>Email<input type="email" name="email" required autocomplete="username" placeholder="ban@vidu.com"></label>
+        <label>Mật khẩu<input type="password" name="password" required minlength="6" autocomplete="new-password" placeholder="ít nhất 6 ký tự"></label>
+        <label>Nhập lại mật khẩu<input type="password" name="password2" required minlength="6" autocomplete="new-password"></label>
+        <label class="check"><input type="checkbox" name="remember" checked> Ghi nhớ đăng nhập</label>
+        <button class="btn gold big" type="submit">Tạo tài khoản</button>
+      </form>
+      <form id="form-guest" class="auth-form">
+        <label>Tên người chơi<input name="name" required maxlength="20" minlength="2" placeholder="Nhập tên của bạn"></label>
+        <p class="muted small">Tài khoản khách không lưu lâu dài; thành tích có thể mất khi đăng xuất.</p>
+        <button class="btn gold big" type="submit">Chơi ngay</button>
+      </form>
+      <p class="form-msg" id="auth-msg" role="alert"></p>
+      <div class="net-badge" id="net-badge"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SẢNH ============ -->
+<section id="screen-lobby" class="screen">
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark"><b>四</b></span> Tứ Tộc Kỳ Chiến</div>
+    <nav class="nav" id="lobby-nav">
+      <button data-view="play" class="active">Sảnh đấu</button>
+      <button data-view="guide">Hướng dẫn</button>
+      <button data-view="codex">Bách khoa</button>
+      <button data-view="ranks">Xếp hạng</button>
+      <button data-view="profile">Hồ sơ</button>
+    </nav>
+    <div class="me-chip" id="me-chip"></div>
+  </header>
+  <main class="lobby-main">
+    <div class="view active" id="view-play">
+      <div id="rejoin-banner" class="banner hidden"></div>
+      <div class="play-grid">
+        <div class="panel rooms-panel">
+          <div class="panel-head">
+            <h2>Phòng đang mở</h2>
+            <div class="room-tools">
+              <input id="room-search" placeholder="Tìm tên / mã phòng…">
+              <select id="room-filter"><option value="">Mọi chế độ</option><option value="2">2 người</option><option value="3">3 người</option><option value="4">4 người</option></select>
+            </div>
+          </div>
+          <div class="room-list" id="room-list"></div>
+        </div>
+        <div class="side-col">
+          <div class="panel">
+            <h2>Vào bằng mã</h2>
+            <form id="form-join" class="row">
+              <input name="code" maxlength="6" placeholder="MÃ PHÒNG" class="code-input" required>
+              <button class="btn gold">Vào</button>
+            </form>
+          </div>
+          <div class="panel">
+            <h2>Tạo phòng</h2>
+            <form id="form-create" class="create-form">
+              <label>Tên phòng<input name="name" maxlength="28" placeholder="Phòng của …"></label>
+              <div class="seg" id="mode-seg">
+                <button type="button" data-mode="2" class="active">2 người</button>
+                <button type="button" data-mode="3">3 người</button>
+                <button type="button" data-mode="4">4 người</button>
+              </div>
+              <label>Thời gian mỗi lượt
+                <select name="turn">
+                  <option value="60000">60 giây</option><option value="90000" selected>90 giây</option><option value="180000">3 phút</option>
+                  <option value="600000">10 phút</option><option value="86400000">24 giờ (lượt dài)</option>
+                </select></label>
+              <label class="check"><input type="checkbox" name="teamMode"> 2 đấu 2 (chỉ 4 người)</label>
+              <label class="check"><input type="checkbox" name="ranked"> Giới hạn 80 vòng (tính điểm)</label>
+              <label class="check"><input type="checkbox" name="secondBonus" checked> Bù người đi sau +1 Vàng (2 người)</label>
+              <label class="check"><input type="checkbox" name="private"> Phòng riêng (không hiện trong danh sách)</label>
+              <button class="btn gold big">Tạo phòng</button>
+            </form>
+            <button class="btn ghost wide" id="btn-practice">⚔ Luyện tập với Bot</button>
+          </div>
+          <div class="panel chat-panel">
+            <h2>Kênh thế giới <span class="online" id="online-count"></span></h2>
+            <div class="chat-log" id="lobby-chat"></div>
+            <form class="chat-form" id="lobby-chat-form"><input maxlength="200" placeholder="Nhắn gì đó…"><button class="btn">Gửi</button></form>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="view" id="view-guide"></div>
+    <div class="view" id="view-codex"></div>
+    <div class="view" id="view-ranks"></div>
+    <div class="view" id="view-profile"></div>
+  </main>
+</section>
+
+<!-- ============ PHÒNG CHỜ ============ -->
+<section id="screen-room" class="screen">
+  <header class="topbar room-top">
+    <button class="btn ghost" id="btn-leave-room">← Rời phòng</button>
+    <div class="room-title"><span id="room-name">Phòng</span><button class="code-chip" id="room-code" title="Sao chép mã"></button></div>
+    <div class="room-opts" id="room-opts"></div>
+  </header>
+  <main class="room-main">
+    <div class="seats" id="seats"></div>
+    <div class="room-bottom">
+      <div class="panel loadout" id="loadout"></div>
+      <div class="panel chat-panel room-chat">
+        <h2>Trò chuyện</h2>
+        <div class="chat-log" id="room-chat"></div>
+        <form class="chat-form" id="room-chat-form"><input maxlength="200" placeholder="Nhắn cho cả phòng…"><button class="btn">Gửi</button></form>
+      </div>
+    </div>
+    <div class="room-actions">
+      <div class="room-status" id="room-status"></div>
+      <button class="btn big" id="btn-ready">Sẵn sàng</button>
+      <button class="btn gold big" id="btn-start">Bắt đầu trận</button>
+    </div>
+  </main>
+</section>
+
+<!-- ============ LOADING ============ -->
+<section id="screen-loading" class="screen">
+  <div class="loading-cards" id="loading-cards"></div>
+  <div class="loading-foot">
+    <div class="tip" id="loading-tip"></div>
+    <div class="bar"><div class="fill" id="loading-fill"></div></div>
+  </div>
+</section>
+
+<!-- ============ TRẬN ĐẤU ============ -->
+<section id="screen-game" class="screen">
+  <div class="game-top">
+    <button class="btn ghost small" id="btn-menu">☰</button>
+    <div class="turn-banner" id="turn-banner"></div>
+    <div class="timer" id="turn-timer"><div class="fill"></div><span></span></div>
+  </div>
+  <div class="game-grid">
+    <aside class="g-left" id="g-players"></aside>
+    <div class="board-wrap" id="board-wrap">
+      <canvas id="board"></canvas>
+      <div class="board-tip" id="board-tip"></div>
+      <div class="prompt" id="prompt"></div>
+    </div>
+    <aside class="g-right">
+      <div class="panel tight" id="g-econ"></div>
+      <div class="panel tight" id="g-skills"></div>
+      <div class="panel tight" id="g-shop"></div>
+      <div class="panel tight" id="g-unit"></div>
+    </aside>
+  </div>
+  <div class="game-bottom">
+    <div class="g-log panel tight">
+      <div class="tabs mini" id="log-tabs"><button data-t="log" class="active">Nhật ký</button><button data-t="chat">Chat</button></div>
+      <div class="chat-log" id="g-log"></div>
+      <div class="chat-log hidden" id="g-chat"></div>
+      <form class="chat-form hidden" id="g-chat-form"><input maxlength="200" placeholder="Chat trong trận…"><button class="btn">Gửi</button></form>
+    </div>
+    <div class="g-actions">
+      <div class="reward-pref" id="reward-pref"></div>
+      <button class="btn" id="btn-undo" title="Hoàn tác (Ctrl+Z)">↶ Hoàn tác</button>
+      <button class="btn gold big" id="btn-end">Kết thúc lượt</button>
+    </div>
+  </div>
+  <div class="overlay hidden" id="dice-overlay"></div>
+  <div class="overlay hidden" id="over-overlay"></div>
+  <div class="overlay hidden" id="menu-overlay"></div>
+</section>
+
+<div class="modal hidden" id="modal"><div class="modal-box" id="modal-box"></div></div>
+<div class="toasts" id="toasts"></div>
+
+<script src="js/vendor/firebase-app-compat.js"></script>
+<script src="js/vendor/firebase-auth-compat.js"></script>
+<script src="js/vendor/firebase-database-compat.js"></script>
+<script src="js/vendor/firebase-analytics-compat.js"></script>
+<script src="js/net/firebase-config.js"></script>
+<script src="js/core/data.js"></script>
+<script src="js/core/engine.js"></script>
+<script src="js/core/bot.js"></script>
+<script src="js/net/db.js"></script>
+<script src="js/net/service.js"></script>
+<script src="js/ui/icons.js"></script>
+<script src="js/ui/sound.js"></script>
+<script src="js/ui/board.js"></script>
+<script src="js/ui/content.js"></script>
+<script src="js/ui/app.js"></script>
+<script src="js/ui/game.js"></script>
+</body>
+</html>
