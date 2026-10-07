@@ -1034,6 +1034,7 @@ Cần playtest: sức mạnh đội Quỷ 10/20/30, khả năng săn đội nh�
 - Chốt các điểm luật còn mơ hồ thành quy tắc xác định (mục 19.6), thêm tham số `threeSeatBonusGold`, `secondPlayerBonusGold`, giới hạn bỏ lượt 3 lần.
 - Đồng bộ online theo đúng cấu trúc `rooms/{mã}` và luật bảo mật Firebase của dự án; bổ sung các nút tùy chọn `lobby`, `lobbyChat`, `users`, `presence`, `rooms/{mã}/chat`.
 - **1.2.1:** đồ họa 3D (Three.js) phong cách Ragnarok tươi sáng, quân chibi theo tộc, VFX riêng cho từng loại đòn đánh và kỹ năng, HUD nổi với thẻ kỹ năng và dock Kỹ năng/Cửa hàng, khung Nhật ký/Chat thu gọn được, kéo-thả mua quân và di chuyển, toàn bộ biểu tượng SVG tiếng Việt (bỏ emoji và chữ tượng hình) — xem mục 19.9.
+- **1.2.2:** bot 3 mức Dễ/Trung bình/Khó; giao diện điện thoại; Kết thúc lượt và đồng hồ lên trên cùng; popup Tạo phòng/Đấu với Bot/Nhập mã với nút **i** xem luật từng chế độ; bố cục HUD tự né không che nhau; camera dời lên/xuống/trái/phải; dọn chữ thừa — xem mục 19.10.
 
 ---
 
@@ -1196,21 +1197,83 @@ Ngoài ra: số sát thương bật lên, quân bị hạ xoay thu nhỏ rồi n
 - Góc dưới phải: **dock chuyển đổi Kỹ năng ↔ Cửa hàng**, thu gọn được.
   - Kỹ năng là 3 **thẻ bài** xếp hình quạt: phím Q/W/E, tranh kỹ năng, che hồi chiêu dạng quạt tròn, nổi lên và hiện mô tả khi rê chuột, nhấp nháy khi đang chọn mục tiêu. Kèm thẻ nội tại và nút hành động phụ (Oán Hồn, Tái Sinh, Chợ Trời).
   - Cửa hàng là lưới 15 ô gọn có khóa theo Đời và giá theo tộc.
-- Dưới cùng bên phải: nút Kết thúc lượt, Hoàn tác và chọn loại thưởng hạ gục.
+- (Bản 1.2.1 ban đầu đặt nút Kết thúc lượt ở góc dưới phải; từ 1.2.2 đã chuyển lên thanh điều khiển trên cùng, xem 19.10.)
 
 **Kéo – thả:**
 - Kéo một ô trong cửa hàng ra bàn: các ô spawn hợp lệ sáng vàng có khung, biểu tượng quân bay theo con trỏ và đổi viền khi nằm trên ô hợp lệ, thả để mua. Bấm thường vẫn dùng chế độ đặt liên tiếp.
-- Kéo một quân của mình: quân nhấc lên theo con trỏ, ô đi được sáng xanh có khung, mục tiêu đánh sáng đỏ. Thả vào ô đi để di chuyển, thả vào mục tiêu để đánh. Kéo ở chỗ trống thì xoay camera.
+- Kéo một quân của mình: quân nhấc lên theo con trỏ, ô đi được sáng xanh có khung, mục tiêu đánh sáng đỏ. Thả vào ô đi để di chuyển, thả vào mục tiêu để đánh. Kéo ở chỗ trống thì dời camera (từ 1.2.2, xem 19.10).
 
 **Màn đăng nhập:** nền là bàn cờ 3D 4 tộc quay chậm, thỉnh thoảng phát hiệu ứng kỹ năng. Các màn sảnh và phòng có nền trời xanh, mây trôi, lấp lánh.
 
 **Kiểm thử:** 40 khẳng định lõi luật vẫn đạt. Ván 4 người trên bàn 3D chạy 20 lượt, hai tab có cùng mã băm. Đã kiểm thử kéo-thả mua và kéo-thả di chuyển tự động. Biến `window.TT_FX_SLOW` (mặc định 1) làm chậm VFX để kiểm tra từng khung.
 
+### 19.10 Bot, điện thoại, bố cục tự né và camera (bản 1.2.2)
+
+**Bot ba mức độ khó** (`js/core/bot.js`). Bot dùng chính lõi luật nên không bao giờ đi sai luật và luôn khớp mã băm.
+
+| Mức | Cách chơi |
+|---|---|
+| Dễ | Chọn nước có nhiễu lớn, đôi khi bỏ qua nước đánh, không dùng kỹ năng, lên Đời chậm. |
+| Trung bình | Tham lam theo điểm đánh giá, kiểm tra Vua có bị đe dọa không, mua quân dự trữ, dùng kỹ năng buff và kỹ năng tiện ích. |
+| Khó | Mô phỏng từng ứng viên bằng `E.apply` rồi chấm điểm trạng thái: vật chất, kinh tế, bản đồ đe dọa, độ lộ của Vua, áp lực lên Vua địch. Mua quân khắc chế, chọn nghề Dân theo tài nguyên đang thiếu. |
+
+- Giải đấu tự động `tests/bot-levels.js`: Khó thắng Dễ 16-0, Khó thắng Trung bình 15-1, Trung bình thắng Dễ 16-0.
+- Ở phòng chờ, chủ phòng thêm Bot vào ghế trống và chọn độ khó ngay trên ghế (Dễ, Trung bình, Khó). Độ khó lưu ở `lobby/{mã}/bots/{ghế}` (tùy chọn) và trên máy chủ phòng.
+- Nút **Đấu với Bot** ở sảnh mở popup chọn 1–3 bot và độ khó, tạo phòng riêng rồi vào trận ngay.
+- Bot do máy chủ phòng chạy và gửi lệnh qua sổ lệnh như người thật.
+
+**Popup thay cho form cố định ở sảnh.**
+- Cột phải của sảnh chỉ còn ba nút: **Tạo phòng**, **Đấu với Bot**, **Nhập mã**. Mỗi nút mở một popup.
+- Popup Tạo phòng gồm:
+  - Tên phòng.
+  - 4 thẻ chế độ ngắn gọn: *1 đấu 1*, *3 người*, *Hỗn chiến*, *2 đấu 2*.
+  - Thời gian lượt dạng nút chọn.
+  - Công tắc *Giới hạn 80 vòng*, *Bù người đi sau* (chỉ hiện ở 1 đấu 1), *Phòng riêng*.
+  - Lựa chọn được ghi nhớ cho lần sau.
+- Mỗi chế độ và tùy chọn có nút **i** nhỏ. Bấm vào sẽ hiện bong bóng luật của chế độ đó (bàn, điều kiện thắng, luật bù). Nút i cũng có ở thẻ chế độ trong danh sách phòng, ở dòng tùy chọn của phòng chờ và ở mức độ khó Bot.
+- Bộ lọc phòng có thêm "2 đấu 2". Bấm ra ngoài popup thì đóng popup.
+
+**Giao diện điện thoại (≤ 760px).**
+- Thanh trên gồm băng lượt rồi đồng hồ, Hoàn tác, Kết thúc lượt và chọn thưởng.
+- Dưới đó là dải tài nguyên gọn và hàng thẻ đối thủ cuộn ngang.
+- Đáy màn hình có hai nút: Nhật ký/Chat và Kỹ năng/Cửa hàng. Mỗi nút mở một *bottom sheet*, và chỉ một sheet mở tại một thời điểm.
+- Chọn quân thì sheet tự đóng để nhìn bàn. Bảng đơn vị cũng là một sheet.
+- Trên màn hình cảm ứng, bấm mục tiêu hai lần để xác nhận đánh.
+
+**Thanh điều khiển trên cùng.** Đồng hồ lượt, Hoàn tác, **Kết thúc lượt** (nhấp nháy khi hết hành động) và chọn loại thưởng nằm ngay dưới băng lượt. Băng lượt hiện "Hành động x/y".
+
+**Bố cục tự né** (`layoutHud` trong `js/ui/game.js`). Sau mỗi lần vẽ lại, khi đổi kích thước hoặc khi thu/mở một khung, hệ thống đo vị trí thật của từng khung và xếp lại:
+- Khung thông tin và thẻ đối thủ tự xuống dưới thanh trên cùng nếu bị chạm.
+- Lời nhắc và thông báo luôn nằm ngay dưới thanh trên cùng.
+- Bảng đơn vị đặt ngay dưới khung thông tin và dừng trước khung chat. Nếu quá chật, chat tự thu gọn một lần.
+- Khung chat tự thu hẹp khi chạm dock. Dock giới hạn chiều cao để không chạm thẻ đối thủ, quá dài thì cuộn.
+- Thanh camera tìm khoảng trống giữa chat và dock ở đáy. Nếu không đủ chỗ thì dựng dọc bên phải, rồi bên trái. Nếu không còn chỗ thì tạm ẩn.
+- Trên điện thoại các dải xếp chồng theo chiều cao thật. Sheet không được trùm lên dải thông tin, và thanh camera tự ẩn khi sheet che.
+- Ngoại lệ có chủ ý: popup, lớp phủ (menu, xúc xắc, kết thúc trận), bóng kéo thả và bong bóng thông tin.
+
+**Camera di chuyển được.**
+
+| Thao tác | Máy tính | Điện thoại |
+|---|---|---|
+| Dời camera lên/xuống/trái/phải | Kéo chỗ trống bằng chuột trái, hoặc phím mũi tên | Kéo một ngón |
+| Xoay | Chuột phải kéo hoặc Shift + kéo | Xoay hai ngón |
+| Phóng to/thu nhỏ | Lăn chuột | Chụm hai ngón |
+
+- Thanh camera có các nút xoay trái/phải, phóng to, thu nhỏ, nhìn từ trên xuống, và **về mặc định** (phím H).
+- Camera dời mượt và bị giới hạn trong phạm vi bàn cờ.
+- Màn dọc dùng góc nhìn rộng hơn để thấy trọn bàn.
+
+**Dọn chữ.**
+- Bỏ khẩu hiệu và các dòng mô tả rải rác.
+- Không còn nhắc tên dịch vụ máy chủ trên giao diện.
+- Không dùng emoji hay chữ tượng hình; mọi ký hiệu là icon SVG.
+- Hướng dẫn chỉ nằm ở mục *Hướng dẫn*, và mục "Điều khiển" đã thêm phần camera.
+
 ### 19.8 Việc tiếp theo đề xuất
 
 1. Playtest người thật 1v1 đủ 4 tộc với bản online; thu sổ lệnh để phân tích.
 2. Tutorial tương tác cho người mới (dựa trên ví dụ mục 13).
-3. Bot nâng cao (tìm kiếm 1–2 lượt, phòng thủ Vua) để mô phỏng cân bằng đáng tin hơn.
+3. Bot Khó đã có mô phỏng 1 lượt (19.10); bước sau là tìm kiếm 2 lượt có tính phản đòn của đối thủ.
 4. Cloud Functions làm trọng tài tối thiểu cho xếp hạng (kiểm hash, ghi điểm hạng), chế độ xem trận/replay công khai.
 5. Thông báo đẩy cho chế độ lượt dài 24 giờ.
 

@@ -10,7 +10,7 @@ python3 -m http.server 8080
 # mở http://localhost:8080/index.html?local=1
 ```
 
-`?local=1` bật **chế độ demo cục bộ**: mở thêm tab trong cùng trình duyệt để làm người chơi thứ hai/ba/bốn (mỗi tab đăng nhập riêng). Nút **Luyện tập với Bot** cho phép chơi ngay một mình.
+`?local=1` bật **chế độ demo cục bộ**: mở thêm tab trong cùng trình duyệt để làm người chơi thứ hai/ba/bốn (mỗi tab đăng nhập riêng). Nút **Đấu với Bot** cho phép chơi ngay một mình (chọn 1–3 bot, độ khó Dễ/Trung bình/Khó).
 
 Bỏ `?local=1` để chơi online qua Firebase (dự án `vchess-b0dcb` đã cấu hình sẵn trong `js/net/firebase-config.js`).
 
@@ -51,7 +51,7 @@ index.html                 5 màn hình: đăng nhập, sảnh, phòng chờ, m�
 css/style.css              giao diện fantasy (tông đen – vàng kim)
 js/core/data.js            BalanceConfig, chỉ số quân, 4 tộc (nội tại, kích hoạt, đặc tính)
 js/core/engine.js          LÕI LUẬT xác định: init(seed) → apply(state, lệnh) → state + events, hash
-js/core/bot.js             bot heuristic dùng chính lõi luật
+js/core/bot.js             bot 3 mức độ khó (Khó mô phỏng nước đi bằng lõi luật)
 js/net/firebase-config.js  cấu hình dự án Firebase
 js/net/db.js               lớp lưu trữ: Firebase RTDB hoặc demo cục bộ (BroadcastChannel)
 js/net/service.js          tài khoản, hồ sơ, sảnh, phòng/ghế, chat, sổ lệnh
@@ -61,6 +61,7 @@ js/ui/app.js               đăng nhập, sảnh, phòng chờ
 js/ui/game.js              màn tải, xúc xắc, đồng bộ lượt, HUD, hoàn tác, hết giờ
 js/vendor/                 Firebase JS SDK 10.14 (compat) + Three.js r158 — không cần CDN
 tests/run-tests.js         `node tests/run-tests.js`: ca kiểm thử GDD 15.9 + 48 ván bot + replay
+tests/bot-levels.js        `node tests/bot-levels.js`: giải đấu giữa các mức bot
 database.rules.json        luật Realtime Database
 ```
 
@@ -68,8 +69,9 @@ database.rules.json        luật Realtime Database
 
 - **Mua**: mở tab *Cửa hàng* ở góc dưới phải, **kéo** quân thả vào ô sáng vàng ở hàng spawn (hoặc bấm quân rồi bấm ô, bấm tiếp để mua thêm). Chuột phải/Esc để thôi.
 - **Đi/đánh**: **kéo** quân thả vào ô xanh (đi) hoặc mục tiêu đỏ (đánh); hoặc bấm quân → bấm ô. Đi tới ô có mục tiêu → hiện bóng mờ, bấm mục tiêu để đi-rồi-đánh, bấm lại bóng mờ để chỉ đi.
-- **Camera 3D**: kéo chỗ trống để xoay, lăn chuột để zoom, 4 nút góc nhìn ở giữa dưới. Nút menu (góc trên trái) → đổi đồ họa 3D/2D.
+- **Camera 3D**: kéo chỗ trống (hoặc phím mũi tên) để dời camera; chuột phải/Shift + kéo để xoay; lăn chuột để zoom; điện thoại: một ngón dời, hai ngón zoom/xoay. Phím **H** hoặc nút nhà để về mặc định. Nút menu (góc trên trái) → đổi đồ họa 3D/2D.
 - **Thu gọn**: dock Kỹ năng/Cửa hàng và khung Nhật ký/Chat đều có nút thu gọn.
+- **Kết thúc lượt**, đồng hồ, hoàn tác và chọn thưởng nằm ở thanh trên cùng.
 - **Q / W / E**: kỹ năng tộc. **Ctrl+Z**: hoàn tác. **Enter**: kết thúc lượt. **Space**: bỏ qua hiệu ứng chờ.
 - Rê chuột lên mục tiêu để xem trước sát thương và thưởng.
 

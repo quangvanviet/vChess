@@ -128,6 +128,8 @@
     leaf: '<path d="M54 10C24 10 10 26 10 44c0 4 1 7 2 10 4-14 14-24 28-28-12 8-20 18-22 30 30 2 40-24 36-46Z" fill="currentColor"/>',
     lock: '<rect x="12" y="28" width="40" height="30" rx="6" fill="currentColor"/><path d="M20 28v-8a12 12 0 0 1 24 0v8" fill="none" stroke="currentColor" stroke-width="6"/>',
     flag: '<path d="M14 6v52" stroke="currentColor" stroke-width="6" stroke-linecap="round"/><path d="M16 8h34l-8 12 8 12H16Z" fill="currentColor"/>',
+    plus: '<path d="M32 12v40M12 32h40" stroke="currentColor" stroke-width="7" stroke-linecap="round"/>',
+    minus: '<path d="M12 32h40" stroke="currentColor" stroke-width="7" stroke-linecap="round"/>',
     sleep: '<path d="M12 14h18L12 34h18M36 30h14L36 46h14" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>'
   };
   I.ui = function (name, size, color) {

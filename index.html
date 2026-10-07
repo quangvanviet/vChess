@@ -19,7 +19,6 @@
     <div class="logo-block">
       <div class="logo-crests" id="logo-crests"></div>
       <h1 class="logo">TỨ TỘC<span>KỲ CHIẾN</span></h1>
-      <p class="tagline">Một Vua. Mười vàng. Bốn tộc tranh bá trên bàn cờ.</p>
     </div>
     <div class="panel auth-panel">
       <div class="tabs" id="auth-tabs">
@@ -43,11 +42,9 @@
       </form>
       <form id="form-guest" class="auth-form">
         <label>Tên người chơi<input name="name" required maxlength="20" minlength="2" placeholder="Nhập tên của bạn"></label>
-        <p class="muted small">Tài khoản khách không lưu lâu dài; thành tích có thể mất khi đăng xuất.</p>
         <button class="btn gold big" type="submit">Chơi ngay</button>
       </form>
       <p class="form-msg" id="auth-msg" role="alert"></p>
-      <div class="net-badge" id="net-badge"></div>
     </div>
   </div>
 </section>
@@ -74,40 +71,18 @@
             <h2>Phòng đang mở</h2>
             <div class="room-tools">
               <input id="room-search" placeholder="Tìm tên / mã phòng…">
-              <select id="room-filter"><option value="">Mọi chế độ</option><option value="2">2 người</option><option value="3">3 người</option><option value="4">4 người</option></select>
+              <select id="room-filter"><option value="">Mọi chế độ</option><option value="2">1 đấu 1</option><option value="3">3 người</option><option value="4">4 người</option><option value="team">2 đấu 2</option></select>
             </div>
           </div>
           <div class="room-list" id="room-list"></div>
         </div>
         <div class="side-col">
-          <div class="panel">
-            <h2>Vào bằng mã</h2>
-            <form id="form-join" class="row">
-              <input name="code" maxlength="6" placeholder="MÃ PHÒNG" class="code-input" required>
-              <button class="btn gold">Vào</button>
-            </form>
-          </div>
-          <div class="panel">
-            <h2>Tạo phòng</h2>
-            <form id="form-create" class="create-form">
-              <label>Tên phòng<input name="name" maxlength="28" placeholder="Phòng của …"></label>
-              <div class="seg" id="mode-seg">
-                <button type="button" data-mode="2" class="active">2 người</button>
-                <button type="button" data-mode="3">3 người</button>
-                <button type="button" data-mode="4">4 người</button>
-              </div>
-              <label>Thời gian mỗi lượt
-                <select name="turn">
-                  <option value="60000">60 giây</option><option value="90000" selected>90 giây</option><option value="180000">3 phút</option>
-                  <option value="600000">10 phút</option><option value="86400000">24 giờ (lượt dài)</option>
-                </select></label>
-              <label class="check"><input type="checkbox" name="teamMode"> 2 đấu 2 (chỉ 4 người)</label>
-              <label class="check"><input type="checkbox" name="ranked"> Giới hạn 80 vòng (tính điểm)</label>
-              <label class="check"><input type="checkbox" name="secondBonus" checked> Bù người đi sau +1 Vàng (2 người)</label>
-              <label class="check"><input type="checkbox" name="private"> Phòng riêng (không hiện trong danh sách)</label>
-              <button class="btn gold big">Tạo phòng</button>
-            </form>
-            <button class="btn ghost wide" id="btn-practice"><i data-ic="swords" data-s="16"></i> Luyện tập với Bot</button>
+          <div class="panel play-actions">
+            <button class="btn gold big wide" id="btn-create"><i data-ic="plus" data-s="18"></i> Tạo phòng</button>
+            <div class="pa-row">
+              <button class="btn wide" id="btn-practice"><i data-ic="swords" data-s="16"></i> Đấu với Bot</button>
+              <button class="btn wide" id="btn-join-code"><i data-ic="lock" data-s="16"></i> Nhập mã</button>
+            </div>
           </div>
           <div class="panel chat-panel">
             <h2>Kênh thế giới <span class="online" id="online-count"></span></h2>
@@ -167,7 +142,12 @@
   <button class="hud-btn" id="btn-menu" title="Menu"><i data-ic="menu" data-s="22"></i></button>
   <div class="hud hud-top">
     <div class="turn-banner" id="turn-banner"></div>
-    <div class="timer" id="turn-timer"><div class="fill"></div><span></span></div>
+    <div class="top-ctrl">
+      <div class="timer" id="turn-timer"><div class="fill"></div><span></span></div>
+      <button class="btn round" id="btn-undo" title="Hoàn tác (Ctrl+Z)"><i data-ic="undo" data-s="20"></i></button>
+      <button class="btn gold end-btn" id="btn-end" title="Kết thúc lượt (Enter)">Kết thúc lượt</button>
+      <div class="reward-pref" id="reward-pref"></div>
+    </div>
   </div>
   <div class="prompt" id="prompt"></div>
   <aside class="hud win hud-me" id="g-econ"></aside>
@@ -193,13 +173,6 @@
     <div class="dock-body">
       <div id="g-skills"></div>
       <div id="g-shop" class="hidden"></div>
-    </div>
-  </div>
-  <div class="hud hud-end">
-    <div class="reward-pref" id="reward-pref"></div>
-    <div class="end-row">
-      <button class="btn round" id="btn-undo" title="Hoàn tác (Ctrl+Z)"><i data-ic="undo" data-s="22"></i></button>
-      <button class="btn gold big end-btn" id="btn-end">Kết thúc lượt</button>
     </div>
   </div>
   <div class="drag-ghost hidden" id="drag-ghost"></div>

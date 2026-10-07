@@ -312,7 +312,7 @@
     opts = opts || {};
     this.c = canvas; this.wrap = wrap; this.showcase = !!opts.showcase;
     this.state = null; this.view = 0; this.hl = {}; this.anims = []; this.pieces = {}; this.grave = {};
-    this.az = 0; this.azT = 0; this.el = 0.92; this.R = 12; this.RT = 12; this.userAz = 0;
+    this.az = 0; this.azT = 0; this.el = 0.92; this.R = 12; this.RT = 12; this.userAz = 0; this.pan = { x: 0, z: 0 }; this.panT = { x: 0, z: 0 };
     var r = this.renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: !!this.showcase, powerPreference: 'high-performance' });
     r.setPixelRatio(Math.min(2, G.devicePixelRatio || 1));
     r.shadowMap.enabled = true; r.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -495,7 +495,7 @@
     _baseAz: function () { return [0, -Math.PI / 2, Math.PI, Math.PI / 2][this.view] + this.userAz; },
     _fitCamera: function (snap) {
       var W = this.state ? this.state.W : 8, asp = this.cam.aspect || 1;
-      var R = W * 1.42 + 4.2; if (asp < 1) R *= 1 / Math.max(.55, asp);
+      var R = W * 1.42 + 4.2; if (asp < 1) R *= .78 / Math.max(.45, asp);
       this.Rbase = R; if (snap || !this.RT) { this.RT = R; this.R = R; }
       this.RT = Math.max(R * .5, Math.min(R * 1.5, this.RT));
     },
@@ -503,7 +503,7 @@
       var r = this.wrap.getBoundingClientRect(), w = Math.max(100, r.width), h = Math.max(100, r.height);
       this.renderer.setSize(w, h, false);
       this.c.style.width = w + 'px'; this.c.style.height = h + 'px';
-      this.cam.aspect = w / h; this.cam.updateProjectionMatrix();
+      this.cam.aspect = w / h; this.cam.fov = w / h < 1 ? 50 : 36; this.cam.updateProjectionMatrix();
       if (this.state) this._fitCamera(false);
     },
     planePoint: function (e) {
@@ -512,60 +512,84 @@
       this.ray.setFromCamera(this.mouse, this.cam);
       var v = new THREE.Vector3(); return this.ray.ray.intersectPlane(this.plane, v) ? v : null;
     },
+    /* dịch camera theo hướng màn hình (kéo bản đồ) */
+    panBy: function (dx, dy) {
+      var k = this.R * .0019, az = this.az, lim = this.state ? this.state.W / 2 + 1 : 6;
+      var rx = Math.cos(az), rz = -Math.sin(az), fx = -Math.sin(az), fz = -Math.cos(az);
+      this.panT.x = Math.max(-lim, Math.min(lim, this.panT.x - rx * dx * k + fx * dy * k));
+      this.panT.z = Math.max(-lim, Math.min(lim, this.panT.z - rz * dx * k + fz * dy * k));
+    },
+    resetCam: function () { this.userAz = 0; this.azT = this._baseAz(); this.el = .92; this.RT = this.Rbase; this.panT = { x: 0, z: 0 }; },
     _controls: function () {
-      var self = this, c = this.c, drag = null, pinch = null;
+      var self = this, c = this.c, drag = null, touch = null;
       c.addEventListener('pointerdown', function (e) {
-        if (e.button === 2) return;
-        var cell = self.cellAt(e);
-        drag = { x: e.clientX, y: e.clientY, az: self.azT, el: self.el, moved: false, id: e.pointerId, cell: cell, piece: false, canPiece: !!(cell && self.onDragStart) };
+        if (touch && touch.multi) return;
+        var cell = e.button === 0 ? self.cellAt(e) : null;
+        drag = { x: e.clientX, y: e.clientY, lx: e.clientX, ly: e.clientY, btn: e.button, az: self.azT, el: self.el, moved: false, id: e.pointerId, cell: cell, piece: false, canPiece: !!(cell && self.onDragStart) };
+        try { c.setPointerCapture(e.pointerId); } catch (x) { }
       });
       this._onMove = function (e) {
-        if (!drag || drag.id !== e.pointerId || pinch) return;
+        if (!drag || drag.id !== e.pointerId || (touch && touch.multi)) return;
         var dx = e.clientX - drag.x, dy = e.clientY - drag.y;
         if (!drag.moved && Math.abs(dx) + Math.abs(dy) > 7) {
           drag.moved = true;
-          if (drag.canPiece && self.onDragStart(drag.cell[0], drag.cell[1])) { drag.piece = true; var t = E.teamAt(self.state, drag.cell[0], drag.cell[1]); self.dragId = t ? t.id : null; c.style.cursor = 'grabbing'; }
+          if (drag.btn === 0 && drag.canPiece && self.onDragStart(drag.cell[0], drag.cell[1])) { drag.piece = true; var t = E.teamAt(self.state, drag.cell[0], drag.cell[1]); self.dragId = t ? t.id : null; c.style.cursor = 'grabbing'; }
+          else if (drag.btn === 0) c.style.cursor = 'grabbing';
         }
         if (!drag.moved) return;
         if (drag.piece) {
           self.dragPoint = self.planePoint(e);
           var cell = self.cellAt(e, true), key = cell ? cell + '' : '';
           if (key !== self._dk) { self._dk = key; self.hover = cell; self._syncHL(); if (self.onDragMove) self.onDragMove(cell, e); }
-        } else {
+        } else if (drag.btn === 2 || e.shiftKey) {
           self.azT = drag.az - dx * .008; self.az = self.azT; self.el = Math.max(.42, Math.min(1.42, drag.el + dy * .006));
           self.userAz = self.azT - [0, -Math.PI / 2, Math.PI, Math.PI / 2][self.view];
+        } else {
+          self.panBy(e.clientX - drag.lx, e.clientY - drag.ly);
         }
+        drag.lx = e.clientX; drag.ly = e.clientY;
       };
       this._onUp = function (e) {
         if (drag && drag.piece) {
-          var cell = self.cellAt(e, true); self.dragId = null; self.dragPoint = null; self._dk = ''; c.style.cursor = '';
+          var cell = self.cellAt(e, true); self.dragId = null; self.dragPoint = null; self._dk = '';
           if (self.onDragEnd) self.onDragEnd(cell, e);
         }
-        setTimeout(function () { drag = null; }, 0);
+        c.style.cursor = '';
+        var d = drag; setTimeout(function () { if (drag === d) drag = null; }, 0);
       };
       G.addEventListener('pointermove', this._onMove);
       G.addEventListener('pointerup', this._onUp);
       c.addEventListener('click', function (e) { if (drag && drag.moved) return; var cell = self.cellAt(e); if (cell && self.onClick) self.onClick(cell[0], cell[1], e); });
-      c.addEventListener('contextmenu', function (e) { e.preventDefault(); if (self.onRight) self.onRight(); });
-      c.addEventListener('wheel', function (e) { e.preventDefault(); self.RT = Math.max(self.Rbase * .5, Math.min(self.Rbase * 1.5, self.RT * (1 + Math.sign(e.deltaY) * .08))); }, { passive: false });
-      c.addEventListener('touchstart', function (e) { if (e.touches.length === 2) { var a = e.touches[0], b = e.touches[1]; pinch = { d: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY), R: self.RT }; } }, { passive: true });
-      c.addEventListener('touchmove', function (e) { if (pinch && e.touches.length === 2) { var a = e.touches[0], b = e.touches[1]; self.RT = Math.max(self.Rbase * .5, Math.min(self.Rbase * 1.5, pinch.R * pinch.d / Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY))); } }, { passive: true });
-      c.addEventListener('touchend', function (e) { if (e.touches.length < 2) pinch = null; });
+      c.addEventListener('contextmenu', function (e) { e.preventDefault(); if (drag && drag.moved) return; if (self.onRight) self.onRight(); });
+      c.addEventListener('wheel', function (e) { e.preventDefault(); self.RT = Math.max(self.Rbase * .45, Math.min(self.Rbase * 1.5, self.RT * (1 + Math.sign(e.deltaY) * .08))); }, { passive: false });
+      // hai ngón: chụm để zoom, xoay để xoay góc nhìn, kéo để dịch
+      var two = function (e) { var a = e.touches[0], b = e.touches[1]; return { d: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY), ang: Math.atan2(b.clientY - a.clientY, b.clientX - a.clientX), cx: (a.clientX + b.clientX) / 2, cy: (a.clientY + b.clientY) / 2 }; };
+      c.addEventListener('touchstart', function (e) { if (e.touches.length === 2) { var t = two(e); touch = { multi: true, d: t.d, ang: t.ang, cx: t.cx, cy: t.cy, R: self.RT, az: self.azT }; drag = null; } }, { passive: true });
+      c.addEventListener('touchmove', function (e) {
+        if (!touch || e.touches.length !== 2) return;
+        var t = two(e);
+        self.RT = Math.max(self.Rbase * .45, Math.min(self.Rbase * 1.5, touch.R * touch.d / t.d));
+        self.azT = touch.az - (t.ang - touch.ang); self.az = self.azT; self.userAz = self.azT - [0, -Math.PI / 2, Math.PI, Math.PI / 2][self.view];
+        self.panBy(t.cx - touch.cx, t.cy - touch.cy); touch.cx = t.cx; touch.cy = t.cy;
+      }, { passive: true });
+      c.addEventListener('touchend', function (e) { if (e.touches.length < 2 && touch) { setTimeout(function () { touch = null; }, 50); } });
       c.addEventListener('mousemove', function (e) {
         if (drag && drag.moved) return;
         var cell = self.cellAt(e), key = cell ? cell[0] + ',' + cell[1] : '';
         if (key !== self._hk) { self._hk = key; self.hover = cell; self._syncHL(); if (self.onHover) self.onHover(cell, e); }
       });
       c.addEventListener('mouseleave', function () { self.hover = null; self._hk = ''; self._syncHL(); if (self.onHover) self.onHover(null); });
-      var bar = document.createElement('div'); bar.className = 'cam-bar';
-      bar.innerHTML = '<button title="Xoay trái" data-c="l">' + TT.Icons.ui('rotl', 16) + '</button><button title="Về góc nhìn của bạn" data-c="r">' + TT.Icons.ui('home', 16) + '</button><button title="Xoay phải" data-c="rr">' + TT.Icons.ui('rotr', 16) + '</button><button title="Nhìn từ trên xuống" data-c="t">' + TT.Icons.ui('top', 16) + '</button>';
+      var I = TT.Icons, bar = document.createElement('div'); bar.className = 'cam-bar';
+      bar.innerHTML = '<button title="Xoay trái" data-c="l">' + I.ui('rotl', 16) + '</button><button title="Xoay phải" data-c="rr">' + I.ui('rotr', 16) + '</button><button title="Phóng to" data-c="zi">' + I.ui('plus', 16) + '</button><button title="Thu nhỏ" data-c="zo">' + I.ui('minus', 16) + '</button><button title="Nhìn từ trên xuống" data-c="t">' + I.ui('top', 16) + '</button><button title="Về góc nhìn mặc định" data-c="r">' + I.ui('home', 16) + '</button>';
       this.wrap.appendChild(bar); this.camBar = bar;
       bar.querySelectorAll('button').forEach(function (b) {
         b.onclick = function () {
           var k = b.dataset.c;
           if (k === 'l') { self.userAz -= Math.PI / 2; self.azT = self._baseAz(); }
           if (k === 'rr') { self.userAz += Math.PI / 2; self.azT = self._baseAz(); }
-          if (k === 'r') { self.userAz = 0; self.azT = self._baseAz(); self.el = .92; self.RT = self.Rbase; }
+          if (k === 'zi') self.RT = Math.max(self.Rbase * .45, self.RT * .85);
+          if (k === 'zo') self.RT = Math.min(self.Rbase * 1.5, self.RT * 1.18);
+          if (k === 'r') self.resetCam();
           if (k === 't') { self.el = self.el > 1.3 ? .92 : 1.42; }
         };
       });
@@ -996,8 +1020,9 @@
       this.R += (this.RT - this.R) * Math.min(1, dt * 8);
       var el = this.el, shake = 0;
       if (this.shakeT && now - this.shakeT < 380) shake = (1 - (now - this.shakeT) / 380) * (this.shakeA || .12);
-      this.cam.position.set(Math.cos(el) * Math.sin(this.az) * this.R + rnd(-1, 1) * shake, Math.sin(el) * this.R + rnd(-1, 1) * shake, Math.cos(el) * Math.cos(this.az) * this.R);
-      this.cam.lookAt(0, -.9, this.showcase ? 0 : .6 * Math.cos(this.az) * 0);
+      this.pan.x += (this.panT.x - this.pan.x) * Math.min(1, dt * 10); this.pan.z += (this.panT.z - this.pan.z) * Math.min(1, dt * 10);
+      this.cam.position.set(this.pan.x + Math.cos(el) * Math.sin(this.az) * this.R + rnd(-1, 1) * shake, Math.sin(el) * this.R + rnd(-1, 1) * shake, this.pan.z + Math.cos(el) * Math.cos(this.az) * this.R);
+      this.cam.lookAt(this.pan.x, -.9, this.pan.z);
       (this.braziers || []).forEach(function (b) { var f = .9 + Math.sin(tsec * 2 + b.ph) * .1; b.fire.scale.set(1.1 * f, 1.1 * f, 1); });
       (this.clouds || []).forEach(function (c) { c.a += c.s * dt; c.g.position.x = Math.cos(c.a) * c.r; c.g.position.z = Math.sin(c.a) * c.r; });
       (this.resGlows || []).forEach(function (g, i) { g.material.opacity = .3 + Math.sin(tsec * 2 + i) * .12; });

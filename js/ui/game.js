@@ -48,7 +48,7 @@
       return '<div class="lcard" style="animation-delay:' + (i * 0.12) + 's;--seat-bg: radial-gradient(circle at 50% 30%, ' + TT.hexA(f.color, .6) + ', transparent 70%)">' + I.crest(p.faction, 170) +
         '<div class="lf">' + f.name + '</div><div class="ln">' + esc(p.name) + '</div><div class="lp">' + I.ui('diamond', 10) + ' ' + (pas ? pas.name : '') + ' · Ô nhà ' + TT.RES_NAME[p.home] + '</div><div class="lbar"><i></i></div></div>';
     }).join('');
-    $('#loading-tip').textContent = C.tips[Math.floor(Math.random() * C.tips.length)];
+    $('#loading-tip').textContent = '';
     var prog = 0, fill = $('#loading-fill'), bars = $$('#loading-cards .lbar i');
     // vẽ trước biểu tượng
     TT.FACTION_ORDER.forEach(function () { }); Object.keys(I.paths).forEach(function (k) { I.img(k, '#ffffff'); });
@@ -218,13 +218,15 @@
     refreshAll();
   }
 
+  function botLevel(i) { var seat = roomSeatOf(S.state, i); return (Net.botLevels(S.code)[seat]) || (S.remoteBotLv || {})[seat] || 'medium'; }
+  Game.onBotLv = function (m) { if (S) { S.remoteBotLv = m; renderPlayers(); } };
   function runBot() {
     S.botBusy = true;
     var seqAt = S.seq;
     setTimeout(function () {
       if (!S || S.seq !== seqAt || S.state.over) { if (S) S.botBusy = false; return; }
       var st = S.state, a = st.active;
-      var cmds = TT.Bot.planTurn(st, a);
+      var cmds = TT.Bot.planTurn(st, a, botLevel(a));
       var fin = runPackage(st, a, cmds);
       var entry = { seq: S.seq, uid: me(), turnNo: Math.max(1, st.turnNo), payload: JSON.stringify(E.compact(cmds)), stateHash: E.hash(fin), ts: Net.B.TS };
       Net.pushTurn(S.code, entry, { seat: roomSeatOf(fin, fin.active), startedAt: Net.B.TS, nextSeq: S.seq + 1 })
@@ -362,10 +364,10 @@
     // dock kỹ năng / cửa hàng
     $$('#g-dock .dock-tabs [data-d]').forEach(function (b) { b.onclick = function () { setDock(b.dataset.d, true); }; });
     $('#dock-hide').onclick = function () { var c = !$('#g-dock').classList.contains('collapsed'); $('#g-dock').classList.toggle('collapsed', c); $('#dock-hide').innerHTML = I.ui(c ? 'up' : 'down', 12); try { localStorage.setItem('ttkc.dockC', c ? '1' : '0'); } catch (e) { } };
-    $('#chat-toggle').onclick = function () { var c = !$('#g-chatbox').classList.contains('collapsed'); $('#g-chatbox').classList.toggle('collapsed', c); $('#chat-toggle').innerHTML = I.ui(c ? 'up' : 'down', 12); try { localStorage.setItem('ttkc.chatC', c ? '1' : '0'); } catch (e) { } };
+    $('#chat-toggle').onclick = function () { var c = !$('#g-chatbox').classList.contains('collapsed'); if (!c && isPhone()) collapseDock(true); $('#g-chatbox').classList.toggle('collapsed', c); $('#chat-toggle').innerHTML = I.ui(c ? 'up' : 'down', 12); try { localStorage.setItem('ttkc.chatC', c ? '1' : '0'); } catch (e) { } };
     var small = G.innerWidth < 900, lsC = function (k) { try { return localStorage.getItem(k); } catch (e) { return null; } };
     if ((lsC('ttkc.chatC') || (small ? '1' : '0')) === '1') { $('#g-chatbox').classList.add('collapsed'); $('#chat-toggle').innerHTML = I.ui('up', 12); }
-    if (lsC('ttkc.dockC') === '1') { $('#g-dock').classList.add('collapsed'); $('#dock-hide').innerHTML = I.ui('up', 12); }
+    if (lsC('ttkc.dockC') === '1' || G.innerWidth <= 760) collapseDock(true);
     setDock(lsC('ttkc.dock') || 'skill', false);
     $('#btn-end').onclick = function () { if (S.local) sendTurn(); };
     $('#btn-undo').onclick = undo;
@@ -379,8 +381,8 @@
         if ($('#g-chatbox').classList.contains('collapsed')) $('#chat-toggle').click();
       };
     });
-    $('#g-chat-form').onsubmit = function (e) { e.preventDefault(); var inp = $('input', e.target), v = inp.value.trim(); if (!v) return; inp.value = ''; Net.sendRoomChat(S.code, v).catch(function () { App.toast('Chat cần nút chat trong luật Firebase', 'err'); }); };
-    $('#reward-pref').innerHTML = '<span>Thưởng hạ gục</span>' + ['V', 'T', 'G'].map(function (r) { return '<button data-r="' + r + '" class="c' + r + (S.rw === r ? ' active' : '') + '" title="Nhận thưởng kết liễu bằng ' + TT.RES_NAME[r] + '">' + r + '</button>'; }).join('');
+    $('#g-chat-form').onsubmit = function (e) { e.preventDefault(); var inp = $('input', e.target), v = inp.value.trim(); if (!v) return; inp.value = ''; Net.sendRoomChat(S.code, v).catch(function () { App.toast('Chat chưa khả dụng', 'err'); }); };
+    $('#reward-pref').innerHTML = '<span>Thưởng</span>' + ['V', 'T', 'G'].map(function (r) { return '<button data-r="' + r + '" class="c' + r + (S.rw === r ? ' active' : '') + '" title="Nhận thưởng kết liễu bằng ' + TT.RES_NAME[r] + '">' + r + '</button>'; }).join('');
     $$('#reward-pref button').forEach(function (b) { b.onclick = function () { S.rw = b.dataset.r; try { localStorage.setItem('ttkc.rw', S.rw); } catch (e) { } $$('#reward-pref button').forEach(function (x) { x.classList.toggle('active', x === b); }); }; });
     clearInterval(S.timerIv); S.timerIv = setInterval(tick, 500);
     refreshAll();
@@ -394,13 +396,16 @@
     else if (k === 'z' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); undo(); }
     else if (k === 'q' || k === 'w' || k === 'e') { var pl = view().players[S.meIdx]; if (pl) { var a = F[pl.faction].actives.filter(function (x) { return x.key.toLowerCase() === k; })[0]; if (a) startSkill(a.id); } }
     else if (k === ' ' && S.local && S.draft.pending.length) { e.preventDefault(); doCmd({ c: 'skip' }); }
+    else if (/^arrow/.test(k) && S.board && S.board.panBy) { e.preventDefault(); var d = 60; S.board.panBy(k === 'arrowleft' ? d : k === 'arrowright' ? -d : 0, k === 'arrowup' ? d : k === 'arrowdown' ? -d : 0); }
+    else if (k === 'h' && S.board && S.board.resetCam) S.board.resetCam();
   });
 
   function setUi(u) {
     if (!S) return;
-    S.ui = u;
+    S.ui = u; S.armed = null;
+    if (isPhone() && (u.mode === 'selected' || u.mode === 'skill' || u.mode === 'dieubinh')) { collapseDock(true); collapseChat(true); }
     if (u.mode !== 'selected') S.opts = {};
-    updateHighlights(); renderUnit(); renderShop(); renderSkills(); renderPrompt();
+    updateHighlights(); renderUnit(); renderShop(); renderSkills(); renderPrompt(); queueLayout();
   }
   function canAct(st, t) {
     if (!S.local || !t || t.o !== S.meIdx) return false;
@@ -457,6 +462,7 @@
     function inList(list) { return (list || []).some(function (c) { return (c.x != null ? c.x : c[0]) === x && (c.y != null ? c.y : c[1]) === y; }); }
     if (S.local && st.pending.length) {
       var pd = st.pending[0];
+      if (pd.k === 'atk' && inList(h.attacks) && isTouch && S.armed !== x + ',' + y) { S.armed = x + ',' + y; var r1 = S.board.cellRect(x, y); onHover([x, y], { clientX: r1.x, clientY: r1.y }); return; }
       if (pd.k === 'atk' && inList(h.attacks)) doCmd({ c: 'follow', tgt: [x, y], opt: { rw: S.rw } });
       else if (pd.k === 'mv' && inList(h.moves)) doCmd({ c: 'follow', to: [x, y] });
       else App.toast('Chọn ô sáng hoặc bấm "Bỏ qua"', '');
@@ -473,6 +479,7 @@
         var k = selK(st), opt = Object.assign({ rw: S.rw }, S.opts);
         if (u.ghost && u.ghost.x === x && u.ghost.y === y) { doCmd({ c: 'act', id: tm.id, k: k, to: [x, y], opt: opt }); setUi({ mode: 'idle' }); return; }
         if (inList(h.attacks)) {
+          if (isTouch && S.armed !== x + ',' + y) { S.armed = x + ',' + y; var r0 = S.board.cellRect(x, y); onHover([x, y], { clientX: r0.x, clientY: r0.y }); App.toast('Chạm lần nữa để đánh', '', 1400); return; }
           doCmd({ c: 'act', id: tm.id, k: k, to: u.ghost ? [u.ghost.x, u.ghost.y] : null, tgt: [x, y], opt: opt });
           setUi({ mode: 'idle' }); return;
         }
@@ -597,11 +604,16 @@
   }
 
   /* ============ HUD ============ */
+  function isPhone() { return G.innerWidth <= 760; }
+  var isTouch = G.matchMedia && G.matchMedia('(hover: none)').matches;
+  function collapseDock(c) { var dk = $('#g-dock'); if (!dk || dk.classList.contains('collapsed') === c) return; dk.classList.toggle('collapsed', c); $('#dock-hide').innerHTML = I.ui(c ? 'up' : 'down', 12); }
+  function collapseChat(c) { var cb = $('#g-chatbox'); if (!cb || cb.classList.contains('collapsed') === c) return; cb.classList.toggle('collapsed', c); $('#chat-toggle').innerHTML = I.ui(c ? 'up' : 'down', 12); }
   function setDock(d, user) {
+    if (user && isPhone() && S.dock === d && !$('#g-dock').classList.contains('collapsed')) { collapseDock(true); return; }
     S.dock = d;
     $$('#g-dock .dock-tabs [data-d]').forEach(function (b) { b.classList.toggle('active', b.dataset.d === d); });
     $('#g-skills').classList.toggle('hidden', d !== 'skill'); $('#g-shop').classList.toggle('hidden', d !== 'shop');
-    if (user) { try { localStorage.setItem('ttkc.dock', d); } catch (e) { } if ($('#g-dock').classList.contains('collapsed')) $('#dock-hide').click(); }
+    if (user) { try { localStorage.setItem('ttkc.dock', d); } catch (e) { } collapseDock(false); if (isPhone()) { collapseChat(true); if (S.ui.mode === 'selected') setUi({ mode: 'idle' }); } }
   }
   function refreshAll() {
     if (!S || !S.state) return;
@@ -611,6 +623,110 @@
     $('#btn-undo').disabled = !S.local || S.sending || !S.draftCmds.some(function (c) { return c.c !== 'harvest'; });
     $('#btn-end').classList.toggle('btn-end-pulse', S.local && st && E.actionsLeft(st) <= 0 && !st.pending.length);
     $('#btn-end').textContent = S.sending ? 'Đang gửi…' : S.local ? 'Kết thúc lượt' : 'Chờ đối thủ…';
+    queueLayout();
+  }
+  /* ---- bố cục HUD thông minh: đo thực tế để các khung không che nhau ---- */
+  var layoutQ = 0;
+  function queueLayout() { if (layoutQ) return; layoutQ = requestAnimationFrame(function () { layoutQ = 0; layoutHud(); }); }
+  Game.layout = queueLayout;
+  function vis(el) { return el && !el.classList.contains('hidden') && el.offsetParent !== null && el.getBoundingClientRect().height > 0; }
+  function setS(el, k, v) { if (el && el.style[k] !== v) el.style[k] = v; }
+  function layoutHud() {
+    if (!S || App.screen !== 'game') return;
+    var W = G.innerWidth, H = G.innerHeight, phone = isPhone(), gap = phone ? 5 : 8;
+    var top = $('.hud-top'), me = $('#g-econ'), pl = $('#g-players'), unit = $('#g-unit'), chat = $('#g-chatbox'), dock = $('#g-dock'),
+      prm = $('#prompt'), toasts = $('#toasts'), bar = S.board && S.board.camBar, dbody = dock && dock.querySelector('.dock-body'), cbody = chat && chat.querySelector('.chat-body');
+    var R = function (el) { return el.getBoundingClientRect(); };
+    var hit = function (a, b) { return a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom; };
+    var tR = R(top);
+    if (phone) {
+      // xếp chồng từ trên xuống theo kích thước thật
+      setS(me, 'top', Math.round(tR.bottom + gap) + 'px');
+      var mR = R(me);
+      setS(pl, 'top', Math.round(mR.bottom + gap) + 'px');
+      var pR = pl.children.length ? R(pl) : mR, below = pR.bottom + gap;
+      setS(prm, 'top', Math.round(below) + 'px');
+      var prR = prm.classList.contains('show') ? R(prm) : null, below2 = prR ? prR.bottom + gap : below;
+      if (toasts) setS(toasts, 'top', Math.round(below2) + 'px');
+      // bottom sheet không được trùm lên dải thông tin phía trên
+      var maxSheet = Math.max(120, H - 52 - below - 6) + 'px';
+      [dbody, cbody, unit].forEach(function (el) { if (el) setS(el, 'maxHeight', maxSheet); });
+      setS(unit, 'top', 'auto');
+      if (bar) {
+        setS(bar, 'top', Math.round(below2) + 'px'); setS(bar, 'left', 'auto'); setS(bar, 'bottom', 'auto'); setS(bar, 'right', ''); setS(bar, 'transform', ''); setS(bar, 'flexDirection', '');
+        var bR = R(bar), sheet = [vis(unit) && unit, !dock.classList.contains('collapsed') && dbody, !chat.classList.contains('collapsed') && cbody].filter(Boolean)[0];
+        var low = sheet ? R(sheet).top : H - 52;
+        bar.classList.toggle('cam-hide', bR.bottom > low - 4);
+      }
+      return;
+    }
+    // ---- máy tính / máy tính bảng ----
+    setS(me, 'top', ''); setS(pl, 'top', ''); setS(prm, 'top', ''); if (toasts) setS(toasts, 'top', ''); if (cbody) setS(cbody, 'maxHeight', '');
+    var mR = R(me), pR = R(pl);
+    if (mR.right + gap > tR.left && mR.top < tR.bottom) { setS(me, 'top', Math.round(tR.bottom + gap) + 'px'); mR = R(me); }
+    if (pl.children.length && pR.left - gap < tR.right && pR.top < tR.bottom) { setS(pl, 'top', Math.round(tR.bottom + gap) + 'px'); pR = R(pl); }
+    var prTop = tR.bottom + gap;
+    setS(prm, 'top', Math.round(prTop) + 'px');
+    var prR = prm.classList.contains('show') ? R(prm) : null;
+    if (toasts) setS(toasts, 'top', Math.round(prR ? prR.bottom + gap : prTop) + 'px');
+    // khung chat (trái dưới) vs dock (phải dưới): thu hẹp chat, nếu vẫn chật thì tự thu gọn
+    setS(chat, 'width', '');
+    var dR = R(dock), cR = R(chat);
+    if (cR.right + gap > dR.left) {
+      var w = dR.left - gap - cR.left;
+      if (w >= 230) setS(chat, 'width', Math.round(w) + 'px');
+      else { setS(chat, 'width', Math.max(200, Math.round(w)) + 'px'); if (S._chatAutoW !== W) { S._chatAutoW = W; collapseChat(true); } }
+      cR = R(chat);
+    }
+    // dock không được chạm hàng đối thủ phía trên
+    var ceilD = (pl.children.length && pR.left < dR.right && dR.left < pR.right) ? pR.bottom : (dR.left < tR.right && tR.left < dR.right ? tR.bottom : 0);
+    if (prR && prR.left < dR.right && dR.left < prR.right) ceilD = Math.max(ceilD, prR.bottom);
+    if (dbody) {
+      var tabsH = (dock.querySelector('.dock-tabs') || dock).getBoundingClientRect().height;
+      var avail = H - 10 - tabsH - ceilD - gap - 6;
+      setS(dbody, 'maxHeight', Math.max(140, Math.min(460, avail)) + 'px');
+      setS(dbody, 'overflowY', dbody.scrollHeight > avail + 4 ? 'auto' : '');
+    }
+    // bảng đơn vị: ngay dưới thông tin bản thân, dừng trước khung chat
+    if (vis(unit)) {
+      var uTop = Math.max(mR.bottom, prR && prR.left < 280 ? prR.bottom : 0) + gap;
+      setS(unit, 'top', Math.round(uTop) + 'px');
+      var uMax = cR.top - gap - uTop;
+      if (uMax < 140 && !chat.classList.contains('collapsed') && S._unitAuto !== S.ui.id) { S._unitAuto = S.ui.id; collapseChat(true); cR = R(chat); uMax = cR.top - gap - uTop; }
+      setS(unit, 'maxHeight', Math.max(120, Math.round(uMax)) + 'px');
+    }
+    // thanh camera: tìm khoảng trống ở đáy giữa chat và dock, không có thì dựng dọc bên phải
+    if (bar) {
+      var wrapR = bar.parentNode.getBoundingClientRect();
+      setS(bar, 'flexDirection', 'row'); setS(bar, 'top', ''); setS(bar, 'bottom', ''); setS(bar, 'left', ''); setS(bar, 'right', ''); setS(bar, 'transform', '');
+      var bR = R(bar), bw = bR.width, bh = bR.height;
+      dR = R(dock); cR = R(chat);
+      var gapL = cR.right + gap, gapR = dR.left - gap, uR = vis(unit) ? R(unit) : null;
+      var cx = Math.max(W / 2, gapL + bw / 2);
+      var ok = gapR - gapL >= bw && cx + bw / 2 <= gapR;
+      bar.classList.remove('cam-hide');
+      if (ok) {
+        setS(bar, 'left', Math.round(cx - wrapR.left) + 'px'); setS(bar, 'transform', 'translateX(-50%)');
+      } else {
+        setS(bar, 'flexDirection', 'column'); bR = R(bar);
+        var vTop = (pl.children.length ? pR.bottom : tR.bottom) + gap, vBot = dR.top - gap;
+        setS(bar, 'left', 'auto'); setS(bar, 'right', '10px'); setS(bar, 'bottom', 'auto');
+        if (vBot - vTop >= bR.height) setS(bar, 'top', Math.round(vTop - wrapR.top) + 'px');
+        else {
+          // thử khoảng trống bên trái giữa bảng thông tin và chat
+          var lTop = (uR ? uR.bottom : mR.bottom) + gap, lBot = cR.top - gap;
+          if (lBot - lTop >= bR.height) { setS(bar, 'right', 'auto'); setS(bar, 'left', Math.round((uR ? uR.right : mR.right) + gap - wrapR.left) + 'px'); setS(bar, 'top', Math.round(lTop - wrapR.top) + 'px'); }
+          else bar.classList.add('cam-hide');
+        }
+      }
+    }
+  }
+  G.addEventListener('resize', queueLayout);
+  G.addEventListener('orientationchange', function () { setTimeout(queueLayout, 250); });
+  if (G.ResizeObserver) {
+    var hudRO = new ResizeObserver(queueLayout);
+    G.addEventListener('DOMContentLoaded', function () { ['.hud-top', '#g-econ', '#g-players', '#g-unit', '#g-chatbox', '#g-dock', '#prompt'].forEach(function (s) { var el = $(s); if (el) hudRO.observe(el); }); });
+    if (document.readyState !== 'loading') ['.hud-top', '#g-econ', '#g-players', '#g-unit', '#g-chatbox', '#g-dock', '#prompt'].forEach(function (s) { var el = $(s); if (el) hudRO.observe(el); });
   }
   function renderTop() {
     var st = view(), pl = st.players[st.active];
@@ -618,8 +734,10 @@
     var tags = '';
     if (E.inPeace(st)) tags += '<span class="ph peace">' + I.ui('leaf', 12) + ' Miễn chiến</span>';
     if (pl.pturn >= CFG.declineTurn) tags += '<span class="ph decline">Suy Tàn</span>';
-    $('#turn-banner').innerHTML = (S.local ? '<span class="yours">' + I.ui('swords', 18) + ' Lượt của bạn</span>' : '<span class="who" style="--pc:' + TT.SEAT_COLORS[pl.seat] + '">Lượt của ' + esc(pl.name) + '</span>') +
-      '<span class="ph">Vòng ' + st.round + '</span><span class="ph">' + phase + '</span>' + tags;
+    var acts = '';
+    if (S.local) { var mx = CFG.actionsByAge[pl.age], lf = E.actionsLeft(st); acts = '<span class="ph acts-pill">Hành động <b>' + lf + '/' + mx + '</b></span>'; }
+    $('#turn-banner').innerHTML = (S.local ? '<span class="yours">' + I.ui('swords', 18) + ' Lượt của bạn</span>' : '<span class="who" style="--pc:' + TT.SEAT_COLORS[pl.seat] + '">Lượt của ' + esc(pl.name) + (pl.bot ? ' <small class="muted">(đang tính…)</small>' : '') + '</span>') +
+      '<span class="ph">Vòng ' + st.round + '</span><span class="ph">' + phase + '</span>' + acts + tags;
   }
   function resPills(p, big) {
     var s = big ? 20 : 14;
@@ -634,7 +752,7 @@
       var rp = room.players && room.players[p.uid];
       var off = !p.bot && rp && typeof rp.lastSeen === 'number' && Net.B.now() - rp.lastSeen > 45000;
       return '<div class="pchip' + (st.active === i ? ' active' : '') + (p.alive ? '' : ' dead') + '" style="--pc:' + TT.SEAT_COLORS[p.seat] + '">' + I.crest(p.faction, 40) +
-        '<div class="pc-body"><div class="pc-name">' + esc(p.name) + (off ? ' <span title="Mất kết nối">' + I.ui('warn', 12, '#e0a000') + '</span>' : '') + (st.teamMode ? ' <small>' + (p.team ? 'B' : 'A') + '</small>' : '') + '</div>' +
+        '<div class="pc-body"><div class="pc-name">' + esc(p.name) + (p.bot ? ' <span class="tag lv-' + botLevel(i) + '">' + TT.Bot.levelName(botLevel(i)) + '</span>' : '') + (off ? ' <span title="Mất kết nối">' + I.ui('warn', 12, '#e0a000') + '</span>' : '') + (st.teamMode ? ' <small>' + (p.team ? 'B' : 'A') + '</small>' : '') + '</div>' +
         '<div class="pc-sub">' + F[p.faction].short + ' · Đời ' + TT.AGE_ROMAN[p.age] + ' · ' + I.ui('worker', 11) + w + ' ' + I.ui('swords', 11) + army + '</div><div class="pc-res">' + resPills(p) + '</div></div>' +
         (st.active === i ? '<div class="pc-turn">' + I.ui('play', 12) + '</div>' : '') + '</div>';
     }).join('');
@@ -675,7 +793,7 @@
     }
     var dsc = pl.passive === 'doatsinh' ? ((pl.ready.doatsinh || 0) - pl.pturn) : null;
     el.innerHTML = '<div class="hand">' + cards + '</div>' +
-      '<div class="passive-card" style="--fc:' + f.color + '"><div class="pc-ic">' + I.skillSvg(pl.passive === 'doatsinh' || I.SKILL[pl.passive] ? pl.passive : 'doatsinh', 30) + '</div><div><b>' + I.ui('diamond', 10) + ' ' + (pas ? pas.name : '') + '</b>' + (dsc != null ? ' <small>' + (dsc > 0 ? '· hồi ' + dsc : '· sẵn sàng') + '</small>' : '') + '<div class="muted small">' + (pas ? pas.text : '') + '</div></div></div>' +
+      '<div class="passive-card" title="' + esc(pas ? pas.text : '') + '" style="--fc:' + f.color + '"><div class="pc-ic">' + I.skillSvg(pl.passive === 'doatsinh' || I.SKILL[pl.passive] ? pl.passive : 'doatsinh', 30) + '</div><div><b>' + I.ui('diamond', 10) + ' ' + (pas ? pas.name : '') + '</b>' + (dsc != null ? ' <small>' + (dsc > 0 ? '· hồi ' + dsc : '· sẵn sàng') + '</small>' : '') + '<div class="muted small">' + (pas ? pas.text : '') + '</div></div></div>' +
       (extras ? '<div class="xcards">' + extras + '</div>' : '');
     $$('.scard', el).forEach(function (s) { s.onclick = function () { startSkill(s.dataset.a); }; });
     $$('.xcard', el).forEach(function (b) { b.onclick = function () { if (b.classList.contains('no')) return; var x = b.dataset.x; if (x === 'trade') openTrade(); else setUi({ mode: 'spawn', kind: x }); }; });
@@ -692,7 +810,7 @@
     if (S.meIdx < 0) { el.innerHTML = ''; return; }
     var st = view(), pl = st.players[S.meIdx], mine = S.local && st.phase !== 'act' && !st.pending.length;
     var note = !S.local ? 'Chờ tới lượt bạn' : st.phase === 'act' ? 'Đã qua pha mua (đã hành động)' : 'Kéo quân vào ô sáng ở hàng spawn, hoặc bấm rồi chọn ô';
-    el.innerHTML = '<div class="shop-note">' + note + '</div><div class="shop">' + shopItems().map(function (it) {
+    el.innerHTML = (S.local && st.phase === 'act' ? '<div class="shop-note">Đã qua pha mua</div>' : '') + '<div class="shop">' + shopItems().map(function (it) {
       var price = E.price(st, S.meIdx, it.u), lockAge = U[it.u].age > pl.age, sold = it.u === 'beast' && pl.beast;
       var can = mine && !lockAge && !sold && E.canPay(pl.res, price);
       var on = S.ui.mode === 'place' && S.ui.u === it.u && S.ui.job === it.job;
@@ -790,7 +908,7 @@
     if (!can && mineT && S.local && st.active === S.meIdx) {
       var why = E.actionsLeft(st) <= 0 ? 'Hết hành động lượt này.' : av <= 0 ? 'Đội đã hành động.' : E.isResting(st, t) ? 'Quân mới mua — nghỉ tới lượt sau.' : '';
       if (why) html += '<div class="muted small" style="margin-top:6px">' + why + '</div>';
-    } else if (can) html += '<div class="muted small hint">Kéo quân tới ô sáng, hoặc bấm ô xanh / vòng đỏ.</div>';
+    }
     el.innerHTML = html + '</div>';
     $('#unit-x').onclick = function () { setUi({ mode: 'idle' }); };
     var kr = $('#k-range');

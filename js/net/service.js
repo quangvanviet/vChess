@@ -214,6 +214,13 @@
   Net.addBot = function (code, seat) {
     return Net.B.txn('rooms/' + code + '/seats/' + seat, function (c) { return c ? undefined : Net.user.uid; });
   };
+  /* độ khó bot: chỉ máy chủ phòng cần biết (bot chạy ở đó); công bố vào lobby/{mã}/bots để người khác xem */
+  Net.botLevels = function (code) { try { return JSON.parse(localStorage.getItem('ttkc.botlv.' + code) || '{}'); } catch (e) { return {}; } };
+  Net.setBotLevel = function (code, seat, lv) {
+    var m = Net.botLevels(code); m[seat] = lv;
+    try { localStorage.setItem('ttkc.botlv.' + code, JSON.stringify(m)); } catch (e) { }
+    return Net.B.set('lobby/' + code + '/bots/' + seat, lv).catch(function () { });
+  };
   Net.freeSeat = function (code, seat) { return Net.B.remove('rooms/' + code + '/seats/' + seat); };
   Net.leaveRoom = function (code, room) {
     var u = Net.user, base = 'rooms/' + code;

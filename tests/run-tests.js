@@ -232,8 +232,9 @@ function playGame(mode, seed, facs) {
   let turns = 0;
   while (!st.over && turns < 800) {
     const p = st.active;
-    const cmds = TT.Bot.planTurn(st, p);
-    for (const c of cmds) {
+    const cmds = TT.Bot.planTurn(st, p, (players[p] && players[p].level) || 'medium');
+    for (const c0 of cmds) {
+      const c = Object.assign({ p }, c0);
       const r = E.apply(st, c);
       if (!r.ok) { errs++; console.log('  bot cmd fail', c, r.err); break; }
       st = r.state;
@@ -244,7 +245,7 @@ function playGame(mode, seed, facs) {
   }
   // replay
   let r2 = E.init(setupObj);
-  for (const pkg of log) for (const c of pkg) { const r = E.apply(r2, c); if (r.ok) r2 = r.state; }
+  for (const pkg of log) for (const c of pkg) { const r = E.apply(r2, Object.assign({ p: r2.active }, c)); if (r.ok) r2 = r.state; }
   return { st, same: E.hash(r2) === E.hash(st), turns };
 }
 let replayOK = true;

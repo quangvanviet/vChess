@@ -27,6 +27,8 @@
       var box = $('#modal-box');
       box.innerHTML = html + '<div class="btns">' + (buttons || [['OK', 'gold', true]]).map(function (b, i) { return '<button class="btn ' + (b[1] || '') + '" data-i="' + i + '">' + b[0] + '</button>'; }).join('') + '</div>';
       $('#modal').classList.remove('hidden');
+      var bs = buttons || [['OK', 'gold', true]], cancel = bs.map(function (b) { return b[2]; }).indexOf(false);
+      $('#modal').onclick = function (e) { if (e.target === $('#modal')) { $('#modal').classList.add('hidden'); res(cancel >= 0 ? false : bs[0][2]); } };
       $$('.btns button', box).forEach(function (b) {
         b.onclick = function () { $('#modal').classList.add('hidden'); res((buttons || [['OK', 'gold', true]])[+b.dataset.i][2]); };
       });
@@ -65,10 +67,7 @@
     bgFx();
     Net.init();
     $('#logo-crests').innerHTML = TT.FACTION_ORDER.map(function (f) { return I.crest(f, 74); }).join('');
-    $('#net-badge').innerHTML = Net.B.kind === 'firebase'
-      ? '<span class="dot"></span> Online · Firebase Realtime Database'
-      : '<span class="dot warn"></span> Chế độ demo cục bộ — mở thêm tab để chơi nhiều người trên cùng trình duyệt';
-    if (Net.B.kind === 'firebase') Net.B.onConnected(function (on) { $('#net-badge').innerHTML = on ? '<span class="dot"></span> Online · Firebase' : '<span class="dot warn"></span> Đang kết nối Firebase…'; });
+    if (Net.B.kind === 'firebase') Net.B.onConnected(function (on) { if (!on && App.screen !== 'auth') App.toast('Mất kết nối mạng — đang thử lại…', 'err'); });
     // tab đăng nhập
     $$('#auth-tabs button').forEach(function (b) {
       b.onclick = function () {
@@ -110,35 +109,125 @@
   var lobbyWired = false;
   function initLobbyUI() {
     $$('#lobby-nav button').forEach(function (b) { b.onclick = function () { App.lobbyView(b.dataset.view); }; });
-    $$('#mode-seg button').forEach(function (b) { b.onclick = function () { $$('#mode-seg button').forEach(function (x) { x.classList.toggle('active', x === b); }); }; });
-    $('#form-create').onsubmit = function (e) {
-      e.preventDefault(); var d = new FormData(e.target), btn = $('button.big', e.target);
-      var mode = +$('#mode-seg .active').dataset.mode;
-      var o = { name: String(d.get('name') || '').trim() || ('Phòng của ' + Net.user.name), mode: mode, turnLimitMs: +d.get('turn'), teamMode: !!d.get('teamMode') && mode === 4, ranked: !!d.get('ranked'), secondBonus: !!d.get('secondBonus'), private: !!d.get('private') };
-      if (d.get('teamMode') && mode !== 4) App.toast('2 đấu 2 chỉ áp dụng cho phòng 4 người', '');
-      busy(btn, true);
-      Net.createRoom(o).then(function (code) { try { localStorage.setItem('ttkc.roomName.' + code, o.name); } catch (x) { } App.enterRoom(code); })
-        .catch(function (err) { App.toast('Không tạo được phòng: ' + (err.message || err), 'err', 5000); }).then(function () { busy(btn, false); });
-    };
-    $('#form-join').onsubmit = function (e) { e.preventDefault(); App.join(new FormData(e.target).get('code')); };
+    $('#btn-create').onclick = function () { App.createRoomPopup(); };
+    $('#btn-join-code').onclick = function () { App.joinPopup(); };
     $('#btn-practice').onclick = function () { App.practice(); };
     $('#room-search').oninput = renderRoomList; $('#room-filter').onchange = renderRoomList;
     $('#lobby-chat-form').onsubmit = function (e) {
       e.preventDefault(); var inp = $('input', e.target), v = inp.value.trim(); if (!v) return;
-      inp.value = ''; Net.sendLobbyChat(v).catch(function () { App.toast('Kênh thế giới chưa được bật trong luật Firebase', 'err'); });
+      inp.value = ''; Net.sendLobbyChat(v).catch(function () { App.toast('Kênh thế giới chưa khả dụng', 'err'); });
     };
   }
+  /* ---------- chế độ chơi + bong bóng thông tin (i) ---------- */
+  App.MODES = [
+    { k: 'duel', mode: 2, team: false, n: '1 đấu 1', s: 'Bàn 8×8' },
+    { k: 'three', mode: 3, team: false, n: '3 người', s: 'Chữ thập' },
+    { k: 'ffa', mode: 4, team: false, n: 'Hỗn chiến', s: '4 người' },
+    { k: 'team', mode: 4, team: true, n: '2 đấu 2', s: 'Đồng đội' }
+  ];
+  App.modeOf = function (mode, team) { return App.MODES.filter(function (m) { return m.mode === mode && m.team === !!team; })[0] || App.MODES[0]; };
+  App.INFO = {
+    duel: ['1 đấu 1', 'Bàn 8×8, hai người đối mặt. Hạ Vua đối thủ để thắng. Chế độ cân bằng nhất, hợp để luyện tập và đấu xếp hạng.'],
+    three: ['3 người', 'Bàn chữ thập 14×14, một cánh bỏ trống (Hoang Địa). Người ngồi đối diện cánh trống chịu hai mặt nên được +2 vàng khởi đầu. Người cuối cùng còn Vua thắng.'],
+    ffa: ['Hỗn chiến 4 người', 'Bàn chữ thập 14×14, mỗi người một cánh: hai hàng xóm hai bên và một đối thủ đối diện. Hạ Vua ai thì nhận 3 tài nguyên thưởng; quân của người thua biến mất khỏi bàn. Người cuối cùng còn Vua thắng.'],
+    team: ['2 đấu 2', 'Bốn người chia hai đội, đồng đội ngồi đối diện nhau. Đồng đội không đánh nhau, đi xuyên qua quân của nhau và không bị Thu Thuế/Hối Lộ. Hạ cả hai Vua đội bạn để thắng.'],
+    turn: ['Thời gian mỗi lượt', 'Hết giờ mà chưa kết thúc lượt thì lượt đó bị bỏ qua. Hết giờ 3 lần sẽ bị loại khỏi trận. Chọn 10 phút hoặc 24 giờ để chơi thong thả.'],
+    ranked: ['Giới hạn 80 vòng', 'Hết vòng 80 mà chưa phân thắng bại thì tính điểm: tổng giá trị quân trên bàn cộng tài nguyên còn lại. Ai cao nhất thắng, bằng điểm thì hòa.'],
+    second: ['Bù người đi sau', 'Chỉ áp dụng cho 1 đấu 1: người đi sau nhận thêm +1 vàng khởi đầu để bù lợi thế đi trước.'],
+    priv: ['Phòng riêng', 'Phòng không hiện ở danh sách sảnh. Bạn bè vào bằng mã 6 ký tự.'],
+    easy: ['Bot Dễ', 'Hay đi chưa tối ưu, đôi khi bỏ lỡ nước đánh. Hợp để làm quen luật.'],
+    medium: ['Bot Trung bình', 'Mua quân hợp lý, biết giữ an toàn cho Vua và dùng kỹ năng tộc.'],
+    hard: ['Bot Khó', 'Tính trước từng nước bằng chính lõi luật, mua quân khắc chế đội hình của bạn và săn Vua có tính toán.']
+  };
+  App.infoBtn = function (key) { return '<span class="info-i" role="button" tabindex="0" data-info="' + key + '" title="Xem luật">i</span>'; };
+  function closeInfo() { var p = $('#info-pop'); if (p) p.remove(); }
+  App.showInfo = function (anchor, key) {
+    var inf = App.INFO[key]; if (!inf) return;
+    var had = $('#info-pop'); var same = had && had.dataset.k === key; closeInfo(); if (same) return;
+    var p = document.createElement('div'); p.id = 'info-pop'; p.className = 'info-pop'; p.dataset.k = key;
+    p.innerHTML = '<b>' + inf[0] + '</b><p>' + inf[1] + '</p>';
+    document.body.appendChild(p);
+    var r = anchor.getBoundingClientRect(), w = p.offsetWidth, h = p.offsetHeight, vw = innerWidth, vh = innerHeight;
+    var x = Math.max(8, Math.min(vw - w - 8, r.left + r.width / 2 - w / 2)), y = r.bottom + 8;
+    if (y + h > vh - 8) { y = r.top - h - 8; p.classList.add('up'); }
+    p.style.left = x + 'px'; p.style.top = Math.max(8, y) + 'px';
+    p.style.setProperty('--ax', Math.max(12, Math.min(w - 12, r.left + r.width / 2 - x)) + 'px');
+  };
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('.info-i');
+    if (b) { e.preventDefault(); e.stopPropagation(); App.showInfo(b, b.dataset.info); return; }
+    if (!e.target.closest('#info-pop')) closeInfo();
+  }, true);
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeInfo(); });
+  addEventListener('resize', closeInfo);
+  function segHtml(name, opts, cur) { return '<div class="seg" data-name="' + name + '">' + opts.map(function (o) { return '<button type="button" data-v="' + o[0] + '" class="' + (String(o[0]) === String(cur) ? 'active' : '') + '">' + o[1] + (o[2] ? App.infoBtn(o[2]) : '') + '</button>'; }).join('') + '</div>'; }
+  function wireSeg(pick, cb) {
+    $$('#modal-box .seg').forEach(function (sg) {
+      $$('button', sg).forEach(function (b) {
+        b.onclick = function () { $$('button', sg).forEach(function (x) { x.classList.toggle('active', x === b); }); var v = b.dataset.v; pick[sg.dataset.name] = /^\d+$/.test(v) ? +v : v; if (cb) cb(); };
+      });
+    });
+  }
+  App.createRoomPopup = function () {
+    var pick = { m: 'duel', turn: 90000, ranked: false, second: true, priv: false, name: '' };
+    try { pick = Object.assign(pick, JSON.parse(localStorage.getItem('ttkc.create') || '{}')); } catch (e) { }
+    var tog = function (k, label) { return '<div class="opt-row"><label class="switch"><input type="checkbox" data-k="' + k + '"' + (pick[k] ? ' checked' : '') + '><span></span>' + label + '</label>' + App.infoBtn(k) + '</div>'; };
+    App.modal('<h2>' + I.ui('plus', 18) + ' Tạo phòng</h2>' +
+      '<label class="fl">Tên phòng</label><input id="cr-name" maxlength="28" placeholder="Phòng của ' + esc(Net.user.name) + '" value="' + esc(pick.name || '') + '">' +
+      '<label class="fl">Chế độ</label><div class="mode-grid seg" data-name="m">' + App.MODES.map(function (m) { return '<button type="button" data-v="' + m.k + '" class="mode-card' + (pick.m === m.k ? ' active' : '') + '"><b>' + m.n + '</b><small>' + m.s + '</small>' + App.infoBtn(m.k) + '</button>'; }).join('') + '</div>' +
+      '<label class="fl">Thời gian lượt ' + App.infoBtn('turn') + '</label>' + segHtml('turn', [[60000, '60s'], [90000, '90s'], [180000, '3 phút'], [600000, '10 phút'], [86400000, '24 giờ']], pick.turn) +
+      '<div class="opt-list">' + tog('ranked', 'Giới hạn 80 vòng') + '<div id="cr-second">' + tog('second', 'Bù người đi sau') + '</div>' + tog('priv', 'Phòng riêng') + '</div>',
+      [['Hủy', 'ghost', false], ['Tạo phòng', 'gold', true]]).then(function (ok) {
+      if (!ok) return;
+      pick.name = ($('#cr-name') || {}).value || pick.name;
+      try { localStorage.setItem('ttkc.create', JSON.stringify(pick)); } catch (e) { }
+      var md = App.MODES.filter(function (m) { return m.k === pick.m; })[0] || App.MODES[0];
+      var o = { name: String(pick.name || '').trim() || ('Phòng của ' + Net.user.name), mode: md.mode, turnLimitMs: +pick.turn, teamMode: md.team, ranked: !!pick.ranked, secondBonus: md.mode === 2 && !!pick.second, private: !!pick.priv };
+      var btn = $('#btn-create'); busy(btn, true);
+      Net.createRoom(o).then(function (code) { try { localStorage.setItem('ttkc.roomName.' + code, o.name); } catch (x) { } App.enterRoom(code); })
+        .catch(function (err) { App.toast('Không tạo được phòng: ' + (err.message || err), 'err', 5000); }).then(function () { busy(btn, false); });
+    });
+    var upd = function () { $('#cr-second').classList.toggle('hidden', pick.m !== 'duel'); };
+    wireSeg(pick, upd); upd();
+    $$('#modal-box .switch input').forEach(function (c) { c.onchange = function () { pick[c.dataset.k] = c.checked; }; });
+    $('#cr-name').oninput = function () { pick.name = this.value; };
+    $('#cr-name').onkeydown = function (e) { if (e.key === 'Enter') { e.preventDefault(); $('#modal-box .btns .gold').click(); } };
+  };
+  App.joinPopup = function () {
+    App.modal('<h2>' + I.ui('lock', 18) + ' Vào bằng mã</h2><input id="jn-code" class="code-input" maxlength="6" placeholder="MÃ PHÒNG" autocomplete="off">',
+      [['Hủy', 'ghost', false], ['Vào phòng', 'gold', true]]).then(function (ok) { if (ok) App.join(App._jcode); });
+    var inp = $('#jn-code'); App._jcode = '';
+    inp.oninput = function () { inp.value = inp.value.toUpperCase().replace(/[^A-Z0-9]/g, ''); App._jcode = inp.value; };
+    inp.onkeydown = function (e) { if (e.key === 'Enter') { e.preventDefault(); $('#modal-box .btns .gold').click(); } };
+    setTimeout(function () { inp.focus(); }, 50);
+  };
   App.join = function (code) {
     code = String(code || '').trim().toUpperCase();
     if (code.length !== 6) { App.toast('Mã phòng gồm 6 ký tự', 'err'); return; }
     Net.joinRoom(code).then(function (r) { App.enterRoom(r.code); }).catch(function (err) { App.toast(err.message || String(err), 'err', 4000); });
   };
+  App.LV = [['easy', 'Dễ'], ['medium', 'Trung bình'], ['hard', 'Khó']];
   App.practice = function () {
-    var btn = $('#btn-practice'); busy(btn, true);
-    Net.createRoom({ name: 'Luyện tập', mode: 2, turnLimitMs: 600000, secondBonus: true, private: true })
-      .then(function (code) { return Net.addBot(code, 2).then(function () { App.autoStart = code; App.enterRoom(code); }); })
-      .catch(function (err) { App.toast('Không tạo được phòng luyện tập: ' + (err.message || err), 'err', 5000); })
-      .then(function () { busy(btn, false); });
+    var pick = { n: 1, lv: 'medium' };
+    try { pick = Object.assign(pick, JSON.parse(localStorage.getItem('ttkc.practice') || '{}')); } catch (e) { }
+    App.modal('<h2>' + I.ui('swords', 18) + ' Đấu với Bot</h2>' +
+      '<label class="fl">Số đối thủ</label>' + segHtml('n', [[1, '1 bot', 'duel'], [2, '2 bot', 'three'], [3, '3 bot', 'ffa']], pick.n) +
+      '<label class="fl">Độ khó</label>' + segHtml('lv', App.LV.map(function (l) { return [l[0], l[1], l[0]]; }), pick.lv) +
+      '', [['Hủy', 'ghost', false], ['Bắt đầu', 'gold', true]]).then(function (ok) {
+      if (!ok) return;
+      try { localStorage.setItem('ttkc.practice', JSON.stringify(pick)); } catch (e) { }
+      var btn = $('#btn-practice'); busy(btn, true);
+      var mode = pick.n + 1;
+      Net.createRoom({ name: 'Đấu Bot (' + TT.Bot.levelName(pick.lv) + ')', mode: mode, turnLimitMs: 600000, secondBonus: true, private: true })
+        .then(function (code) {
+          var seats = []; for (var s = 2; s <= mode; s++) seats.push(String(s));
+          return seats.reduce(function (pr, s) { return pr.then(function () { return Net.addBot(code, s); }).then(function () { return Net.setBotLevel(code, s, pick.lv); }); }, Promise.resolve())
+            .then(function () { App.autoStart = code; App.enterRoom(code); });
+        })
+        .catch(function (err) { App.toast('Không tạo được phòng luyện tập: ' + (err.message || err), 'err', 5000); })
+        .then(function () { busy(btn, false); });
+    });
+    wireSeg(pick);
   };
 
   var lobbyList = [], lobbyErr = null;
@@ -152,7 +241,6 @@
       Net.watchLobby(function (list, err) { lobbyList = list || []; lobbyErr = err; renderRoomList(); });
       Net.watchLobbyChat(function (m) { appendChat($('#lobby-chat'), m); });
       Net.watchOnline(function (n) { $('#online-count').textContent = n == null ? '' : n + ' online'; });
-      setTimeout(function () { if (!Net.ext.chat) appendSys($('#lobby-chat'), 'Kênh thế giới cần thêm nút lobbyChat vào luật Firebase (xem database.rules.json).'); }, 2500);
     }
     checkRejoin();
   };
@@ -172,21 +260,23 @@
   };
   function renderRoomList() {
     var el = $('#room-list');
-    if (lobbyErr && !Net.ext.lobby) { el.innerHTML = '<div class="empty">Danh sách phòng cần nút <b>lobby</b> trong luật Firebase.<br><small class="muted">Bạn vẫn có thể vào phòng bằng mã 6 ký tự.</small></div>'; return; }
+    if (lobbyErr && !Net.ext.lobby) { el.innerHTML = '<div class="empty">Chưa tải được danh sách phòng.<br><small class="muted">Bạn vẫn có thể vào phòng bằng mã 6 ký tự.</small></div>'; return; }
     var q = ($('#room-search').value || '').trim().toLowerCase(), m = $('#room-filter').value;
     var list = lobbyList.filter(function (r) {
-      if (m && String(r.mode) !== m) return false;
+      var tm = !!(r.opts || {}).teamMode;
+      if (m === 'team' ? !tm : (m && (String(r.mode) !== m || tm))) return false;
       if (q && (String(r.name || '').toLowerCase().indexOf(q) < 0 && r.code.toLowerCase().indexOf(q) < 0 && String(r.hostName || '').toLowerCase().indexOf(q) < 0)) return false;
       return true;
     });
-    if (!list.length) { el.innerHTML = '<div class="empty">Chưa có phòng nào đang mở.<br><small class="muted">Hãy tạo phòng mới hoặc luyện tập với Bot.</small></div>'; return; }
+    if (!list.length) { el.innerHTML = '<div class="empty">Chưa có phòng nào đang mở</div>'; return; }
     el.innerHTML = list.map(function (r) {
       var pips = ''; for (var i = 0; i < r.mode; i++) pips += '<span class="pip' + (i < (r.count || 0) ? ' on' : '') + '"></span>';
       var o = r.opts || {};
       var full = (r.count || 0) >= r.mode;
+      var md = App.modeOf(r.mode, o.teamMode);
       return '<div class="room-row"><div class="mode">' + r.mode + '<small>người</small></div>' +
         '<div><div class="rn">' + esc(r.name || r.code) + '</div><div class="rm">' + esc(r.hostName || '') + ' · <b>' + r.code + '</b> · ' + fmtTurn(r.turnLimitMs) + '/lượt ' +
-        (r.status === 'playing' ? '<span class="tag live">Đang đấu</span>' : '<span class="tag open">Chờ</span>') + (o.teamMode ? '<span class="tag">2v2</span>' : '') + (o.ranked ? '<span class="tag">80 vòng</span>' : '') + '</div></div>' +
+        (r.status === 'playing' ? '<span class="tag live">Đang đấu</span>' : '<span class="tag open">Chờ</span>') + '<span class="tag">' + md.n + App.infoBtn(md.k) + '</span>' + (o.ranked ? '<span class="tag">80 vòng</span>' : '') + '</div></div>' +
         '<div class="pips">' + pips + '</div>' +
         '<button class="btn ' + (full || r.status !== 'lobby' ? 'ghost' : 'gold') + '" data-code="' + r.code + '"' + (r.status !== 'lobby' || full ? ' disabled' : '') + '>Vào</button></div>';
     }).join('');
@@ -225,7 +315,7 @@
     var el = $('#view-ranks');
     el.innerHTML = '<div class="panel"><h2>Bảng xếp hạng</h2><div class="muted">Đang tải…</div></div>';
     Net.leaderboard().then(function (list) {
-      if (!list) { el.innerHTML = '<div class="panel"><h2>Bảng xếp hạng</h2><p class="muted">Cần nút <b>users</b> (có .indexOn rating) trong luật Firebase.</p></div>'; return; }
+      if (!list) { el.innerHTML = '<div class="panel"><h2>Bảng xếp hạng</h2><p class="muted">Bảng xếp hạng chưa khả dụng.</p></div>'; return; }
       el.innerHTML = '<div class="panel"><h2>Bảng xếp hạng — Top 20</h2><table class="rank-table"><tr><th>#</th><th>Người chơi</th><th>Điểm</th><th>Thắng</th><th>Số trận</th><th>Tỉ lệ</th></tr>' +
         (list.length ? list.map(function (r, i) { return '<tr><td><b>' + (i + 1) + '</b></td><td>' + esc(r.name) + (Net.user && r.uid === Net.user.uid ? ' <span class="tag open">bạn</span>' : '') + '</td><td>' + (r.rating || 1000) + '</td><td>' + (r.wins || 0) + '</td><td>' + (r.games || 0) + '</td><td>' + (r.games ? Math.round(100 * (r.wins || 0) / r.games) + '%' : '—') + '</td></tr>'; }).join('') : '<tr><td colspan="6" class="muted">Chưa có dữ liệu</td></tr>') + '</table></div>';
     });
@@ -235,7 +325,7 @@
     Promise.all([Net.getProfile(), Net.history()]).then(function (r) {
       var p = r[0] || {}, h = r[1] || []; App.profile = p; renderMe();
       var av = (p.avatar || 0) % I.AVATARS.length;
-      el.innerHTML = '<div class="panel profile-card"><div class="profile-hero"><div class="avatar">' + I.AVATARS[av] + '</div><h2>' + esc(Net.user.name) + '</h2><div class="muted small">' + (Net.user.guest ? 'Tài khoản khách' : esc(Net.user.email)) + '</div>' +
+      el.innerHTML = '<div class="panel profile-card"><div class="profile-hero"><div class="avatar">' + I.avatar(av) + '</div><h2>' + esc(Net.user.name) + '</h2><div class="muted small">' + (Net.user.guest ? 'Tài khoản khách' : esc(Net.user.email)) + '</div>' +
         '<div class="avatar-pick">' + I.AVATARS.map(function (a, i) { return '<button data-a="' + i + '" class="' + (i === av ? 'active' : '') + '">' + I.avatar(i) + '</button>'; }).join('') + '</div>' +
         '<form id="rename" class="row" style="margin-top:12px"><input name="n" maxlength="20" value="' + esc(Net.user.name) + '"><button class="btn">Đổi tên</button></form>' +
         '<button class="btn ghost wide" id="btn-sound">' + (TT.Sound.on ? I.ui('sound') + ' Âm thanh: Bật' : I.ui('mute') + ' Âm thanh: Tắt') + '</button>' +
@@ -259,7 +349,7 @@
     };
     $('#room-chat-form').onsubmit = function (e) {
       e.preventDefault(); var inp = $('input', e.target), v = inp.value.trim(); if (!v) return;
-      inp.value = ''; Net.sendRoomChat(App.code, v).catch(function () { App.toast('Chat phòng cần nút chat trong luật Firebase', 'err'); });
+      inp.value = ''; Net.sendRoomChat(App.code, v).catch(function () { App.toast('Chat chưa khả dụng', 'err'); });
     };
     $('#btn-ready').onclick = function () {
       var me = myRec(); if (!me) return;
@@ -279,6 +369,8 @@
     $('#room-chat').innerHTML = ''; $('#room-name').textContent = 'Phòng'; $('#room-code').textContent = code;
     App.show('room');
     App.unsubs.push(Net.watchRoom(code, onRoom));
+    App.remoteBotLv = {};
+    App.unsubs.push(Net.B.on('lobby/' + code + '/bots', function (v) { App.remoteBotLv = v || {}; if (App.room) renderRoom(App.room); if (TT.Game && TT.Game.onBotLv) TT.Game.onBotLv(App.remoteBotLv); }));
     App.unsubs.push(Net.watchRoomChat(code, function (m) { appendChat($('#room-chat'), m); if (TT.Game && TT.Game.onChat) TT.Game.onChat(m); }));
     App.hb = setInterval(function () { Net.heartbeat(code); }, 15000);
     Net.heartbeat(code);
@@ -345,7 +437,8 @@
     var opt = Net.decodeSeed(meta.seed), occ = occupants(room);
     var rn; try { rn = localStorage.getItem('ttkc.roomName.' + App.code); } catch (e) { }
     $('#room-name').textContent = rn || ('Phòng ' + meta.mode + ' người');
-    $('#room-opts').innerHTML = '<span class="tag">' + meta.mode + ' người</span><span class="tag">' + fmtTurn(meta.turnLimitMs) + '/lượt</span>' + (opt.teamMode ? '<span class="tag">2 đấu 2</span>' : '') + (opt.ranked ? '<span class="tag">80 vòng</span>' : '') + (opt.secondBonus && meta.mode === 2 ? '<span class="tag">Bù +1V</span>' : '') + '<span class="tag">' + esc(meta.ruleVersion) + '</span>';
+    var rmd = App.modeOf(meta.mode, opt.teamMode);
+    $('#room-opts').innerHTML = '<span class="tag">' + rmd.n + App.infoBtn(rmd.k) + '</span><span class="tag">' + fmtTurn(meta.turnLimitMs) + '/lượt' + App.infoBtn('turn') + '</span>' + (opt.ranked ? '<span class="tag">80 vòng' + App.infoBtn('ranked') + '</span>' : '') + (opt.secondBonus && meta.mode === 2 ? '<span class="tag">Bù +1V' + App.infoBtn('second') + '</span>' : '') + '<span class="tag">' + esc(meta.ruleVersion) + '</span>';
     var html = '';
     for (var n = 1; n <= 4; n++) {
       var s = String(n), o = occ[s], side = meta.mode === 2 ? [0, 2][n - 1] : n - 1;
@@ -375,7 +468,8 @@
         '<div class="side">' + sideName + '</div>' +
         '<div class="art">' + I.crest(f, 150) + '</div>' +
         (opt.teamMode ? '<span class="tag team-tag" style="top:40px">' + (n % 2 ? 'Đội A' : 'Đội B') + '</span>' : '') +
-        '<div class="ready ' + (ready ? 'yes' : 'no') + '">' + (o.kind === 'bot' ? 'Bot' : ready ? 'Sẵn sàng' : 'Chưa sẵn') + '</div>' +
+        '<div class="ready ' + (ready ? 'yes' : 'no') + '">' + (o.kind === 'bot' ? 'Bot · ' + TT.Bot.levelName(App.botLv(s)) : ready ? 'Sẵn sàng' : 'Chưa sẵn') + '</div>' +
+        (o.kind === 'bot' && host ? '<div class="bot-lv">' + App.LV.map(function (l) { return '<button data-lv="' + l[0] + '" data-s="' + s + '" class="' + (App.botLv(s) === l[0] ? 'active' : '') + '">' + l[1] + '</button>'; }).join('') + '</div>' : '') +
         '<div class="info"><div class="fac">' + fd.name + '</div><div class="pname">' + esc(name) + (stale ? ' <small class="muted" title="Mất kết nối">' + I.ui('warn', 14, '#e0a000') + '</small>' : '') + '</div>' +
         '<div class="chips"><span class="chip">' + I.ui('diamond', 10) + ' ' + (pd ? pd.name : '') + '</span><span class="chip">' + I.svg('res' + home, null, 12) + ' Ô nhà: ' + TT.RES_NAME[home] + '</span></div></div>' + t2 + '</div>';
     }
@@ -383,10 +477,11 @@
     $$('#seats [data-act]').forEach(function (b) {
       b.onclick = function () {
         var s = b.dataset.s, a = b.dataset.act;
-        var p = a === 'sit' ? Net.changeSeat(App.code, me.seat, s) : a === 'bot' ? Net.addBot(App.code, s) : Net.freeSeat(App.code, s);
+        var p = a === 'sit' ? Net.changeSeat(App.code, me.seat, s) : a === 'bot' ? Net.addBot(App.code, s).then(function () { return Net.setBotLevel(App.code, s, App.botLv(s)); }) : Net.freeSeat(App.code, s);
         p.catch(function (e) { App.toast(e.message || String(e), 'err'); });
       };
     });
+    $$('#seats .bot-lv button').forEach(function (b) { b.onclick = function () { Net.setBotLevel(App.code, b.dataset.s, b.dataset.lv).then(function () { renderRoom(App.room); }); renderRoom(App.room); }; });
     renderLoadout(room, me, host);
     // nút
     var humans = Object.keys(occ).filter(function (k) { return occ[k].kind === 'human'; });
@@ -397,11 +492,12 @@
     $('#btn-ready').style.display = host ? 'none' : '';
     $('#btn-start').disabled = !canStart;
     if (me) { $('#btn-ready').textContent = me.ready ? 'Hủy sẵn sàng' : 'Sẵn sàng'; $('#btn-ready').className = 'btn big ' + (me.ready ? 'ghost' : 'teal'); }
-    $('#room-status').innerHTML = filled < meta.mode ? 'Đang chờ người chơi (' + filled + '/' + meta.mode + ') — gửi mã <b style="color:var(--gold)">' + App.code + '</b> cho bạn bè' + (host ? ' hoặc thêm Bot.' : '.') :
-      !allReady ? 'Chờ mọi người bấm Sẵn sàng…' : host ? '<span style="color:#1f8a49">Tất cả đã sẵn sàng — bắt đầu thôi!</span>' : 'Chờ chủ phòng bắt đầu…';
+    $('#room-status').innerHTML = filled < meta.mode ? 'Đang chờ người chơi ' + filled + '/' + meta.mode + ' · mã <b>' + App.code + '</b>'  :
+      !allReady ? 'Chờ mọi người sẵn sàng' : host ? '<span style="color:#1f8a49">Đã đủ người</span>' : 'Chờ chủ phòng bắt đầu';
     $('#btn-start').classList.toggle('btn-end-pulse', canStart);
   }
 
+  App.botLv = function (seat) { var loc = Net.botLevels(App.code)[seat]; return loc || (App.remoteBotLv || {})[seat] || 'medium'; };
   function renderLoadout(room, me, host) {
     var el = $('#loadout');
     if (!me) { el.innerHTML = '<p class="muted">Đang tải…</p>'; return; }
@@ -411,11 +507,11 @@
     if (el.dataset.key === key) return; el.dataset.key = key;
     el.innerHTML = '<div class="lo-grid' + (locked ? ' locked' : '') + '"><div>' +
       '<h3>Chọn tộc</h3><div class="fac-pick">' + TT.FACTION_ORDER.map(function (k) { return '<div class="fac-opt' + (k === f ? ' active' : '') + '" data-f="' + k + '">' + I.crest(k, 58) + '<div class="n">' + F[k].short + '</div></div>'; }).join('') + '</div>' +
-      '<div class="fac-desc">' + fd.theme + '</div><div class="weak">Điểm yếu — <b>' + fd.weakness.name + '</b>: ' + fd.weakness.text + '</div>' +
-      '<h3>Ô nhà <small class="muted">(như phép bổ trợ)</small></h3><div class="home-pick">' + ['V', 'T', 'G'].map(function (r) { return '<div class="home-opt' + (r === home ? ' active' : '') + '" data-h="' + r + '">' + I.svg('res' + r, null, 34) + TT.RES_NAME[r] + '</div>'; }).join('') + '</div>' +
-      '</div><div><h3>Nội tại <small class="muted">(bảng ngọc — chọn 1)</small></h3><div class="rune-row">' + fd.passives.map(function (p) { return '<div class="rune' + (p.id === me.passive ? ' active' : '') + '" data-p="' + p.id + '"><div class="rn">' + p.name + '</div><div class="rt">' + p.text + '</div></div>'; }).join('') + '</div>' +
-      '<h3>Kích hoạt <small class="muted">(cố định theo tộc)</small></h3><div class="spells">' + fd.actives.map(function (a) { return '<div class="spell"><div class="k">' + a.key + '</div><div><div class="sn">' + a.name + ' <small class="muted">· hồi ' + a.cd + '</small></div><div class="sd">' + a.text + '</div></div></div>'; }).join('') + '</div>' +
-      '<p class="muted small" style="margin:0">' + (locked ? I.ui('lock', 12) + ' Đã sẵn sàng — hủy sẵn sàng để đổi lựa chọn.' : 'Mẹo: xem chi tiết quân từng tộc trong mục Bách khoa ở sảnh.') + '</p></div></div>';
+      '<div class="weak">Điểm yếu — <b>' + fd.weakness.name + '</b>: ' + fd.weakness.text + '</div>' +
+      '<h3>Ô nhà</h3><div class="home-pick">' + ['V', 'T', 'G'].map(function (r) { return '<div class="home-opt' + (r === home ? ' active' : '') + '" data-h="' + r + '">' + I.svg('res' + r, null, 34) + TT.RES_NAME[r] + '</div>'; }).join('') + '</div>' +
+      '</div><div><h3>Nội tại</h3><div class="rune-row">' + fd.passives.map(function (p) { return '<div class="rune' + (p.id === me.passive ? ' active' : '') + '" data-p="' + p.id + '"><div class="rn">' + p.name + '</div><div class="rt">' + p.text + '</div></div>'; }).join('') + '</div>' +
+      '<h3>Kích hoạt</h3><div class="spells">' + fd.actives.map(function (a) { return '<div class="spell"><div class="k">' + a.key + '</div><div><div class="sn">' + a.name + ' <small class="muted">· hồi ' + a.cd + '</small></div><div class="sd">' + a.text + '</div></div></div>'; }).join('') + '</div>' +
+      (locked ? '<p class="muted small" style="margin:0">' + I.ui('lock', 12) + ' Đã khóa lựa chọn</p>' : '') + '</div></div>';
     function save(patch) {
       var nf = patch.race ? Net.RACE_INV[patch.race] : f;
       try { localStorage.setItem('ttkc.loadout', JSON.stringify({ faction: nf, passive: patch.passive || me.passive, home: patch.homeTileType ? Net.HOME_INV[patch.homeTileType] : home })); } catch (e) { }
