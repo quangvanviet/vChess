@@ -1,8 +1,8 @@
-# Tứ Tộc Kỳ Chiến 2.0 — Webgame auto-battler online
+# Tứ Tộc Kỳ Chiến 3.0 — Webgame auto-battler online
 
-Cờ **tự động đánh** 2–4 người, 10 ngày, 4 tộc, chạy hoàn toàn trên trình duyệt. Mỗi ngày mọi người **cùng lúc chuẩn bị** (mua quân ở Băng ghế, trang bị, Lõi, lên Đời, xếp đội, cắm cờ) rồi xem **giao tranh tự động** trên chiến trường 3D. Firebase chỉ lưu phòng và các gói đội hình theo kiểu **commit–reveal**; mỗi máy tự chạy cùng một **mô phỏng xác định** nên ai cũng thấy cùng một trận.
+Cờ **tự động đánh** 2–4 người, 10 ngày, 4 tộc, chạy hoàn toàn trên trình duyệt. Mỗi ngày mọi người **cùng lúc chuẩn bị** (mua tướng và lính, trang bị, Lõi bằng Vàng, lên Đời, xếp đạo quân, cắm cờ hành quân) rồi xem **giao tranh tự động** trên chiến trường 3D. Firebase chỉ lưu phòng và các gói đội hình theo kiểu **commit–reveal**; mỗi máy tự chạy cùng một **mô phỏng xác định** nên ai cũng thấy cùng một trận.
 
-Thiết kế đầy đủ: `tu-toc-ky-chien-gdd-2.0.md` (sinh lại từ số liệu thật bằng `node tools/gen-gdd.js`). Bản luật 1.x cũ: `tu-toc-ky-chien-gdd.md`.
+Thiết kế đầy đủ: `tu-toc-ky-chien-gdd-3.0.md` (sinh lại từ số liệu thật bằng `node tools/gen-gdd.js`). Bản luật 1.x cũ (tham khảo): `tu-toc-ky-chien-gdd.md`.
 
 ## Chạy thử ngay (không cần mạng)
 
@@ -61,28 +61,62 @@ js/core/bot.js             bot 3 mức (Khó mô phỏng 5 biến thể đội h
 js/net/firebase-config.js  cấu hình Firebase
 js/net/db.js               lớp lưu trữ: Firebase RTDB hoặc cục bộ (BroadcastChannel)
 js/net/service.js          tài khoản, hồ sơ, sảnh, phòng/ghế, chat, commit–reveal theo ngày
-js/ui/models.js            44 mẫu quân 3D khối bo góc + quái, viền đậm, chibi
+js/ui/models.js            44 mẫu quân 3D low-poly chibi (tướng/lính) + quái: tay chân capsule, da/vải mượt, giáp/vũ khí mặt phẳng, viền
 js/ui/field3d.js           chiến trường 3D: địa hình, camera, hoạt ảnh, VFX, thanh máu
 js/ui/icons.js, sound.js   biểu tượng SVG, âm thanh
 js/ui/content.js           Hướng dẫn và Bách khoa (đọc số liệu từ data.js)
 js/ui/app.js               đăng nhập, sảnh, tạo phòng, phòng chờ (tộc, thiên phú, trang bị đầu)
 js/ui/game.js              trận đấu: điều phối ngày, HUD chuẩn bị, giao tranh, kết quả
-js/vendor/                 Firebase JS SDK 10.14 (compat) + Three.js r158 — không cần CDN
-tests/run-tests.js         `node tests/run-tests.js` — 56 kiểm tra (kinh tế, gói, xác định, ván bot)
+js/vendor/                 Firebase JS SDK 10.14 (compat) + three-bundle.min.js (Three.js r158 + HDRI + hậu kỳ) — không cần CDN
+assets/hdri/                ánh sáng môi trường HDRI (Poly Haven, CC0)
+tools/build.js             bản phát hành: gộp + làm rối mã + khoá tên miền → dist/
+tests/run-tests.js         `node tests/run-tests.js` — 63 kiểm tra (Vàng, tướng/lính, tủ đồ, gói chống gian lận, ván bot)
+tests/fuzz.js              thao tác ngẫu nhiên → gói → kiểm tra lại phải khớp
 tests/balance.js, duel.js  mô phỏng cân bằng tộc / bot
 tests/gallery.html         xem 44 mẫu 3D; tests/battle.html xem giao tranh (?mode=2&day=4)
 tools/gen-gdd.js           sinh tài liệu thiết kế từ data.js
 database.rules.json        luật Realtime Database
 ```
 
-## Điều khiển trong trận
+## Điều khiển trong trận (chỉ cần chạm / chuột trái)
 
-- **Mua quân**: kéo thẻ ở **Băng ghế** (dưới giữa) thả vào vùng xuất quân sáng màu; thả vào đội cùng loại để thêm quân.
-- **Xếp đội**: kéo đội sang ô khác (lên đội cùng loại = gộp, khác loại = đổi chỗ). Kéo về Băng ghế hoặc phím **Delete** để bán (hoàn 100%).
-- **Trang bị / Lõi**: cửa hàng bên phải. Kéo trang bị thả lên đội; bấm Lõi để mua; khóa / đổi bảng Lõi.
-- **Lên Đời**: nút **+4 EXP** ở bảng thông tin góc trên trái.
-- **Bảng Đội** (bấm vào đội): chỉ số thực, tư thế, tách đội, cắm cờ Xanh / Đỏ / Vàng.
-- **Camera**: kéo chỗ trống để dời, chuột phải / Shift + kéo để xoay, lăn chuột để phóng to (góc nhìn tự hạ thấp khi phóng to); điện thoại: một ngón dời, hai ngón phóng to / xoay. **H** về góc nhìn mặc định.
-- **Sẵn sàng** (Space) khi xong; bấm lại để sửa trước khi khóa. **Ctrl+Z** hoàn tác.
-- Giao tranh: tốc độ ×1 / ×2 / ×4 (phím 1/2/4) hoặc bỏ qua.
+- **Thanh dưới** gộp mọi thứ cần mua, có 3 tab (vuốt ngang nếu nhiều thẻ): **Tướng** · **Lõi** · **Trang bị**. Giá là số trong nền tròn ở góc trên trái icon; rê chuột hoặc chạm để xem thông tin.
+- **Mua tướng**: chạm thẻ rồi chạm vùng xuất quân (hoặc kéo thả). Mỗi tướng là một đạo quân.
+- **Mua lính**: chạm một tướng trên sân → thanh dưới chuyển sang tab **Lính** của tướng đó → chạm icon lính (hoặc **+5** / **Tối đa**); lính tự nhập vào đạo quân.
+- **Menu tướng** (hiện trên đầu tướng khi chọn): Di chuyển · Chiến thuật · Hành quân (cắm cờ Xanh / Đỏ / Vàng) · + Lính. Bảng thông tin tự đặt sang bên không che tướng; điện thoại có nút **Chi tiết**.
+- **Bán**: trong bảng tướng — **Bán lính** (kéo / gõ số lượng, Bán hết) hoặc **Bán tướng** (cả đạo quân + trang bị đang đeo). Hoàn 100% giá mua.
+- **Trang bị**: đang chọn tướng thì mua xong đeo ngay (tối đa 3); không thì vào **tủ đồ 9 ô** (bên phải thanh dưới). **Lõi** mua là có hiệu lực ngay.
+- **Lên Đời**: nút tròn **Đời** ở góc trái thanh dưới (phím F).
+- **Camera**: kéo chỗ trống để dời, chuột phải / Shift + kéo để xoay, lăn chuột để phóng to; điện thoại: một ngón dời, hai ngón phóng to / xoay. **H** về góc nhìn mặc định.
+- **Sẵn sàng** (Space) khi xong; bấm lại để sửa trước khi khóa. **Ctrl+Z** hoàn tác. **Q** đổi tab, **D** Lõi/Trang bị, **Esc** bỏ chọn.
+- Giao tranh: giao diện tự trượt ra ngoài cho thoáng; tốc độ ×1 / ×2 / ×4 (phím 1/2/4) hoặc bỏ qua.
 - Rê chuột / giữ ngón tay lên quân, địa hình, trang bị, Lõi để xem mô tả.
+
+
+## Bảo vệ mã nguồn khi đăng web (khuyến nghị)
+
+Mã chạy trên trình duyệt **không thể giấu tuyệt đối** — trình duyệt phải tải được mã thì mới chạy được. Bản dựng phát hành làm cho việc lấy về, đọc hiểu, sửa và dựng lại trên web khác **tốn công hơn rất nhiều**:
+
+```bash
+npm i                                                    # một lần: esbuild + javascript-obfuscator
+node tools/build.js --domain=tenban.github.io,tenban.web.app
+# đăng thư mục dist/ (KHÔNG đăng thư mục gốc chứa mã nguồn)
+```
+
+Dùng Firebase Hosting thì sửa `firebase.json` → `"public": "dist"` rồi `firebase deploy`. Dùng GitHub Pages thì đẩy nội dung `dist/` lên nhánh/repo dùng cho Pages.
+
+Bản dựng làm gì:
+- Gộp 16 file mã game thành **một file** tên ngẫu nhiên, thu gọn, **làm rối** (đổi tên biến thành mã hex, mã hoá chuỗi, làm phẳng luồng điều khiển nhẹ, **tự vệ**: định dạng lại / sửa file thì ngừng chạy).
+- **Khoá tên miền**: chép `dist/` sang web khác (hoặc mở bằng file:///) sẽ ra trang trắng. Thêm `--nolocal` để cấm cả localhost.
+- Chặn web lạ **nhúng** trang của bạn vào iframe.
+- Bỏ chú thích HTML, thu gọn CSS, tên file theo mã băm.
+- Tuỳ chọn `--light`: làm rối nhẹ hơn nếu máy yếu thấy chậm.
+
+Việc nên làm thêm ở Firebase Console (chống dùng trộm dự án Firebase của bạn):
+1. **Authentication → Settings → Authorized domains**: chỉ để tên miền của bạn (xoá các miền không dùng).
+2. **App Check** (reCAPTCHA v3/Enterprise) → bật **Enforce** cho Realtime Database: web nhái dùng chung cấu hình Firebase sẽ bị từ chối.
+3. **Google Cloud Console → APIs & Services → Credentials**: giới hạn API key theo *HTTP referrer* là tên miền của bạn.
+4. Luật Realtime Database (`database.rules.json`) chỉ cho ghi đúng ghế của mình — đã có sẵn, nhớ **Publish**.
+5. Đặt repo GitHub ở chế độ **Private** nếu dùng GitHub Pages trả phí / hoặc dùng Firebase Hosting (chỉ đăng `dist/`).
+
+Gian lận trong trận đã được chặn ở tầng luật chơi: mỗi máy tự kiểm tra lại gói đội hình của đối thủ (ngân sách Vàng, Đời, trang bị, Lõi, vị trí) — gói sai bị loại.

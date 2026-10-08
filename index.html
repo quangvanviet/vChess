@@ -156,19 +156,22 @@
       </div>
     </div>
   </div>
-  <!-- bản thân -->
-  <aside class="hud win hud-me" id="g-me"></aside>
-  <!-- người chơi -->
+  <!-- người chơi: thẻ nhỏ góc phải, chạm để xem đầy đủ -->
   <aside class="hud hud-players" id="g-players"></aside>
-  <!-- bảng đội đang chọn -->
-  <div class="hud win hud-unit hidden" id="g-squad"></div>
-  <!-- thanh cắm cờ -->
+  <!-- thông báo chế độ thao tác -->
+  <div class="hud mode-pill hidden" id="g-mode"></div>
+  <!-- bảng thông tin tướng (tự đặt trái/phải để không che tướng) -->
+  <div class="hud win hud-info hidden" id="g-info"></div>
+  <!-- menu ngang nổi trên đầu tướng -->
+  <div class="hud act-menu hidden" id="g-act"></div>
+  <!-- thanh hành quân (cắm cờ) -->
   <div class="hud flag-bar hidden" id="flag-bar"></div>
-  <!-- nhật ký + chat -->
+  <!-- nhật ký + chat (bật/tắt) -->
+  <button class="hud-btn chat-btn" id="btn-chat" title="Nhật ký và chat"><i data-ic="chat" data-s="20"></i></button>
   <div class="hud win hud-chat" id="g-chatbox">
     <div class="win-title">
       <div class="tabs mini" id="log-tabs"><button data-t="log" class="active">Nhật ký</button><button data-t="chat">Chat</button></div>
-      <button class="win-x" id="chat-toggle" title="Thu gọn / mở rộng"><i data-ic="down" data-s="12"></i></button>
+      <button class="win-x" id="chat-x" title="Đóng"><i data-ic="close" data-s="12"></i></button>
     </div>
     <div class="chat-body">
       <div class="chat-log" id="g-log"></div>
@@ -176,19 +179,15 @@
       <form class="chat-form hidden" id="g-chat-form"><input maxlength="200" placeholder="Nhắn trong trận…"><button class="btn small">Gửi</button></form>
     </div>
   </div>
-  <!-- băng ghế: mua quân -->
-  <div class="hud bench" id="g-bench"></div>
-  <!-- cửa hàng: trang bị / lõi -->
-  <div class="hud hud-dock" id="g-dock">
-    <div class="dock-tabs">
-      <button data-d="item" class="active"><i data-ic="shield" data-s="14"></i> Trang bị</button>
-      <button data-d="core"><i data-ic="diamond" data-s="14"></i> Lõi</button>
-      <button class="dock-hide" id="dock-hide" title="Thu gọn"><i data-ic="down" data-s="12"></i></button>
+  <!-- cửa hàng gộp: Lõi + Trang bị (bật/tắt) -->
+  <!-- thanh dưới: bản thân · Tướng/Lính · tủ đồ · cửa hàng -->
+  <div class="hud game-bar" id="g-bar">
+    <div class="gb-me" id="gb-me"></div>
+    <div class="gb-buy">
+      <div class="gb-tabs" id="gb-tabs"></div>
+      <div class="gb-cards" id="gb-cards"></div>
     </div>
-    <div class="dock-body">
-      <div id="g-items"></div>
-      <div id="g-cores" class="hidden"></div>
-    </div>
+    <div class="gb-inv" id="gb-inv" title="Tủ đồ: trang bị chưa đeo và Lõi (Lõi trong tủ là có hiệu lực)"></div>
   </div>
   <div class="drag-ghost hidden" id="drag-ghost"></div>
   <div class="center-msg hidden" id="center-msg"></div>
@@ -215,7 +214,7 @@
 <script src="js/net/service.js"></script>
 <script src="js/ui/icons.js"></script>
 <script src="js/ui/sound.js"></script>
-<script src="js/vendor/three.min.js"></script>
+<script src="js/vendor/three-bundle.min.js"></script>
 <script src="js/ui/models.js"></script>
 <script src="js/ui/field3d.js"></script>
 <script src="js/ui/content.js"></script>
