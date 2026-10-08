@@ -1,0 +1,14 @@
+{
+  "name": "tu-toc-ky-chien",
+  "version": "3.0.0",
+  "private": true,
+  "description": "Tứ Tộc Kỳ Chiến — webgame auto-battler",
+  "scripts": {
+    "test": "node tests/run-tests.js",
+    "build": "node tools/build.js"
+  },
+  "devDependencies": {
+    "esbuild": "0.19.12",
+    "javascript-obfuscator": "4.1.1"
+  }
+}

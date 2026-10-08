@@ -1,0 +1,18 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Battle test</title>
+<link rel="stylesheet" href="../css/style.css">
+<style>html,body{margin:0;height:100%;overflow:hidden} #w{position:fixed;inset:0} .field-ov{position:absolute;inset:0;pointer-events:none}</style></head><body>
+<div id="w"><canvas id="c"></canvas></div>
+<script src="../js/vendor/three-bundle.min.js"></script>
+<script src="../js/core/data.js"></script><script src="../js/core/maps.js"></script><script src="../js/core/prep.js"></script><script src="../js/core/battle.js"></script><script src="../js/core/match.js"></script><script src="../js/core/bot.js"></script>
+<script src="../js/ui/icons.js"></script><script src="../js/ui/models.js"></script><script src="../js/ui/field3d.js"></script>
+<script>
+var TT=window.TT, q=new URLSearchParams(location.search), mode=+(q.get('mode')||4), day=+(q.get('day')||6);
+var races=mode===2?['dragon','fairy']:['dragon','human','fairy','demon'].slice(0,mode);
+var M=TT.Match.create({seed:+(q.get('seed')||31),mode:mode,players:races.map(function(r,i){return {seat:i+1,name:'B'+(i+1),race:r,start:'gold',bot:'medium'};})});
+for(var d=1;d<=day;d++){ TT.Match.beginDay(M); M.players.forEach(function(p,i){ var pk=TT.Bot.makePackage(M,p.seat,'medium'); var r=TT.Prep.applyPackage(p,pk,TT.Match.ctx(M,p)); M.players[i]=Object.assign(r.p,{side:p.side,team:p.team}); }); if(d<day){ var Bx=TT.Battle.create(TT.Match.battleInput(M)); TT.Match.endDay(M,Bx.run()); } }
+var f=new TT.Field3D(document.getElementById('c'),document.getElementById('w'));
+f.setMap(M.map,{mode:mode,zones:M.players.map(function(p){var z=TT.zoneOf(mode,p.side); return Object.assign({color:TT.SEAT_COLORS[p.seat],mine:p.seat==='1'},z);})});
+f.setView(0);
+if(q.get('prep')){ var list=[]; var P=M.players[0]; P.squads.forEach(function(s){ var pos=TT.Battle.formation(M.map,P.side,s.t,s.n,s.x,s.y); pos.forEach(function(p,i){ list.push({id:s.id+'-'+i,race:P.race,role:s.t,x:p[0]/1000,y:p[1]/1000,face:Math.PI,seat:P.seat,cap:i===0,items:i===0?s.it:null,sq:s.id,rad:TT.ROLES[s.t].rad}); }); }); f.setView(0, TT.zoneOf(mode,0)); f.setPrepUnits(list); if(q.get('zoom')){f.RT=+q.get('zoom');} window.DONE=true; }
+else { var B=TT.Battle.create(TT.Match.battleInput(M)); window.ENDED=false; f.startBattle(B,{speed:+(q.get('speed')||1),onEnd:function(r){window.ENDED=r;}}); if(q.get('zoom')) { f.RT=+q.get('zoom'); } if(q.get('follow')) setInterval(function(){ var x=0,y=0,n=0; B.units.forEach(function(u){ if(u.alive&&u.seat==='1'){x+=u.x;y+=u.y;n++;} }); if(n) f.panT={x:f.wx(x/n/1000), z:f.wz(y/n/1000)}; },500); window.DONE=true; }
+</script></body></html>
