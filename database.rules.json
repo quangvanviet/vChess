@@ -154,6 +154,41 @@
               ".validate": false
             }
           }
+        },
+        "days": {
+          ".read": "root.child('rooms').child($roomId).child('players').child(auth.uid).exists()",
+          "$day": {
+            "c": {
+              "$seat": {
+                ".write": "auth != null && root.child('rooms').child($roomId).child('seats').child($seat).val() === auth.uid && !root.child('rooms').child($roomId).child('days').child($day).child('lock').exists()",
+                ".validate": "newData.isString() && newData.val().length >= 8 && newData.val().length <= 64"
+              }
+            },
+            "r": {
+              "$seat": {
+                ".write": "auth != null && root.child('rooms').child($roomId).child('seats').child($seat).val() === auth.uid && !data.exists() && root.child('rooms').child($roomId).child('days').child($day).child('lock').exists()",
+                ".validate": "newData.hasChildren(['p','n']) && newData.child('p').isString() && newData.child('p').val().length <= 12000 && newData.child('n').isString() && newData.child('n').val().length <= 64"
+              }
+            },
+            "lock": {
+              ".write": "auth != null && root.child('rooms').child($roomId).child('players').child(auth.uid).exists() && !data.exists()",
+              ".validate": "newData.hasChildren(['at','seats']) && newData.child('at').isNumber() && newData.child('seats').isString()"
+            },
+            "fin": {
+              ".write": "auth != null && root.child('rooms').child($roomId).child('players').child(auth.uid).exists() && !data.exists()",
+              ".validate": "newData.hasChildren(['at','seats']) && newData.child('at').isNumber() && newData.child('seats').isString()"
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        },
+        "quit": {
+          ".read": "root.child('rooms').child($roomId).child('players').child(auth.uid).exists()",
+          "$seat": {
+            ".write": "auth != null && root.child('rooms').child($roomId).child('seats').child($seat).val() === auth.uid",
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 20"
+          }
         }
       }
     },

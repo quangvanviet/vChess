@@ -13,22 +13,18 @@
   Net.HOME = { V: 'gold', T: 'food', G: 'wood' };
   Net.HOME_INV = { gold: 'V', food: 'T', wood: 'G' };
 
-  /* tùy chọn ván nằm ở 4 bit thấp của seed (meta không cho thêm trường) */
+  /* tùy chọn ván nằm ở 4 bit thấp của seed (meta không cho thêm trường): bit0 = 2 đấu 2, bit1 = khóa bản đồ */
   Net.encodeSeed = function (o) {
     var base = Math.floor(Math.random() * 0x7fffffff);
-    return base * 16 + (o.teamMode ? 1 : 0) + (o.ranked ? 2 : 0) + (o.secondBonus ? 4 : 0);
+    return base * 16 + (o.teamMode ? 1 : 0) + (o.lockMap ? 2 : 0);
   };
   Net.decodeSeed = function (seed) {
     var f = seed % 16;
-    return { teamMode: !!(f & 1), ranked: !!(f & 2), secondBonus: !!(f & 4), rngSeed: Math.floor(seed / 16) >>> 0 };
+    return { teamMode: !!(f & 1), lockMap: !!(f & 2), rngSeed: Math.floor(seed / 16) >>> 0 };
   };
-  Net.sideOf = function (mode, seatStr) { var n = +seatStr; return mode === 2 ? [0, 2][n - 1] : n - 1; };
-  Net.seatOfSide = function (mode, side) { return String(mode === 2 ? (side === 0 ? 1 : 2) : side + 1); };
-
   Net.botLoadout = function (seed, seatStr) {
-    var r = TT.Engine.rng((Math.floor(seed / 16) ^ (+seatStr * 2654435761)) >>> 0);
-    var f = TT.FACTION_ORDER[r() % 4], fd = TT.FACTIONS[f];
-    return { faction: f, passive: fd.passives[r() % 3].id, home: 'VTG'[r() % 3], name: 'Bot ' + fd.short };
+    var lo = TT.Bot.loadout(Math.floor(seed / 16) >>> 0, seatStr);
+    return { faction: lo.race, talent: lo.talent, start: lo.start, name: 'Bot ' + TT.FACTIONS[lo.race].short };
   };
 
   function isPerm(e) { return e && /permission|PERMISSION_DENIED/i.test(String(e.code || e.message || e)); }
@@ -133,10 +129,10 @@
   var CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   function genCode() { var s = ''; for (var i = 0; i < 6; i++) s += CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)]; return s; }
   Net.defaultPlayer = function (seat) {
-    var saved = {}; try { saved = JSON.parse(localStorage.getItem('ttkc.loadout') || '{}'); } catch (e) { }
+    var saved = {}; try { saved = JSON.parse(localStorage.getItem('ttkc.loadout2') || '{}'); } catch (e) { }
     var f = saved.faction && TT.FACTIONS[saved.faction] ? saved.faction : 'dragon';
-    var pas = TT.FACTIONS[f].passives.some(function (p) { return p.id === saved.passive; }) ? saved.passive : TT.FACTIONS[f].passives[0].id;
-    return { seat: seat, name: Net.user.name.slice(0, 24), race: Net.RACE[f], passive: pas, homeTileType: Net.HOME[saved.home] || 'food', ready: false, lastSeen: Net.B.TS };
+    var tal = TT.TALENTS[f].some(function (t) { return t.id === saved.talent; }) ? saved.talent : TT.TALENTS[f][0].id;
+    return { seat: seat, name: Net.user.name.slice(0, 24), race: Net.RACE[f], passive: tal, homeTileType: TT.START_ITEMS[saved.start] ? saved.start : 'gold', ready: false, lastSeen: Net.B.TS };
   };
 
   Net.createRoom = function (o) {
@@ -241,27 +237,33 @@
       .catch(function (e) { if (isPerm(e)) Net.ext.chat = false; throw e; });
   };
 
-  /* ---------- trận ---------- */
-  Net.startGame = function (code, firstSeat) {
+  /* ---------- trận (2.0: chuẩn bị đồng thời, commit–reveal theo ngày) ----------
+     rooms/{mã}/days/{n}/c/{ghế}  mã băm đội hình (ghi/xóa được tới khi có lock)
+     rooms/{mã}/days/{n}/lock     {at, seats} khóa chuẩn bị (chủ phòng; quá hạn thì ai cũng ghi được)
+     rooms/{mã}/days/{n}/r/{ghế}  {p: gói đội hình, n: nonce} (ghi 1 lần sau lock)
+     rooms/{mã}/days/{n}/fin      {at, seats} chốt các gói được dùng → mọi máy mô phỏng giao tranh
+     rooms/{mã}/days/0/fin        mốc bắt đầu trận
+     rooms/{mã}/quit/{ghế}        ngày đầu hàng */
+  Net.startGame = function (code) {
     var base = 'rooms/' + code;
-    return Net.B.set(base + '/turn', { seat: String(firstSeat), startedAt: Net.B.TS, nextSeq: 1 })
+    return Net.B.set(base + '/days/0/fin', { at: Net.B.TS, seats: '' })
       .then(function () { return Net.B.set(base + '/meta/status', 'playing'); })
       .then(function () { Net.B.cancelDisconnect('lobby/' + code); return Net.publishLobby(code, { status: 'playing' }); });
   };
-  Net.watchCommands = function (code, cb, onErr) {
-    return Net.B.onAdded('rooms/' + code + '/commands', function (k, v) { cb(v); }, { onError: onErr });
-  };
-  Net.pushTurn = function (code, entry, nextTurn) {
-    var up = {}; up['commands/' + entry.seq] = entry; up.turn = nextTurn;
-    return Net.B.update('rooms/' + code, up);
-  };
+  Net.watchDays = function (code, cb) { return Net.B.on('rooms/' + code + '/days', function (v, err) { cb(v || {}, err); }); };
+  Net.watchQuit = function (code, cb) { return Net.B.on('rooms/' + code + '/quit', function (v) { cb(v || {}); }); };
+  Net.commit = function (code, day, seat, h) { return Net.B.set('rooms/' + code + '/days/' + day + '/c/' + seat, h); };
+  Net.uncommit = function (code, day, seat) { return Net.B.remove('rooms/' + code + '/days/' + day + '/c/' + seat); };
+  Net.reveal = function (code, day, seat, payload, nonce) { return Net.B.set('rooms/' + code + '/days/' + day + '/r/' + seat, { p: payload, n: nonce }); };
+  Net.lockDay = function (code, day, seats) { return Net.B.txn('rooms/' + code + '/days/' + day + '/lock', function (c) { return c ? undefined : { at: Net.B.TS, seats: seats.join(',') }; }); };
+  Net.finDay = function (code, day, seats) { return Net.B.txn('rooms/' + code + '/days/' + day + '/fin', function (c) { return c ? undefined : { at: Net.B.TS, seats: seats.join(',') }; }); };
+  Net.quit = function (code, seat, day) { return Net.B.set('rooms/' + code + '/quit/' + seat, day); };
   Net.finish = function (code, winnerSeat) {
     var base = 'rooms/' + code;
     return Net.B.set(base + '/result', { winnerSeat: String(winnerSeat), endedAt: Net.B.TS }).catch(function () { })
       .then(function () { return Net.B.set(base + '/meta/status', 'finished').catch(function () { }); })
       .then(function () { return Net.B.remove('lobby/' + code).catch(function () { }); });
   };
-
   /* dựng thiết lập ván từ dữ liệu phòng (giống hệt trên mọi máy) */
   Net.buildSetup = function (room) {
     var meta = room.meta, mode = meta.mode, opt = Net.decodeSeed(meta.seed);
@@ -272,13 +274,14 @@
       var s = String(n), uid = room.seats[s];
       if (!uid) continue;
       if (bySeat[s]) {
-        var pp = bySeat[s].p;
-        players.push({ seat: Net.sideOf(mode, s), roomSeat: s, uid: uid, name: pp.name, faction: Net.RACE_INV[pp.race], passive: pp.passive, home: Net.HOME_INV[pp.homeTileType], bot: false });
+        var pp = bySeat[s].p, race = Net.RACE_INV[pp.race] || 'dragon';
+        var tal = TT.TALENTS[race].some(function (t) { return t.id === pp.passive; }) ? pp.passive : TT.TALENTS[race][0].id;
+        players.push({ seat: s, uid: uid, name: pp.name, race: race, talent: tal, start: TT.START_ITEMS[pp.homeTileType] ? pp.homeTileType : 'gold', bot: null });
       } else {
         var b = Net.botLoadout(meta.seed, s);
-        players.push({ seat: Net.sideOf(mode, s), roomSeat: s, uid: uid, name: b.name + ' ' + s, faction: b.faction, passive: b.passive, home: b.home, bot: true });
+        players.push({ seat: s, uid: uid, name: b.name + ' ' + s, race: b.faction, talent: b.talent, start: b.start, bot: true });
       }
     }
-    return { seed: opt.rngSeed, mode: mode, teamMode: opt.teamMode && mode === 4, ranked: opt.ranked, secondBonus: opt.secondBonus, players: players };
+    return { seed: opt.rngSeed, mode: mode, teamMode: opt.teamMode && mode === 4, lockMap: opt.lockMap, players: players };
   };
 })(window);

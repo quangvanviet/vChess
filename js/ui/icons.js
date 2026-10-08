@@ -25,9 +25,33 @@
     resG: '<path d="M32 4 L50 30 L40 30 L54 48 L10 48 L24 30 L14 30 Z" fill="#3fae6a"/><path d="M32 12 L44 30 M32 12 L20 30" stroke="#2d7d4c" stroke-width="2"/><rect x="28" y="48" width="8" height="12" fill="#8a5a2b"/>',
     soul: '<path d="M32 6 Q50 24 44 42 Q40 56 32 58 Q24 56 20 42 Q14 24 32 6 Z" fill="#b38cff"/><circle cx="27" cy="36" r="3.5" fill="#1b0b2e"/><circle cx="37" cy="36" r="3.5" fill="#1b0b2e"/><path d="M28 46 Q32 49 36 46" stroke="#1b0b2e" stroke-width="2" fill="none"/>',
     sword2: '<path d="M14 50 L46 18 M50 50 L18 18" stroke="currentColor" stroke-width="5" stroke-linecap="round"/><path d="M10 54 L18 46 M54 54 L46 46" stroke="currentColor" stroke-width="7" stroke-linecap="round"/>',
+    healer: '<path d="M22 58 L36 20" stroke="currentColor" stroke-width="5" stroke-linecap="round"/><path d="M40 6 v20 M30 16 h20" stroke="currentColor" stroke-width="7" stroke-linecap="round"/><circle cx="40" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="3" opacity=".6"/>',
+    cry: '<path d="M32 4 52 22 32 60 12 22Z" fill="#7fd7ff"/><path d="M32 4 40 22 32 60 24 22Z" fill="#c6f1ff"/><path d="M12 22h40" stroke="#3a9ad6" stroke-width="2"/><path d="M32 4 52 22 32 60 12 22Z" fill="none" stroke="#2a7ab6" stroke-width="2"/>',
+    it_sword: '<path d="M46 6 L56 6 L56 16 L24 48 L16 40 Z" fill="currentColor"/><path d="M12 36 L28 52" stroke="currentColor" stroke-width="5" stroke-linecap="round"/><path d="M18 46 L8 56" stroke="currentColor" stroke-width="6" stroke-linecap="round"/>',
+    it_armor: '<path d="M20 8 L32 14 L44 8 L56 18 L50 28 L46 26 L46 56 L18 56 L18 26 L14 28 L8 18 Z" fill="currentColor"/><path d="M32 14 L32 56" stroke="rgba(0,0,0,.3)" stroke-width="3"/>',
+    it_heart: '<path d="M32 56 C10 40 6 28 10 18 C14 8 28 8 32 18 C36 8 50 8 54 18 C58 28 54 40 32 56 Z" fill="currentColor"/>',
+    it_bow: '<path d="M18 6 Q52 32 18 58" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"/><path d="M18 6 L18 58" stroke="currentColor" stroke-width="2"/><path d="M12 32 L56 32 M48 26 L56 32 L48 38" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>',
+    it_gem: '<path d="M18 10 H46 L58 26 L32 58 L6 26 Z" fill="currentColor"/><path d="M6 26 H58 M24 10 L32 26 L40 10 M32 26 L32 58" fill="none" stroke="rgba(0,0,0,.25)" stroke-width="2.5"/>',
+    it_ring: '<circle cx="32" cy="38" r="17" fill="none" stroke="currentColor" stroke-width="7"/><path d="M24 14 L32 4 L40 14 L32 22 Z" fill="currentColor"/>',
+    it_axe: '<path d="M22 58 L44 10" stroke="currentColor" stroke-width="6" stroke-linecap="round"/><path d="M38 8 Q58 8 58 28 Q48 22 40 26 Z" fill="currentColor"/>',
+    it_flag: '<path d="M14 6v52" stroke="currentColor" stroke-width="6" stroke-linecap="round"/><path d="M16 8 Q30 2 36 10 Q44 18 54 10 L54 34 Q44 42 36 34 Q30 26 16 32 Z" fill="currentColor"/>',
+    it_staff: '<path d="M18 58 L40 20" stroke="currentColor" stroke-width="5" stroke-linecap="round"/><circle cx="44" cy="14" r="10" fill="currentColor"/><circle cx="44" cy="14" r="4" fill="rgba(255,255,255,.7)"/>',
+    it_bottle: '<path d="M26 6 H38 V18 Q52 24 50 42 Q48 58 32 58 Q16 58 14 42 Q12 24 26 18 Z" fill="currentColor"/><path d="M18 40 Q32 34 46 40" stroke="rgba(255,255,255,.6)" stroke-width="4" fill="none"/>',
+    it_seal: '<circle cx="32" cy="32" r="22" fill="currentColor"/><path d="M32 16 L36 28 L48 28 L38 36 L42 48 L32 40 L22 48 L26 36 L16 28 L28 28 Z" fill="rgba(255,255,255,.75)"/>',
     hourglass: '<path d="M16 6 H48 M16 58 H48 M20 6 Q20 26 32 32 Q20 38 20 58 M44 6 Q44 26 32 32 Q44 38 44 58" fill="none" stroke="currentColor" stroke-width="4"/><path d="M24 50 Q32 42 40 50 Z" fill="currentColor"/>'
   };
   I.paths = P;
+  I.ROLE_ICON = { linh: 'soldier', thuan: 'shield', cung: 'archer', y: 'healer', ky: 'cavalry', chihuy: 'commander', thichkhach: 'assassin', phapsu: 'mage', congthanh: 'siege', tuong: 'elephant', thanthu: 'beast' };
+  I.ITEM_ICON = { kiem: 'it_sword', giap: 'it_armor', bua: 'it_heart', cunggio: 'it_bow', ngoc: 'it_gem', nhan: 'it_ring', daidao: 'it_axe', thanhtri: 'it_armor', cutam: 'it_heart', huyetkiem: 'it_sword', cohieu: 'it_flag', cunglinh: 'it_bow', phongtoc: 'it_bow', kiemda: 'it_sword', aogiaplon: 'it_armor', binhlinh: 'it_bottle', quanky: 'it_flag', truonglinh: 'it_staff', thankiem: 'it_sword', battu: 'it_seal', longgiap: 'it_armor', thientam: 'it_flag' };
+  I.TIER_COLOR = { 1: '#b7c3d0', 2: '#5fb8ff', 3: '#c58bff', 4: '#ffc23a' };
+  I.CORE_TIER = { 1: '#d9a066', 2: '#b9c6d6', 3: '#ffcf3a', 4: '#c58bff' };
+  I.role = function (role, color, size) { return I.svg(I.ROLE_ICON[role] || 'soldier', color, size); };
+  I.item = function (k, size) { var it = TT.ITEMS[k]; return '<span class="it-ic t' + (it ? it.tier : 1) + '">' + I.svg(I.ITEM_ICON[k] || 'it_gem', '#fff', size || 22) + '</span>'; };
+  I.coreIcon = function (id, size) {
+    var c = TT.CORES[id]; if (!c) return '';
+    var sc = c.scope, name = sc === 'econ' ? 'cry' : sc.indexOf('role:') === 0 ? I.ROLE_ICON[sc.slice(5)] : sc === 'cls:can' ? 'sword2' : sc === 'cls:xa' ? 'archer' : sc === 'cls:trung' ? 'healer' : sc.indexOf('race:') === 0 ? 'beast' : 'it_seal';
+    return '<span class="core-ic t' + c.tier + '">' + I.svg(name, '#fff', size || 22) + '</span>';
+  };
   I.svg = function (name, color, size) {
     var body = P[name] || P.soldier;
     return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="' + (size || 64) + '" height="' + (size || 64) + '" style="color:' + (color || '#fff') + '">' + body + '</svg>';
@@ -130,6 +154,24 @@
     flag: '<path d="M14 6v52" stroke="currentColor" stroke-width="6" stroke-linecap="round"/><path d="M16 8h34l-8 12 8 12H16Z" fill="currentColor"/>',
     plus: '<path d="M32 12v40M12 32h40" stroke="currentColor" stroke-width="7" stroke-linecap="round"/>',
     minus: '<path d="M12 32h40" stroke="currentColor" stroke-width="7" stroke-linecap="round"/>',
+    check: '<path d="M10 34 26 50 54 16" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>',
+    ff: '<path d="M8 12 30 32 8 52Z M32 12 54 32 32 52Z" fill="currentColor"/>',
+    skip: '<path d="M10 12 36 32 10 52Z" fill="currentColor"/><rect x="40" y="12" width="9" height="40" rx="2" fill="currentColor"/>',
+    pause: '<rect x="14" y="10" width="12" height="44" rx="3" fill="currentColor"/><rect x="38" y="10" width="12" height="44" rx="3" fill="currentColor"/>',
+    coin: '<circle cx="32" cy="32" r="22" fill="currentColor"/><path d="M32 18v28M24 24h12a6 6 0 0 1 0 12H28a6 6 0 0 0 0 12h12" fill="none" stroke="rgba(0,0,0,.35)" stroke-width="4"/>',
+    split: '<circle cx="18" cy="46" r="8" fill="none" stroke="currentColor" stroke-width="5"/><circle cx="46" cy="46" r="8" fill="none" stroke="currentColor" stroke-width="5"/><path d="M22 40 44 8M42 40 20 8" stroke="currentColor" stroke-width="5" stroke-linecap="round"/>',
+    wand: '<path d="M10 54 40 24" stroke="currentColor" stroke-width="7" stroke-linecap="round"/><path d="M46 6 48 14 56 16 48 18 46 26 44 18 36 16 44 14Z" fill="currentColor"/><circle cx="54" cy="34" r="3" fill="currentColor"/><circle cx="30" cy="8" r="3" fill="currentColor"/>',
+    eye: '<path d="M4 32 Q32 6 60 32 Q32 58 4 32Z" fill="none" stroke="currentColor" stroke-width="5"/><circle cx="32" cy="32" r="9" fill="currentColor"/>',
+    sun: '<circle cx="32" cy="32" r="12" fill="currentColor"/><path d="M32 4v10M32 50v10M4 32h10M50 32h10M12 12l7 7M45 45l7 7M12 52l7-7M45 19l7-7" stroke="currentColor" stroke-width="5" stroke-linecap="round"/>',
+    moon: '<path d="M40 6A26 26 0 1 0 58 40 20 20 0 1 1 40 6Z" fill="currentColor"/>',
+    rain: '<path d="M16 34a12 12 0 0 1 4-23 16 16 0 0 1 30 4 10 10 0 0 1-2 19Z" fill="currentColor"/><path d="M20 42l-4 10M32 42l-4 10M44 42l-4 10" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>',
+    wind: '<path d="M6 24h34a8 8 0 1 0-8-8M6 36h44a8 8 0 1 1-8 8M6 48h20" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"/>',
+    tower: '<path d="M18 58V22h28v36Z" fill="currentColor"/><path d="M14 22 32 6 50 22Z" fill="currentColor"/><path d="M32 6V0" stroke="currentColor" stroke-width="3"/>',
+    heart: '<path d="M32 56C10 40 6 28 10 18c4-10 18-10 22 0 4-10 18-10 22 0 4 10 0 22-22 38Z" fill="currentColor"/>',
+    target: '<circle cx="32" cy="32" r="24" fill="none" stroke="currentColor" stroke-width="5"/><circle cx="32" cy="32" r="12" fill="none" stroke="currentColor" stroke-width="5"/><circle cx="32" cy="32" r="4" fill="currentColor"/>',
+    shield: '<path d="M32 6 54 14 52 34Q48 50 32 58 16 50 12 34L10 14Z" fill="currentColor"/>',
+    bolt: '<path d="M36 4 12 36h18l-4 24 26-34H34Z" fill="currentColor"/>',
+    info: '<circle cx="32" cy="32" r="26" fill="none" stroke="currentColor" stroke-width="5"/><circle cx="32" cy="18" r="4" fill="currentColor"/><path d="M32 28v20" stroke="currentColor" stroke-width="6" stroke-linecap="round"/>',
     sleep: '<path d="M12 14h18L12 34h18M36 30h14L36 46h14" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>'
   };
   I.ui = function (name, size, color) {
