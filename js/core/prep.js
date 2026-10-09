@@ -11,13 +11,13 @@
   P.newPlayer = function (o) {
     // o: {seat, name, race, talent, start(gold|food|wood), bot}
     var p = {
-      seat: String(o.seat), name: o.name, race: o.race, talent: o.talent || TT.TALENTS[o.race][0].id, bot: o.bot || null,
+      seat: String(o.seat), name: o.name, race: o.race, talent: o.talent || TT.TALENTS[o.race][0].id, mar: TT.marshalOf(o.race, o.mar).id, bot: o.bot || null,
       gold: 0, xp: 0, lv: 1,
       squads: [], inv: [], cores: [], board: [null, null, null, null, null], locks: [0, 0, 0, 0, 0], rr: 0, freeRr: 0, rrIdx: 0, nid: 1,
       pop: 0, ishop: [null, null, null, null, null, null], irIdx: 0, freeIr: 0,
       out: 0
     };
-    p.squads.push({ id: p.nid++, t: 'nguyensoai', n: 1, x: 0, y: 0, st: 'giu', fm: 'khoi', lp: 4, it: [], fl: [], up: [0, 0, 0, 0], sm: 'linh' });
+    p.squads.push({ id: p.nid++, t: 'nguyensoai', n: 1, x: 0, y: 0, st: 'tc', fm: 'khoi', lp: 4, it: [], fl: [], up: [0, 0, 0, 0], sm: 'linh' });
     p.inv.push(TT.START_ITEMS[o.start] || 'kiem');
     return p;
   };

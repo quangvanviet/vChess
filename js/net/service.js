@@ -8,8 +8,8 @@
   var TT = G.TT;
   var Net = TT.Net = { B: null, user: null, ext: { lobby: true, chat: true, users: true, presence: true } };
 
-  Net.RACE = { dragon: 'rong', human: 'nhan', fairy: 'tien', demon: 'quy' };
-  Net.RACE_INV = { rong: 'dragon', nhan: 'human', tien: 'fairy', quy: 'demon' };
+  Net.RACE = { dragon: 'rong', human: 'nhan', fairy: 'tien', demon: 'quy', beast: 'thu' };
+  Net.RACE_INV = { rong: 'dragon', nhan: 'human', tien: 'fairy', quy: 'demon', thu: 'beast' };
   Net.HOME = { V: 'gold', T: 'food', G: 'wood' };
   Net.HOME_INV = { gold: 'V', food: 'T', wood: 'G' };
 
@@ -24,7 +24,7 @@
   };
   Net.botLoadout = function (seed, seatStr) {
     var lo = TT.Bot.loadout(Math.floor(seed / 16) >>> 0, seatStr);
-    return { faction: lo.race, talent: lo.talent, start: lo.start, name: 'Bot ' + TT.FACTIONS[lo.race].short };
+    return { faction: lo.race, talent: lo.talent, start: lo.start, mar: lo.mar, name: 'Bot ' + TT.FACTIONS[lo.race].short };
   };
 
   function isPerm(e) { return e && /permission|PERMISSION_DENIED/i.test(String(e.code || e.message || e)); }
@@ -134,6 +134,7 @@
     var tal = TT.TALENTS[f].some(function (t) { return t.id === saved.talent; }) ? saved.talent : TT.TALENTS[f][0].id;
     var pl = { seat: seat, name: Net.user.name.slice(0, 24), race: Net.RACE[f], passive: tal, homeTileType: TT.START_ITEMS[saved.start] ? saved.start : 'gold', ready: false, lastSeen: Net.B.TS };
     if (saved.skin && TT.SKINS[saved.skin]) pl.skin = saved.skin;
+    pl.mar = TT.marshalOf(f, saved.mar).id;
     return pl;
   };
 
@@ -332,10 +333,10 @@
       if (bySeat[s]) {
         var pp = bySeat[s].p, race = Net.RACE_INV[pp.race] || 'dragon';
         var tal = TT.TALENTS[race].some(function (t) { return t.id === pp.passive; }) ? pp.passive : TT.TALENTS[race][0].id;
-        players.push({ seat: s, uid: uid, name: pp.name, race: race, talent: tal, start: TT.START_ITEMS[pp.homeTileType] ? pp.homeTileType : 'gold', skin: TT.SKINS[pp.skin] ? pp.skin : null, bot: null });
+        players.push({ seat: s, uid: uid, name: pp.name, race: race, talent: tal, start: TT.START_ITEMS[pp.homeTileType] ? pp.homeTileType : 'gold', skin: TT.SKINS[pp.skin] ? pp.skin : null, mar: TT.marshalOf(race, pp.mar).id, bot: null });
       } else {
         var b = Net.botLoadout(meta.seed, s);
-        players.push({ seat: s, uid: uid, name: b.name + ' ' + s, race: b.faction, talent: b.talent, start: b.start, bot: true });
+        players.push({ seat: s, uid: uid, name: b.name + ' ' + s, race: b.faction, talent: b.talent, start: b.start, mar: b.mar, bot: true });
       }
     }
     return { seed: opt.rngSeed, mode: mode, teamMode: opt.teamMode && mode === 4, lockMap: opt.lockMap, players: players };

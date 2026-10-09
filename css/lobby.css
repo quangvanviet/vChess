@@ -273,3 +273,58 @@
   #screen-room .chat-bubble svg { width: 20px; height: 20px; }
   #screen-room .chat-pop { bottom: auto; top: 54px; right: 8px; }
 }
+
+/* ===== thẻ ghế: Nguyên soái 3D thay huy hiệu, nút đổi dưới chân ===== */
+.sc .sc-art { width: 84px; height: 104px; margin: 0 0 12px; border-radius: 46% 46% 38% 38% / 34% 34% 52% 52%; border: 2px solid #fff; background: radial-gradient(ellipse at 50% 78%, #ffffff 0%, var(--fc2) 72%); box-shadow: 0 0 0 2px var(--fc), inset 0 -8px 14px rgba(0, 0, 0, .1); display: block; overflow: visible; }
+.sc .sc-art .sc-mar { position: absolute; left: 50%; bottom: 2px; width: 118%; height: auto; transform: translateX(-50%); pointer-events: none; filter: drop-shadow(0 3px 3px rgba(20, 40, 80, .25)); }
+.sc .sc-art .crest { width: 60px; height: 60px; position: absolute; left: 12px; top: 20px; }
+.mar-btn { position: absolute; left: 50%; bottom: -13px; transform: translateX(-50%); z-index: 2; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; padding: 0; border: 2px solid #fff; background: linear-gradient(180deg, #5b92f5, #2f5fd0); color: #fff; box-shadow: 0 2px 5px rgba(20, 40, 100, .4); cursor: pointer; transition: transform .12s; }
+.mar-btn svg { width: 15px; height: 15px; }
+.mar-btn:hover { transform: translateX(-50%) scale(1.12); } .mar-btn:active { transform: translateX(-50%) scale(.94); }
+.sc .sc-art .ready { bottom: -12px; }
+.sc:not(.me) .sc-art { margin-bottom: 14px; }
+@media (min-width: 901px) { .sc .sc-art { width: 104px; height: 128px; } .sc .sc-art .crest { width: 74px; height: 74px; left: 14px; top: 26px; } }
+@media (max-width: 600px) {
+  .sc .sc-art { width: 66px; height: 82px; margin-bottom: 14px; } .sc .sc-art .crest { width: 44px; height: 44px; left: 9px; top: 18px; }
+  .sc .chips { display: flex !important; justify-content: center; gap: 3px; } .sc .chips .rchip { font-size: 0; padding: 3px 5px; gap: 0; } .sc .chips .rchip svg, .sc .chips .rchip img { width: 14px; height: 14px; }
+}
+.fac-pick { grid-template-columns: repeat(5, 1fr) !important; }
+@media (max-width: 520px) { .fac-pick { gap: 4px !important; } .fac-opt .crest { width: 38px !important; height: 38px !important; } }
+
+/* ===== popup Nguyên soái (2 tab) ===== */
+.mp { display: flex; flex-direction: column; gap: 8px; width: min(480px, 82vw); }
+.mp-tabs { display: flex; gap: 6px; padding: 3px; background: #eef3fb; border-radius: 14px; align-self: flex-start; }
+.mp-tabs button { display: inline-flex; align-items: center; gap: 5px; padding: 6px 14px; border-radius: 11px; border: 0; background: transparent; color: #5a6b87; font: 800 13px var(--head, system-ui); cursor: pointer; }
+.mp-tabs button.on { background: #fff; color: #2a5fae; box-shadow: 0 1px 4px rgba(30, 60, 120, .2); }
+.mp-body { display: flex; gap: 14px; align-items: stretch; }
+.mp-prev { flex: 0 0 auto; width: 170px; height: 232px; border-radius: 16px; background: radial-gradient(ellipse at 50% 38%, #ffffff 0%, #dcebff 62%, #c3d9f7 100%); box-shadow: inset 0 0 0 2px #fff, 0 2px 10px rgba(40, 70, 130, .18); }
+.mp-prev canvas { width: 100%; height: 100%; display: block; }
+.mp-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.mp-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.mp-it { width: 46px; height: 46px; border-radius: 50%; border: 3px solid #fff; background: radial-gradient(circle at 50% 70%, #fff, #dbe8fb); box-shadow: 0 0 0 2px #cfd9e8, 0 2px 4px rgba(0, 0, 0, .15); padding: 0; overflow: hidden; cursor: pointer; position: relative; transition: transform .12s; }
+.mp-it img { position: absolute; left: 50%; top: 52%; width: 150%; transform: translate(-50%, -50%); pointer-events: none; }
+.mp-it:hover { transform: scale(1.1); } .mp-it.on { box-shadow: 0 0 0 3px #ffb300, 0 2px 6px rgba(0, 0, 0, .3); transform: scale(1.1); }
+.mp-info { display: flex; flex-direction: column; gap: 5px; font-size: 12px; line-height: 1.35; color: #33415a; }
+.mp-nm { display: flex; align-items: baseline; gap: 8px; } .mp-nm b { font: 800 16px var(--head, system-ui); color: #1c2f55; } .mp-nm small { color: #fff; background: #4f86f0; border-radius: 9px; padding: 1px 8px; font-weight: 800; font-size: 10.5px; }
+.mp-st { display: flex; flex-wrap: wrap; gap: 4px; } .mp-st span { display: inline-flex; align-items: center; gap: 3px; padding: 2px 7px; border-radius: 9px; background: #eef3fb; font-weight: 800; font-size: 11.5px; color: #2a5fae; }
+.mp-sk i { font-style: normal; font-weight: 800; color: #b05a00; margin-right: 3px; } .mp-sk small { color: #7a889f; }
+@media (max-width: 560px), (max-height: 520px) {
+  .mp { gap: 5px; } .mp-body { gap: 8px; } .mp-prev { width: 112px; height: 160px; } .mp-it { width: 38px; height: 38px; } .mp-info { font-size: 11px; gap: 3px; } .mp-nm b { font-size: 14px; } .mp-tabs button { padding: 4px 10px; font-size: 12px; }
+  .mp .skin-grid { grid-template-columns: repeat(6, 26px); gap: 6px; }
+}
+
+.mp .skin-grid { grid-template-columns: repeat(4, 34px); gap: 8px; justify-content: start; }
+.mp .skin-opt { width: 34px; height: 34px; aspect-ratio: auto; }
+.mp .skin-auto { align-self: flex-start; padding: 6px 12px; }
+.mp-main { overflow: hidden; }
+.sc .sc-art .ready { bottom: auto; top: -9px; }
+@media (max-width: 560px), (max-height: 520px) { .mp .skin-grid { grid-template-columns: repeat(6, 28px); gap: 6px; } .mp .skin-opt { width: 28px; height: 28px; } .mp { width: min(420px, 88vw); } .mp-prev { width: 104px; height: 150px; } }
+@media (max-height: 520px) and (orientation: landscape) {
+  .sc .chips { display: flex !important; flex-wrap: nowrap; gap: 3px; }
+  .sc .chips .rchip { font-size: 0; padding: 2px 4px; gap: 0; border-radius: 10px; }
+  .sc .chips .rchip svg, .sc .chips .rchip img { width: 13px; height: 13px; }
+  .sc .chips .rchip .it-ic { width: 16px; height: 16px; background: none; box-shadow: none; padding: 0; }
+  .sc .pname { padding-right: 56px; font-size: 14px; }
+  .sc-corner { top: 4px; right: 4px; }
+  .sc .fac { font-size: 11px; }
+}

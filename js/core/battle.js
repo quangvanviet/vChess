@@ -30,7 +30,7 @@
     inp.players.forEach(function (p, idx) {
       var cf = {}; (p.cores || []).forEach(function (c) { var C = TT.CORES[c]; if (C) cf[c] = C; });
       var pl = {
-        idx: idx, seat: String(p.seat), side: p.side, team: p.team, race: p.race, talent: p.talent, lv: p.lv, cores: cf, name: p.name,
+        idx: idx, seat: String(p.seat), side: p.side, team: p.team, race: p.race, talent: p.talent, lv: p.lv, cores: cf, name: p.name, mar: R_MAR(p),
         souls: 0, soulMax: 25 + (cf.honchu2 ? 10 : 0), deaths: 0, engaged: false, used: [false, false, false], totalMax: 0,
         kills: 0, mkills: 0, dmg: 0, taken: 0, healed: 0, towerAtk: 0, itemsTotal: 0, out: false
       };
@@ -54,6 +54,7 @@
     return B;
   };
 
+  function R_MAR(p) { return p.mar ? TT.marshalOf(p.race, p.mar) : null; }
   function sq(v) { return v * v; }
   function d2(a, b) { var dx = a.x - b.x, dy = a.y - b.y; return dx * dx + dy * dy; }
   function dist(a, b) { return TT.isqrt(d2(a, b)); }
@@ -76,12 +77,14 @@
   function makeUnit(B, pl, sqd, role, opts) {
     opts = opts || {};
     var race = opts.race || pl.race, R = TT.ROLES[role], f = TT.FACTIONS[race].mods, ud = TT.UNITS[race + '.' + role] || {};
+    if (R.marshal && pl && pl.mar) ud = { name: pl.mar.name, ps: pl.mar.ps, sk: ud.sk, psd: pl.mar.psd };
     var a = { hpPct: f.hp - 100, atkPct: f.atk - 100, defPct: f.def - 100, asPct: f.as - 100, spdPct: f.spd - 100, mpGain: f.mpGain - 100, dodge: R.dodge + (f.dodge || 0), ls: f.ls || 0, crit: R.crit, critDmg: 150, armorPen: 0, mp0: R.mp0, hp: 0, atk: 0, def: 0, rngAdd: 0, skillDmg: 0, healPct: 0, reflect: 0, regen: R.regen, dr: 0 };
     var fx = {}, ps = ud.ps || {};
     if (!opts.monster) {
       var tal = pl.talent;
       if (tal === 'vaythep') a.def += 8; if (tal === 'kyluat') a.hpPct += 10; if (tal === 'tinhlinh') a.mpGain += 20; if (tal === 'huyetam') a.ls += 6;
       if (tal === 'longdiem' && R.cls === 'xa') fx.burnOnHit = { pct: 15, dur: 2 };
+      if (race === 'beast') { fx.ccAdd = (fx.ccAdd || 0) + (tal === 'kimkep' ? 30 : 15); fx.huntP = (fx.huntP || 0) + (tal === 'sanmoi' ? 20 : 12); if (tal === 'longday') { a.hpPct += 10; fx.tenacity = (fx.tenacity || 0) + 20; } }
       var night = B.inp.day % 2 === 0;
       if ((!night && (race === 'dragon' || race === 'human')) || (night && (race === 'fairy' || race === 'demon'))) a.atkPct += 4;
       if (B.inp.event === 'cuongphong') { a.asPct += 15; a.hpPct -= 10; }
@@ -98,6 +101,7 @@
         if (opts.cap) sqd.items.forEach(function (k) { var I = TT.ITEMS[k]; if (I.st) sumFx(a, I.st, imul); if (I.fx) sumFx(fx, I.fx); });
       }
       if (ps.dodgeAdd) a.dodge += ps.dodgeAdd;
+      if (pl.mar && pl.mar.mods) { var MM = pl.mar.mods; if (R.marshal) { a.hpPct += MM.hp || 0; a.atkPct += MM.atk || 0; a.defPct += MM.def || 0; a.asPct += MM.as || 0; a.spdPct += MM.spd || 0; } }
     }
     // nâng cấp lính (Vàng): chỉ áp cho lính thường của đạo quân, không áp cho tướng/quân triệu hồi
     if (sqd && sqd.up && !opts.cap && !opts.temp && !opts.monster) CFG.solUp.stats.forEach(function (S, i) { var v = (sqd.up[i] | 0) * S.pct; if (S.k === 'hp') a.hpPct += v; else if (S.k === 'atk') a.atkPct += v; else if (S.k === 'def') a.defPct += v; else a.asPct += v; });
@@ -120,7 +124,7 @@
       mpGain: 100 + a.mpGain, skillDmg: fx.skillDmg || 0, healPct: fx.healPct || 0, reflect: fx.reflect || 0, idr: fx.dr || 0, dt: R.dt === 'magic' ? 1 : 0,
       splash: R.splash ? mil(R.splash + (a.splashAdd || 0)) : 0, pop: R.pop,
       cd: 0, castT: 0, tgt: -1, tgtT: 0, lastHit: -1, moved: 0, standT: 0, kiteT: 0, kx: 0, ky: 0, hits: 0, firstT: -999, stackK: 0,
-      stun: 0, slowP: 0, slowT: 0, slowAsP: 0, slowAsT: 0, burnD: 0, burnT: 0, burnS: -1, shield: 0, shieldT: 0, tauntBy: -1, tauntT: 0,
+      stun: 0, rootT: 0, silT: 0, airT: 0, slowP: 0, slowT: 0, slowAsP: 0, slowAsT: 0, burnD: 0, burnT: 0, burnS: -1, shield: 0, shieldT: 0, tauntBy: -1, tauntT: 0,
       stealthT: 0, block: 0, blockT: 0, vulnP: 0, vulnT: 0, weakP: 0, weakT: 0, shredP: 0, shredT: 0, antiP: 0, antiT: 0, adS: 0, adT: 0,
       buffs: [], bs: null, au: null, ps: ps, sk: (gen || mon) ? (ud.sk || null) : null, ifx: fx, alive: true, revive: 0, rebirth: !!ps.rebirth, lowHealUsed: false,
       dmgDone: 0, dmgTaken: 0, healDone: 0, kills: 0, spawnX: 0, spawnY: 0
@@ -132,6 +136,7 @@
       u.mmp = Math.max(10, floor(S0.mp * (100 - Math.min(60, fx.summonMp || 0)) / 100));
       u.sk = { name: 'Triệu Hồi', fx: [{ t: 'summon', marshal: 1, role: MC.summon[smk] ? smk : 'linh', n: S0.n + (fx.summonN || 0), pct: S0.pct + (fx.summonPct || 0) }] };
       u.mpRegen = MC.mpRegen + (fx.mpRegen || 0); u.marshal = true;
+      if (pl.mar && pl.mar.act) { u.act = pl.mar.act; u.actCd = sec(3); }
     }
     var mp0 = a.mp0 + (fx.mpStartPct ? floor(u.mmp * fx.mpStartPct / 100) : 0); u.mp = Math.min(u.mmp, mp0);
     if (fx.revive) u.revive = fx.revive;
@@ -141,6 +146,8 @@
     if (race === 'fairy' && !mon && !opts.temp) u.stealthT = sec(1.5 + (pl.talent === 'linhan' ? 2 : 0) + (ps.stealthStart || 0));
     if (race === 'fairy' && pl && pl.talent === 'phongthan') u.buffs.push({ as: 20, spd: 20, t: sec(6) });
     if (ps.healAtk || ps.drainHeal) u.healer = 1;
+    if (fx.startShield) { u.shield = floor(u.mhp * fx.startShield / 100); u.shieldT = sec(6); }
+    u.mid = R.marshal && pl && pl.mar ? pl.mar.id : ''; u.huntP = fx.huntP || 0; u.ccAdd = fx.ccAdd || 0;
     return u;
   }
   function placeFree(B, x, y) {
@@ -359,7 +366,10 @@
   // o: {pct, dt(0/1/2 true), skill, aoe, noCrit, noMp, ranged, flat, from}
   function hit(B, src, t, o) {
     if (!t.alive) return 0;
-    var isSkill = !!o.skill, ranged = o.ranged != null ? o.ranged : (src && src.rng > 1500);
+    if (src && t.sq >= 0 && src.team !== t.team) { var hs = B.squads[t.sq]; if (hs) { hs.hurtT = B.tick + sec(6); hs.hurtBy = src.id; } }   // cả đạo quân biết mình đang bị đánh
+    var isSkill = !!o.skill;
+    if (isSkill && src && t.ifx.spellShield && !t.ssUsed) { t.ssUsed = 1; ev(B, { e: 'fx', k: 'shield', a: t.id }); return 0; }
+    var ranged = o.ranged != null ? o.ranged : (src && src.rng > 1500);
     var dmg;
     if (o.flat != null) dmg = o.flat;
     else {
@@ -368,6 +378,8 @@
       var ps = src.ps, fx = src.ifx;
       if (ps.vsCls && ps.vsCls[t.cls]) mult += ps.vsCls[t.cls];
       if (ps.vsItems && t.cap && t.sq >= 0 && B.squads[t.sq].items.length) mult += ps.vsItems;
+      if (src.huntP && (t.stun > 0 || t.rootT > 0 || t.slowT > 0 || t.silT > 0)) mult += src.huntP;
+      if (fx.berserk && src.hp * 100 < src.mhp * fx.berserk.below) mult += fx.berserk.pct;
       if (fx.execute && t.hp * 100 / t.mhp < src.hp * 100 / src.mhp) mult += fx.execute;
       if (!isSkill && ps.charge && src.moved >= mil(ps.charge.tiles)) mult += ps.charge.pct;
       if (!isSkill && ps.firstStrike && src.lastHit !== t.id) mult += ps.firstStrike.pct;
@@ -417,6 +429,7 @@
       var ls = src.ls + bsum(src).ls + aura(src).ls;
       if (ls > 0 && o.dt !== 2) heal(B, src, src, floor(dmg * ls / 100));
       if (o.drain) heal(B, src, src, floor(dmg * o.drain / 100));
+      if (isSkill && src.ifx.svamp) heal(B, src, src, floor(dmg * src.ifx.svamp / 100));
       // phản đòn
       var refl = t.reflect + bsum(t).reflect;
       if (refl > 0 && !ranged && !o.reflected && src.alive) hit(B, t, src, { flat: floor(dmg * refl / 100), dt: 2, reflected: 1, noMp: 1 });
@@ -438,8 +451,18 @@
     if (st.vuln) { t.vulnP = Math.max(t.vulnP, st.vuln); t.vulnT = Math.max(t.vulnT, sec(st.dur)); }
     if (st.weak) { t.weakP = Math.max(t.weakP, st.weak); t.weakT = Math.max(t.weakT, sec(st.dur)); }
     if (st.antiheal) { t.antiP = Math.max(t.antiP, st.antiheal); t.antiT = Math.max(t.antiT, sec(st.dur)); }
-    if (st.stun && !cc && !t.monsterBoss) { var sd = sec(st.stun + (src.ifx.stunAdd || 0)); t.stun = Math.max(t.stun, sd); }
+    var ten = 100 - Math.min(60, (t.ifx.tenacity || 0)); if (src && src.ccAdd) ten = floor(ten * (100 + src.ccAdd) / 100);
+    if (st.stun && !cc && !t.monsterBoss) { var sd = floor(sec(st.stun + (src.ifx.stunAdd || 0)) * ten / 100); t.stun = Math.max(t.stun, sd); ev(B, { e: 'fx', k: 'stun', a: t.id }); }
+    if (st.air && !cc && !t.monsterBoss && t.role !== 'thanthu') { var ad = floor(sec(st.air) * ten / 100); t.stun = Math.max(t.stun, ad); t.airT = Math.max(t.airT, ad); ev(B, { e: 'fx', k: 'air', a: t.id }); }
+    if (st.root && !cc) { t.rootT = Math.max(t.rootT, floor(sec(st.root) * ten / 100)); ev(B, { e: 'fx', k: 'root', a: t.id }); }
+    if (st.silence && !cc) { t.silT = Math.max(t.silT, floor(sec(st.silence) * ten / 100)); ev(B, { e: 'fx', k: 'silence', a: t.id }); }
+    if (st.pull && !cc && !t.monsterBoss && t.role !== 'thanthu') pull(B, src, t, mil(st.pull));
     if (st.knock && !cc && !t.ps.immuneKnock && t.role !== 'thanthu') knock(B, src, t, mil(st.knock));
+  }
+  function pull(B, src, t, d) {
+    var dx = src.x - t.x, dy = src.y - t.y, l = TT.isqrt(dx * dx + dy * dy) || 1; d = Math.min(d, Math.max(0, l - mil(1)));
+    var nx = t.x + floor(dx * d / l), ny = t.y + floor(dy * d / l);
+    if (passable(B, floor(nx / M), floor(ny / M)) || t.fly) { t.x = clamp(nx, 300, B.W * M - 300); t.y = clamp(ny, 300, B.H * M - 300); ev(B, { e: 'knock', a: t.id }); }
   }
   function knock(B, src, t, d) {
     var dx = t.x - src.x, dy = t.y - src.y, l = TT.isqrt(dx * dx + dy * dy) || 1;
@@ -457,6 +480,7 @@
     if (src && src.alive) {
       src.kills++; if (src.sq >= 0) B.squads[src.sq].kills++;
       if (sp && !t.temp) { if (t.monster) sp.mkills += t.pop; else if (tp) sp.kills += t.pop; }
+      if (src.ifx.killMp) gainMp(B, src, src.ifx.killMp);
       if (src.ifx.killStack) { if (src.stackK < src.ifx.killStack.max) src.stackK++; heal(B, src, src, floor(src.mhp * src.ifx.killStack.heal / 100)); }
       if (src.ps.killStealth) { heal(B, src, src, floor(src.mhp * src.ps.killStealth.heal / 100)); src.stealthT = sec(src.ps.killStealth.dur); }
       if (src.ps.killSouls && sp) addSouls(sp, src.ps.killSouls);
@@ -496,7 +520,7 @@
   function alliesIn(B, u, x, y, r) { var out = [], r2 = r * r; for (var i = 0; i < B.units.length; i++) { var e = B.units[i]; if (e.alive && e.team === u.team && !e.monster) { var dx = e.x - x, dy = e.y - y; if (dx * dx + dy * dy <= r2) out.push(e); } } return out; }
   function lowestAlly(B, u, r, excl) { var best = null, bv = 101; alliesIn(B, u, u.x, u.y, r).forEach(function (a) { if (excl && excl.indexOf(a) >= 0) return; var v = floor(a.hp * 100 / a.mhp); if (v < bv) { bv = v; best = a; } }); return bv < 100 ? best : null; }
   function canCast(B, u) {
-    if (!u.sk || u.mp < u.mmp || u.mmp <= 0) return false;
+    if (!u.sk || u.mp < u.mmp || u.mmp <= 0 || u.silT > 0) return false;
     var f = u.sk.fx[0], t = u.tgt >= 0 ? byId(B, u.tgt) : null;
     if (f.t === 'heal' || f.t === 'shield' || f.t === 'buff' || f.t === 'block') { var near = nearestEnemy(B, u, rngE(B, u) + mil(4)); return !!near; }
     if (f.t === 'summon') return f.marshal ? (B.tick > 2 * T && !!nearestEnemy(B, u, null)) : u.tgt >= 0;
@@ -504,6 +528,12 @@
     if (f.t === 'dash' && f.to !== 'target') return !!nearestEnemy(B, u, mil(f.r || 9));
     if (f.t === 'blink' && f.to === 'captain') return !!t;
     return !!(t && t.alive && d2(u, t) <= sq(rngE(B, u) + (f.t === 'dash' || f.t === 'blink' ? mil(4) : 0) + t.rad + u.rad));
+  }
+  function tryAct(B, u) {
+    if (u.actCd > 0 || u.silT > 0) return false;
+    var sk = u.sk, mp = u.mp, mm = u.mmp; u.sk = u.act; u.mmp = u.mp = 100;
+    var ok = canCast(B, u); if (ok) { cast(B, u); u.actCd = sec(u.act.cd); }
+    u.sk = sk; u.mmp = mm; u.mp = mp; return ok;
   }
   function nearestEnemy(B, u, r) { var best = null, bd = r == null ? 1e18 : r * r; for (var i = 0; i < B.units.length; i++) { var e = B.units[i]; if (!e.alive || !isEnemy(B, u, e)) continue; var dd = d2(u, e); if (dd < bd) { bd = dd; best = e; } } return best; }
   function cast(B, u) {
@@ -526,7 +556,7 @@
           else if (area === 'multi') { targets = multiTargets(B, u, t, f); targets.forEach(function (x) { ev(B, { e: 'shot', a: u.id, b: x.id }); }); }
           else if (area === 'chain' && t) { var hitL = [t], cur = t, mul = 100; hit(B, u, t, o); ev(B, { e: 'shot', a: u.id, b: t.id, k: 'bolt' }); for (var cN = 0; cN < f.n; cN++) { var nx = null, bd = sq(mil(3.5)); B.units.forEach(function (e) { if (e.alive && isEnemy(B, u, e) && hitL.indexOf(e) < 0) { var dd = d2(cur, e); if (dd < bd) { bd = dd; nx = e; } } }); if (!nx) break; mul = floor(mul * (100 - f.fall) / 100); hitL.push(nx); ev(B, { e: 'shot', a: cur.id, b: nx.id, k: 'bolt' }); hit(B, u, nx, { pct: floor(f.pct * mul / 100), skill: 1, dt: o.dt }); cur = nx; } targets = []; }
           else if (area === 'rain') { var cc = t || u; for (var rn = 0; rn < f.n; rn++) { var ang = B.R(6283), rad = B.R(mil(f.r)); var px = cc.x + floor(rad * icos(ang) / M), py = cc.y + floor(rad * isin(ang) / M); ev(B, { e: 'area', x: px, y: py, r: mil(f.rr), a: u.id, k: 'star' }); enemiesIn(B, u, px, py, mil(f.rr)).forEach(function (e) { hit(B, u, e, { pct: f.pct, skill: 1, dt: o.dt, aoe: 1 }); applySt(B, u, e, f.st); }); } }
-          targets.forEach(function (e) { hit(B, u, e, o); applySt(B, u, e, f.st); });
+          targets.forEach(function (e) { hit(B, u, e, o); applySt(B, u, e, f.st); if (u.ifx.skillCc) applySt(B, u, e, u.ifx.skillCc); });
           break;
         }
         case 'heal': {
@@ -544,7 +574,7 @@
         }
         case 'buff': {
           var who = f.who === 'self' ? [u] : f.who === 'healed' ? healed : alliesIn(B, u, u.x, u.y, mil(f.r));
-          var bf = { t: sec(f.dur) }; ['atk', 'as', 'def', 'dr', 'spd', 'ls', 'reflect', 'regenPct', 'dmg'].forEach(function (k) { if (f[k]) bf[k] = f[k]; });
+          var bf = { t: sec(f.dur) }; ['atk', 'as', 'def', 'dr', 'spd', 'ls', 'reflect', 'regenPct', 'dmg', 'cc', 'rng'].forEach(function (k) { if (f[k]) bf[k] = f[k]; });
           who.forEach(function (a) { addBuff(a, bf); ev(B, { e: 'fx', k: 'buff', a: a.id }); });
           break;
         }
@@ -627,6 +657,8 @@
       if (wantCluster && dens) { var c = cellOf(B, e.x, e.y), cnt = 0, tm = e.team; for (var oy = -1; oy <= 1; oy++) for (var ox = -1; ox <= 1; ox++) { var k = c + oy * W + ox; if (k >= 0 && k < dens.length) cnt += dens[k][tm] || 0; } s += cnt * 30; }
       if (inR) s += 120;
       if (e.id === u.tgt) s += 160;
+      if (sqd && sqd.hurtT > B.tick && sqd.hurtBy === e.id) s += 500;
+      if (mode && mode.assist === e.id) s += 500;
       if (e.tgt >= 0 && sqd) { var et = B.byId[e.tgt]; if (et && et.sq === u.sq) s += 60; }
       if (s > bs) { bs = s; best = e; }
     }
@@ -701,10 +733,15 @@
     var dmg = hit(B, u, t, o);
     if (dmg <= 0) return;
     var ps = u.ps, fx = u.ifx;
-    if (ps.cleave) { var n = 0; B.units.forEach(function (e) { if (n < ps.cleave.n && e !== t && e.alive && isEnemy(B, u, e) && d2(t, e) <= sq(mil(1.3))) { n++; hit(B, u, e, { pct: ps.cleave.pct, noMp: 1, aoe: 1 }); } }); }
+    var clv = ps.cleave || fx.cleave;
+    if (clv) { var n = 0; B.units.forEach(function (e) { if (n < clv.n && e !== t && e.alive && isEnemy(B, u, e) && d2(t, e) <= sq(mil(1.3))) { n++; hit(B, u, e, { pct: clv.pct, noMp: 1, aoe: 1 }); } }); }
     if (ps.pierce || ps.lineShot) { var lst = lineTargets(B, u, t, rngE(B, u) + mil(2), mil(.6)).filter(function (e) { return e !== t; }).sort(function (a, b) { return d2(u, a) - d2(u, b) || a.id - b.id; }); var cnt = ps.lineShot ? ps.lineShot.n - 1 : 1, pc = ps.pierce ? ps.pierce.pct : 100 - ps.lineShot.fall; lst.slice(0, cnt).forEach(function (e, i) { hit(B, u, e, { pct: ps.lineShot ? 100 - ps.lineShot.fall * (i + 1) : pc, noMp: 1 }); }); }
     if (u.splash) { enemiesIn(B, u, t.x, t.y, u.splash).forEach(function (e) { if (e !== t) hit(B, u, e, { pct: 50, noMp: 1, aoe: 1 }); }); ev(B, { e: 'area', x: t.x, y: t.y, r: u.splash, a: u.id, k: 'boom' }); }
     if (ps.bounce) { var e3 = nearestOther(B, t, null, mil(3)); if (e3 && isEnemy(B, u, e3) && e3 !== t) { ev(B, { e: 'shot', a: t.id, b: e3.id, k: 'bolt' }); hit(B, u, e3, { pct: ps.bounce.pct, noMp: 1 }); } }
+    var cch = ps.ccChance || fx.ccChance; if (cch && t.alive && B.R(100) < cch.pct) applySt(B, u, t, cch.st);
+    var cn = ps.ccHit || fx.ccHit; if (cn && t.alive && u.hits % cn.n === cn.n - 1) applySt(B, u, t, cn.st);
+    if (fx.hpDmg && t.alive) hit(B, u, t, { flat: Math.max(1, floor(t.hp * fx.hpDmg / 100)), dt: 2, noMp: 1 });
+    if (fx.thunder && B.R(100) < fx.thunder.chance) { var th = nearestOther(B, u, t, mil(3)) || t; if (th.alive) { hit(B, u, th, { pct: fx.thunder.pct, dt: 1, skill: 0, noMp: 1, noCrit: 1, ranged: true }); ev(B, { e: 'shot', a: u.id, b: th.id, k: 'bolt' }); } }
     var burn = ps.burnOnHit || fx.burnOnHit; if (burn && t.alive) applySt(B, u, t, { burn: burn.pct, dur: burn.dur });
     var slow = ps.slowOnHit || fx.slowOnHit; if (slow && t.alive) applySt(B, u, t, { slow: slow.pct, dur: slow.dur });
     if (ps.atkDownOnHit && t.alive) { t.adS = Math.min(ps.atkDownOnHit.stack, t.adS + 1); t.adT = sec(ps.atkDownOnHit.dur); }
@@ -718,7 +755,7 @@
     var mode = squadMode(B, u, sqd);
     u.hurry = !!mode.hurry;
     // thả diều
-    if (u.kiteT > 0) { moveToward(B, u, u.x + u.kx, u.y + u.ky, 0); u.standT = 0; return; }
+    if (u.kiteT > 0 && u.rootT <= 0) { moveToward(B, u, u.x + u.kx, u.y + u.ky, 0); u.standT = 0; return; }
     // chọn mục tiêu
     var t = u.tgt >= 0 ? byId(B, u.tgt) : null;
     if (t && t.stealthT > 0 && d2(u, t) > sq(mil(2))) t = null;
@@ -728,6 +765,7 @@
     else if (!t || (B.tick + u.id) % 10 === 0) { var nt = chooseTarget(B, u, sqd, mode); if (nt) t = nt; else if (mode.alert) t = null; }
     u.tgt = t ? t.id : -1;
     // kỹ năng
+    if (!mode.noFight && u.act && tryAct(B, u)) return;
     if (!mode.noFight && canCast(B, u)) { cast(B, u); return; }
     if (t && inRange(B, u, t) && (u.cls !== 'xa' || u.role === 'congthanh' || losClear(B, u, t))) {
       u.standT++;
@@ -742,6 +780,7 @@
     if (t && !mode.goal) { tx = t.x; ty = t.y; var ts = t.sq >= 0 ? B.squads[t.sq] : null; gx = floor(t.x / M); gy = floor(t.y / M); }
     else if (mode.goal) { tx = mode.goal[0]; ty = mode.goal[1]; gx = floor(tx / M); gy = floor(ty / M); }
     else return;
+    if (u.rootT > 0) return;
     var s = pathStep(B, u, gx, gy, tx, ty);
     u.moved += s;
   }
@@ -766,10 +805,11 @@
     if (u.monster) { o.alert = mil(7); if (d2(u, { x: u.spawnX, y: u.spawnY }) > sq(mil(8))) { o.goal = [u.spawnX, u.spawnY]; o.noFight = true; } return o; }
     if (B.storm) return o;
     var st = sqd.st;
+    if (sqd.fl.length && sqd.step >= sqd.fl.length && st === 'giu') st = 'tc';   // xong hết cờ → tự động tìm địch gần nhất
     if (sqd.step < sqd.fl.length) {
       var f = sqd.fl[sqd.step];
       if (f.c === 'X') { o.goal = [f.x * M + 500, f.y * M + 500]; o.noFight = sqd.breakT <= 0; if (!o.noFight) { o.goal = null; o.alert = mil(2); } return o; }
-      if (f.c === 'D') { o.alert = Math.max(rngE(B, u) + mil(2), mil(4)); var near = nearestEnemy(B, u, o.alert); if (!near) o.goal = [f.x * M + 500, f.y * M + 500]; return o; }
+      if (f.c === 'D') { o.alert = Math.max(rngE(B, u) + mil(4), mil(9)); if (sqd.hurtT > B.tick) o.alert = mil(99); var near = nearestEnemy(B, u, o.alert); if (!near) o.goal = [f.x * M + 500, f.y * M + 500]; return o; }
       if (f.c === 'T') { // Cờ Tím: dồn lực diệt một đạo quân địch
         var tt = squadBySeat(B, f.seat, f.sq);
         if (tt && tt.alive > 0 && tt.team !== sqd.team) { o.focus = tt; o.alert = mil(99); return o; }
@@ -778,15 +818,16 @@
         var ts = squadById(B, sqd.pl, f.sq);
         if (ts && ts.alive > 0) {
           var k = f.k || 'sat';
-          if (k === 'theo') { o.alert = rngE(B, u) + mil(1); var dTo = sq(ts.cx - u.x) + sq(ts.cy - u.y); if (dTo > sq(mil(4.5)) && !nearestEnemy(B, u, o.alert)) o.goal = [ts.cx, ts.cy]; if (dTo > sq(mil(7))) o.hurry = true; return o; }
-          o.alert = Math.max(rngE(B, u) + mil(2), mil(5));
+          if (k === 'theo') { o.alert = rngE(B, u) + mil(2); if (ts.hurtT > B.tick) { o.alert = mil(99); o.assist = ts.hurtBy; } var dTo = sq(ts.cx - u.x) + sq(ts.cy - u.y); if (dTo > sq(mil(4.5)) && !nearestEnemy(B, u, o.alert)) o.goal = [ts.cx, ts.cy]; if (dTo > sq(mil(7))) o.hurry = true; return o; }
+          o.alert = Math.max(rngE(B, u) + mil(3), mil(8));
+          if (ts.hurtT > B.tick) { o.alert = mil(99); o.assist = ts.hurtBy; }   // đạo quân được hộ tống bị đánh → lao vào yểm trợ
           var dT = sq(ts.cx - u.x) + sq(ts.cy - u.y);
           if (dT > sq(mil(k === 'bv' ? 3 : 4))) { if (!nearestEnemy(B, u, mil(2.5))) o.goal = [ts.cx, ts.cy]; if (dT > sq(mil(6))) o.hurry = true; }
           return o;
         }
       }
     }
-    if (st === 'giu') { o.alert = rngE(B, u) + mil(2.5); if (d2(u, { x: u.spawnX, y: u.spawnY }) > sq(mil(4))) { o.abs = true; o.goal = [u.spawnX, u.spawnY]; o.noFight = !nearestEnemy(B, u, rngE(B, u) + u.rad + 500); } }
+    if (st === 'giu') { o.alert = rngE(B, u) + mil(4); if (sqd.hurtT > B.tick) o.alert = mil(99); if (d2(u, { x: u.spawnX, y: u.spawnY }) > sq(mil(4))) { o.abs = true; o.goal = [u.spawnX, u.spawnY]; o.noFight = !nearestEnemy(B, u, rngE(B, u) + u.rad + 500); } }
     else if (st === 'rut' && sqd.mhp && sqd.hp * 100 < sqd.mhp * 30) { var ne = nearestEnemy(B, u, rngE(B, u) + mil(.5)); if (!ne) { o.abs = true; o.goal = [u.spawnX, u.spawnY]; o.noFight = true; } else o.alert = rngE(B, u) + mil(1); }
     return o;
   }
@@ -896,6 +937,10 @@
       var es = engagedSquad(); if (!es) return; var cx = es.cx, cy = es.cy;
       B.units.forEach(function (e) { if (e.alive && e.team !== p.team && sq(e.x - cx) + sq(e.y - cy) <= sq(mil(f.r + 2))) { if (f.weak) { e.weakP = Math.max(e.weakP, f.weak); e.weakT = sec(f.dur); } if (f.slowAs) { e.slowAsP = Math.max(e.slowAsP, f.slowAs); e.slowAsT = sec(f.dur); } } });
       ev(B, { e: 'area', x: cx, y: cy, r: mil(f.r + 2), k: 'curse', a: -1 });
+    } else if (f.t === 'ccArea') {
+      var es2 = engagedSquad(); if (!es2) return; var src2 = null; es2.units.forEach(function (x) { if (x.alive && !src2) src2 = x; }); if (!src2) return;
+      B.units.forEach(function (e) { if (e.alive && e.team !== p.team && sq(e.x - es2.cx) + sq(e.y - es2.cy) <= sq(mil(f.r + 2))) applySt(B, src2, e, f.st); });
+      ev(B, { e: 'area', x: es2.cx, y: es2.cy, r: mil(f.r + 2), k: 'curse', a: -1 });
     } else if (f.t === 'healAll') { mine.forEach(function (u) { var g = heal(B, u, u, floor(u.mhp * f.maxPct / 100)); ev(B, { e: 'heal', a: u.id, b: u.id, v: g }); }); }
     else if (f.t === 'shieldAll') { mine.forEach(function (u) { u.shield = Math.max(u.shield, floor(u.mhp * f.maxPct / 100)); u.shieldT = sec(f.dur); ev(B, { e: 'fx', k: 'shield', a: u.id }); }); }
     else if (f.t === 'summonBase') { var z = TT.zoneOf(B.inp.mode, p.side), zx = ((z.x0 + z.x1 + 1) / 2) * M, zy = ((z.y0 + z.y1 + 1) / 2) * M; B.spawnQ.push({ pl: p, role: f.role, n: f.n, pct: f.pct, x: floor(zx), y: floor(zy), sq: -1 }); }
@@ -967,7 +1012,7 @@
     var perSec = B.tick % T;
     for (i = 0; i < us.length; i++) {
       u = us[i]; if (!u.alive) continue;
-      if (u.cd > 0) u.cd--; if (u.castT > 0) u.castT--; if (u.stun > 0) u.stun--; if (u.kiteT > 0) u.kiteT--;
+      if (u.cd > 0) u.cd--; if (u.castT > 0) u.castT--; if (u.actCd > 0) u.actCd--; if (u.stun > 0) u.stun--; if (u.rootT > 0) u.rootT--; if (u.silT > 0) u.silT--; if (u.airT > 0) u.airT--; if (u.kiteT > 0) u.kiteT--;
       if (u.slowT > 0 && --u.slowT === 0) u.slowP = 0; if (u.slowAsT > 0 && --u.slowAsT === 0) u.slowAsP = 0;
       if (u.shieldT > 0 && --u.shieldT === 0) u.shield = 0; if (u.tauntT > 0 && --u.tauntT === 0) u.tauntBy = -1;
       if (u.stealthT > 0) u.stealthT--; if (u.blockT > 0 && --u.blockT === 0) u.block = 0;
@@ -982,6 +1027,7 @@
       if ((perSec + u.id) % T === 0) {
         // mỗi giây: đốt, hồi máu, đầm lầy
         if (u.burnT > 0) { u.burnT -= T; var src = B.byId[u.burnS]; hit(B, src && src.alive ? src : null, u, { flat: u.burnD, dt: 2, noMp: 1 }); if (!u.alive) continue; }
+        if (u.ifx.pulse) { var pls = u.ifx.pulse; enemiesIn(B, u, u.x, u.y, mil(pls.r)).forEach(function (e) { hit(B, u, e, { pct: pls.pct, dt: 1, noMp: 1, noCrit: 1, aoe: 1 }); }); }
         if (u.mpRegen && u.mmp > 0 && u.mp < u.mmp) u.mp = Math.min(u.mmp, u.mp + u.mpRegen);
         var reg = u.regen + floor(u.mhp * ((u.au ? u.au.regenPct : 0) + (u.bs ? u.bs.regenPct : 0) + (u.ifx.regenPct || 0)) / 100);
         if (u.ps.regenLow && u.hp * 100 < u.mhp * u.ps.regenLow.below) reg += floor(u.mhp * u.ps.regenLow.pct / 100);
@@ -1038,7 +1084,7 @@
   Battle.previewStats = function (ctx, p, q, cap) {
     var cf = {}; (p.cores || []).forEach(function (c) { if (TT.CORES[c]) cf[c] = TT.CORES[c]; });
     var items = 0; (p.squads || []).forEach(function (s) { items += s.it.length; });
-    var pl = { idx: 0, seat: p.seat, team: 0, race: p.race, talent: p.talent, cores: cf, itemsTotal: items };
+    var pl = { idx: 0, seat: p.seat, team: 0, race: p.race, talent: p.talent, mar: R_MAR(p), cores: cf, itemsTotal: items };
     var B = { inp: { day: ctx.day || 1, event: ctx.event, weather: ctx.weather }, nid: 1 };
     var sqd = { idx: 0, items: q.it || [], n0: q.n, up: q.up || [0, 0, 0, 0], sm: q.sm };
     var u = makeUnit(B, pl, sqd, q.t, { cap: !!cap });

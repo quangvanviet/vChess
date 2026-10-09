@@ -5,7 +5,7 @@
   'use strict';
   var TT = G.TT = G.TT || {};
 
-  TT.RULE_VERSION = 'tt-3.5.0';
+  TT.RULE_VERSION = 'tt-3.6.0';
 
   /* ================= BalanceConfig ================= */
   TT.CONFIG = {
@@ -81,7 +81,7 @@
   TT.rangeClass = function (rng) { return rng <= 1.5 ? 'can' : rng < 4 ? 'trung' : 'xa'; };
 
   /* ================= Bốn tộc ================= */
-  TT.FACTION_ORDER = ['dragon', 'human', 'fairy', 'demon'];
+  TT.FACTION_ORDER = ['dragon', 'human', 'fairy', 'demon', 'beast'];
   TT.FACTIONS = {
     dragon: {
       name: 'Rồng tộc', short: 'Rồng', color: '#ff6b4a', color2: '#ffd2a8', dark: '#a8321e',
@@ -110,6 +110,13 @@
       base: { name: 'Hồn', desc: 'Mỗi quân chết trên chiến trường (ta hay địch) cho 1 Hồn (tối đa 25). Mỗi Hồn +1% ATK cho mọi quân Quỷ. Có hút máu 9%. Một số kỹ năng tiêu Hồn.' },
       weak: { name: 'Huyết Nhục', desc: 'Không tự hồi máu; nhận hồi máu từ Thuật sĩ và trang bị chỉ còn 50%.' },
       style: 'Đông quân rẻ, càng chết càng mạnh, hút máu để trụ.'
+    },
+    beast: {
+      name: 'Thú nhân', short: 'Thú', color: '#e0963a', color2: '#ffe3b8', dark: '#8a4f14',
+      mods: { hp: 116, atk: 102, def: 102, as: 100, spd: 106, mpGain: 102 }, costAdd: {},
+      base: { name: 'Dấu Săn · Xiềng Xích', desc: 'Khống chế do quân Thú gây ra (choáng, hất tung, trói chân, câm lặng, làm chậm) kéo dài thêm 15%. Quân Thú đánh mạnh thêm 12% lên địch đang bị khống chế.' },
+      weak: { name: 'Sức Công Thấp', desc: 'ATK và DEF thấp hơn các tộc khác; sức mạnh nằm ở khống chế chứ không ở sát thương thô. Dễ gục nếu khống chế trượt.' },
+      style: 'Khống chế dày đặc: choáng, hất tung, trói chân, kéo; giữ địch yên cho cả đội xử lý.'
     }
   };
 
@@ -134,6 +141,11 @@
       { id: 'huyetam', name: 'Huyết Ẩm', desc: 'Hút máu thêm 6%.' },
       { id: 'honchu', name: 'Hồn Chủ', desc: 'Mỗi Hồn +1.5% ATK (thay vì 1%).' },
       { id: 'batdiet', name: 'Bất Diệt', desc: 'Tướng mỗi đội hồi sinh 1 lần với 30% máu.' }
+    ],
+    beast: [
+      { id: 'sanmoi', name: 'Săn Mồi', desc: 'Quân Thú đánh mạnh thêm 20% (thay vì 12%) lên địch đang bị khống chế.' },
+      { id: 'kimkep', name: 'Kìm Kẹp', desc: 'Khống chế của quân Thú kéo dài thêm 30% (thay vì 15%).' },
+      { id: 'longday', name: 'Lông Dày', desc: 'Mọi quân Thú +10% máu và kháng 20% thời gian khống chế.' }
     ]
   };
 
@@ -241,12 +253,94 @@
   def('demon', 'thanthu', { name: 'Ma Vương', ps: { deathSummon: { role: 'linh', n: 2, pct: 50 } }, psd: 'Khi chết để lại 2 Tiểu Quỷ (50% chỉ số).',
     sk: { name: 'Hấp Hồn', desc: 'Tiêu toàn bộ Hồn: gây 100% sức tấn công cộng thêm 25% cho mỗi Hồn lên địch trong 3 ô.', fx: [{ t: 'dmg', area: 'self', r: 3, pct: 100, perSoul: 25, souls: 'all' }] } });
 
+  /* ---------- THÚ NHÂN ---------- */
+  def('beast', 'linh', { name: 'Lang Binh', ps: { ccChance: { pct: 20, st: { slow: 30, dur: 2 } } }, psd: 'Cắn xé: 20% đòn đánh làm chậm mục tiêu 30% trong 2 giây.',
+    sk: { name: 'Vồ Mồi', desc: 'Lao vào mục tiêu, gây 150% sức tấn công và trói chân 1.2 giây.', fx: [{ t: 'dash', to: 'target', pct: 150, st: { root: 1.2 } }] } });
+  def('beast', 'thuan', { name: 'Tê Giác Thuẫn', ps: { immuneKnock: 1, firstHitDR: { pct: 30, cd: 5 } }, psd: 'Da dày: không bị đẩy lùi; mỗi 5 giây, đòn đầu tiên trúng chỉ gây 70% sát thương.',
+    sk: { name: 'Húc Đổ', desc: 'Húc một hình quạt dài 2 ô: gây 130% sức tấn công và hất tung 0.8 giây.', fx: [{ t: 'dmg', area: 'cone', len: 2.2, pct: 130, st: { air: .8 } }] } });
+  def('beast', 'cung', { name: 'Cung Thợ Săn', ps: { ccChance: { pct: 18, st: { root: 1 } } }, psd: 'Bẫy dây: 18% mũi tên trói chân mục tiêu 1 giây.',
+    sk: { name: 'Lưới Săn', desc: 'Bắn lưới vào 3 địch gần nhất, mỗi mũi 100% sức tấn công và trói chân 1.5 giây.', fx: [{ t: 'dmg', area: 'multi', n: 3, pct: 100, st: { root: 1.5 } }] } });
+  def('beast', 'y', { name: 'Dược Sư Rừng', ps: { healAtk: { pct: 150 }, healCleanse: 1 }, psd: 'Đòn đánh biến thành hồi máu cho đồng minh yếu nhất (150% sức tấn công) và gột sạch hiệu ứng xấu của họ.',
+    sk: { name: 'Thảo Dược Linh', desc: 'Hồi 16% máu tối đa cho 3 đồng minh yếu nhất trong 5 ô, họ miễn khống chế 2 giây.', fx: [{ t: 'heal', pick: 'lowest', n: 3, r: 5, maxPct: 16 }, { t: 'buff', who: 'healed', cc: 1, dur: 2 }] } });
+  def('beast', 'ky', { name: 'Báo Kỵ', ps: { charge: { tiles: 4, pct: 60 } }, psd: 'Xung phong: chạy liền ít nhất 4 ô rồi đánh thì đòn đó mạnh thêm 60%.',
+    sk: { name: 'Vồ Chớp', desc: 'Lao tới mục tiêu, gây 160% sức tấn công và hất tung 0.9 giây.', fx: [{ t: 'dash', to: 'target', pct: 160, st: { air: .9 } }] } });
+  def('beast', 'chihuy', { name: 'Tù Trưởng', ps: { aura: { r: 4, atk: 8, as: 4 } }, psd: 'Hào quang 4 ô: đồng minh xung quanh +8% sức tấn công và +4% tốc đánh.',
+    sk: { name: 'Tiếng Hú', desc: 'Hú vang: địch trong 4 ô chịu 60% sức tấn công, bị câm lặng 2 giây và chậm 25%.', fx: [{ t: 'dmg', area: 'self', r: 4, pct: 60, st: { silence: 2, slow: 25, dur: 2 } }] } });
+  def('beast', 'thichkhach', { name: 'Hổ Ảnh', ps: { killStealth: { heal: 15, dur: 1 } }, psd: 'Sau khi hạ gục: hồi 15% máu và tàng hình 1 giây.',
+    sk: { name: 'Vồ Sau Lưng', desc: 'Nhảy ra sau mục tiêu, gây 220% sức tấn công và làm choáng 0.8 giây.', fx: [{ t: 'blink', to: 'target', pct: 220, st: { stun: .8 } }] } });
+  def('beast', 'phapsu', { name: 'Đạo Sĩ Rừng', ps: { ccChance: { pct: 25, st: { silence: 1.2 } } }, psd: 'Lời nguyền rừng: 25% đòn đánh câm lặng mục tiêu 1.2 giây.',
+    sk: { name: 'Dây Leo Siết', desc: 'Dây leo trồi lên trong 2.2 ô: 220% sức tấn công và trói chân 2 giây.', fx: [{ t: 'dmg', area: 'circle', r: 2.2, pct: 220, st: { root: 2 } }] } });
+  def('beast', 'congthanh', { name: 'Ném Đá Khổng Lồ', ps: { ccChance: { pct: 15, st: { slow: 40, dur: 2 } } }, psd: 'Đá nặng: 15% đạn làm chậm mục tiêu 40% trong 2 giây.',
+    sk: { name: 'Đá Lăn', desc: 'Ném tảng đá nổ trong 2 ô: 300% sức tấn công và choáng 1 giây.', fx: [{ t: 'dmg', area: 'circle', r: 2, pct: 300, st: { stun: 1 } }] } });
+  def('beast', 'tuong', { name: 'Voi Ma Mút', ps: { immuneKnock: 1, crowdDef: { n: 3, def: 15 } }, psd: 'Không bị đẩy lùi. Khi có từ 3 địch đứng sát bên thì +15% giáp.',
+    sk: { name: 'Địa Chấn', desc: 'Giậm xuống đất: địch trong 2.4 ô chịu 130% sức tấn công, bị hất tung 1 giây và chậm 30%.', fx: [{ t: 'dmg', area: 'self', r: 2.4, pct: 130, st: { air: 1, slow: 30, dur: 2 } }] } });
+  def('beast', 'thanthu', { name: 'Chúa Sơn Lâm', ps: { immuneKnock: 1, regenLow: { below: 50, pct: 2 } }, psd: 'Không bị đẩy lùi. Khi máu dưới 50% thì hồi 2% máu mỗi giây.',
+    sk: { name: 'Gầm Chấn Áp', desc: 'Gầm vang: kéo địch trong 4 ô về phía mình, choáng 1.2 giây và gây 120% sức tấn công.', fx: [{ t: 'dmg', area: 'self', r: 4, pct: 120, st: { pull: 3, stun: 1.2 } }] } });
+
   /* ---------- NGUYÊN SOÁI (mỗi tộc một mẫu, kỹ năng Triệu hồi do trận đấu dựng theo lựa chọn của người chơi) ---------- */
   var MSK = { name: 'Triệu Hồi', desc: 'Khi đủ MP, triệu hồi lính đã chọn (số lượng và MP cần tùy loại lính) đứng cạnh Nguyên soái. Lính triệu hồi chỉ tồn tại trong ngày.', fx: [{ t: 'summon', marshal: 1, role: 'linh', n: 2, pct: 70 }] };
   def('dragon', 'nguyensoai', { name: 'Long Soái', ps: { regenLow: { below: 50, pct: 2 } }, psd: 'Khi máu dưới 50% thì hồi 2% máu mỗi giây.', sk: MSK });
   def('human', 'nguyensoai', { name: 'Đại Nguyên Soái', ps: { aura: { r: 4, def: 8 } }, psd: 'Hào quang 4 ô: đồng minh xung quanh +8% giáp.', sk: MSK });
   def('fairy', 'nguyensoai', { name: 'Tiên Soái', ps: { aura: { r: 5, regenPct: 1 } }, psd: 'Phước lành 5 ô: đồng minh xung quanh tự hồi 1% máu mỗi giây.', sk: MSK });
+  def('beast', 'nguyensoai', { name: 'Thú Soái', ps: { aura: { r: 4, atk: 6 } }, psd: 'Hào quang 4 ô: đồng minh xung quanh +6% sức tấn công.', sk: MSK });
   def('demon', 'nguyensoai', { name: 'Ma Soái', ps: { killSouls: 1 }, psd: 'Mỗi lần hạ gục thêm 1 Hồn.', sk: MSK });
+
+
+  /* ================= NGUYÊN SOÁI: nhiều mẫu, chọn ở phòng chờ (cùng tộc) =================
+     ps = nội tại, act = kỹ năng chủ động hồi chiêu theo giây (thêm vào Triệu Hồi), mods = % chỉ số. */
+  var MARS = TT.MARSHALS = {}, MAR_ORDER = TT.MARSHAL_ORDER = {};
+  function mar(race, id, name, tag, o) { o.id = id; o.race = race; o.name = name; o.tag = tag; o.mods = o.mods || {}; MARS[id] = o; (MAR_ORDER[race] = MAR_ORDER[race] || []).push(id); }
+  mar('dragon', 'longsoai', 'Long Soái', 'Cân bằng', { ps: { regenLow: { below: 50, pct: 2 } }, psd: 'Khi máu dưới 50% thì hồi 2% máu mỗi giây.' });
+  mar('dragon', 'hoalong', 'Hỏa Long Vương', 'Sát thương', { mods: { atk: 8, hp: -5 }, ps: { burnOnHit: { pct: 15, dur: 2 } }, psd: 'Đòn đánh thiêu đốt mục tiêu 2 giây.',
+    act: { name: 'Hơi Thở Lửa', desc: 'Phun lửa hình quạt dài 3.5 ô: 200% sức tấn công và thiêu đốt 3 giây.', cd: 9, fx: [{ t: 'dmg', area: 'cone', len: 3.5, pct: 200, st: { burn: 25, dur: 3 } }] } });
+  mar('dragon', 'thietlong', 'Thiết Long Giáp', 'Trụ cột', { mods: { hp: 22, atk: -6, def: 10 }, ps: { immuneKnock: 1, firstHitDR: { pct: 40, cd: 5 } }, psd: 'Không bị đẩy lùi; mỗi 5 giây đòn đầu tiên chỉ gây 60% sát thương.',
+    act: { name: 'Vảy Hộ Thể', desc: 'Nhận khiên 25% máu tối đa và +30% giáp trong 5 giây.', cd: 12, fx: [{ t: 'shield', who: 'self', maxPct: 25, dur: 5 }, { t: 'buff', who: 'self', def: 30, dur: 5 }] } });
+  mar('dragon', 'longky', 'Long Kỵ Thương', 'Xung phong', { mods: { spd: 10, atk: 5 }, ps: { charge: { tiles: 4, pct: 60 } }, psd: 'Chạy liền 4 ô rồi đánh thì đòn đó mạnh thêm 60%.',
+    act: { name: 'Xung Thương', desc: 'Lao vào mục tiêu: 180% sức tấn công và hất tung 0.8 giây.', cd: 8, fx: [{ t: 'dash', to: 'target', pct: 180, st: { air: .8 } }] } });
+  mar('dragon', 'longmach', 'Long Mạch Hiền Giả', 'Hồi phục', { mods: { atk: -8 }, ps: { aura: { r: 4, regenPct: 1 } }, psd: 'Hào quang 4 ô: đồng minh xung quanh hồi 1% máu mỗi giây.',
+    act: { name: 'Thanh Tẩy', desc: 'Hồi 14% máu tối đa cho 3 đồng minh yếu nhất trong 5 ô, họ giảm 15% sát thương trong 3 giây.', cd: 10, fx: [{ t: 'heal', pick: 'lowest', n: 3, r: 5, maxPct: 14 }, { t: 'buff', who: 'healed', dr: 15, dur: 3 }] } });
+
+  mar('human', 'daisoai', 'Đại Nguyên Soái', 'Cân bằng', { ps: { aura: { r: 4, def: 8 } }, psd: 'Hào quang 4 ô: đồng minh xung quanh +8% giáp.' });
+  mar('human', 'kiemthanh', 'Kiếm Thánh', 'Sát thương', { mods: { atk: 10, hp: -6, as: 6 }, ps: { firstStrike: { pct: 60 } }, psd: 'Đòn đầu tiên lên mỗi mục tiêu mới mạnh thêm 60%.',
+    act: { name: 'Lốc Kiếm', desc: 'Xoay kiếm quanh mình 2.2 ô: 170% sức tấn công.', cd: 8, fx: [{ t: 'dmg', area: 'self', r: 2.2, pct: 170 }] } });
+  mar('human', 'phapthanh', 'Pháp Thánh Hoàng Gia', 'Khống chế', { mods: { hp: -8, atk: 6 }, ps: { slowOnHit: { pct: 20, dur: 2 } }, psd: 'Đòn đánh làm chậm mục tiêu 20% trong 2 giây.',
+    act: { name: 'Ánh Sáng Giam Cầm', desc: 'Giam địch trong 2 ô: 140% sức tấn công và trói chân 1.5 giây.', cd: 10, fx: [{ t: 'dmg', area: 'circle', r: 2, pct: 140, st: { root: 1.5 } }] } });
+  mar('human', 'thanhky', 'Thánh Kỵ Sĩ', 'Trụ cột', { mods: { hp: 20, def: 8, atk: -4 }, ps: { aura: { r: 4, atk: 6 } }, psd: 'Hào quang 4 ô: đồng minh xung quanh +6% sức tấn công.',
+    act: { name: 'Quyết Chiến', desc: 'Khiêu khích địch trong 3 ô (2.5 giây) và +30% giáp trong 4 giây.', cd: 12, fx: [{ t: 'taunt', r: 3, dur: 2.5 }, { t: 'buff', who: 'self', def: 30, dur: 4 }] } });
+  mar('human', 'xathu', 'Xạ Thủ Hoàng Gia', 'Tầm xa', { mods: { hp: -10, atk: 8 }, ps: { rangeAdd: 1.5, pierce: { pct: 50 } }, psd: '+1.5 tầm đánh; tên xuyên sang 1 địch phía sau (50%).',
+    act: { name: 'Mưa Tên Băng', desc: 'Bắn 4 mũi tên vào địch gần nhất, mỗi mũi 100% sức tấn công và làm chậm 40% trong 2 giây.', cd: 9, fx: [{ t: 'dmg', area: 'multi', n: 4, pct: 100, st: { slow: 40, dur: 2 } }] } });
+
+  mar('fairy', 'tiensoai', 'Tiên Soái', 'Cân bằng', { ps: { aura: { r: 5, regenPct: 1 } }, psd: 'Phước lành 5 ô: đồng minh xung quanh tự hồi 1% máu mỗi giây.' });
+  mar('fairy', 'nguyetnu', 'Nguyệt Nữ', 'Sát thương', { mods: { atk: 8, hp: -6 }, ps: { dodgeAdd: 12 }, psd: '+12% né đòn.',
+    act: { name: 'Ánh Trăng Rơi', desc: 'Giáng ánh trăng 2 ô: 180% sức tấn công và choáng 0.8 giây.', cd: 8, fx: [{ t: 'dmg', area: 'circle', r: 2, pct: 180, st: { stun: .8 } }] } });
+  mar('fairy', 'hoatien', 'Hoa Tiên Chữa Lành', 'Hồi phục', { mods: { atk: -10, hp: 5 }, ps: { aura: { r: 5, regenPct: 2 } }, psd: 'Phước lành 5 ô: đồng minh xung quanh hồi 2% máu mỗi giây.',
+    act: { name: 'Mưa Linh Khí', desc: 'Hồi 16% máu tối đa cho 4 đồng minh yếu nhất trong 5 ô, họ miễn khống chế 1.5 giây.', cd: 10, fx: [{ t: 'heal', pick: 'lowest', n: 4, r: 5, maxPct: 16 }, { t: 'buff', who: 'healed', cc: 1, dur: 1.5 }] } });
+  mar('fairy', 'phongtien', 'Phong Tiên Sứ', 'Khống chế', { mods: { spd: 10, hp: -4 }, ps: { slowOnHit: { pct: 25, dur: 2 } }, psd: 'Đòn đánh làm chậm mục tiêu 25% trong 2 giây.',
+    act: { name: 'Gió Cuốn', desc: 'Cuộn lốc quanh mình 3 ô: 100% sức tấn công và hất tung 1 giây.', cd: 9, fx: [{ t: 'dmg', area: 'self', r: 3, pct: 100, st: { air: 1 } }] } });
+  mar('fairy', 'anhtien', 'Ảnh Tiên', 'Sát thủ', { mods: { hp: -10, atk: 12, spd: 8 }, ps: { killStealth: { heal: 20, dur: 1.5 } }, psd: 'Sau khi hạ gục: hồi 20% máu và tàng hình 1.5 giây.',
+    act: { name: 'Ám Ảnh', desc: 'Lướt ra sau mục tiêu: 220% sức tấn công.', cd: 8, fx: [{ t: 'blink', to: 'target', pct: 220 }] } });
+
+  mar('demon', 'masoai', 'Ma Soái', 'Cân bằng', { ps: { killSouls: 1 }, psd: 'Mỗi lần hạ gục thêm 1 Hồn.' });
+  mar('demon', 'huyetma', 'Huyết Ma', 'Hút máu', { mods: { atk: 6 }, ps: { killSouls: 1, aura: { r: 3, ls: 6 } }, psd: 'Hạ gục thêm 1 Hồn; hào quang 3 ô: đồng minh hút máu 6%.',
+    act: { name: 'Huyết Tế', desc: 'Nổ máu quanh mình 2.5 ô: 150% sức tấn công và hút lại 50% sát thương gây ra.', cd: 9, fx: [{ t: 'dmg', area: 'self', r: 2.5, pct: 150, drain: 50 }] } });
+  mar('demon', 'taman', 'Tà Thần Ma Pháp', 'Khống chế', { mods: { hp: -8, atk: 6 }, ps: { atkDownOnHit: { pct: 8, dur: 3, stack: 2 } }, psd: 'Đòn đánh giảm 8% sức tấn công của mục tiêu trong 3 giây (cộng dồn 2 lần).',
+    act: { name: 'Xích Ma Giam', desc: 'Xích hồn trong 2.5 ô: 160% sức tấn công và trói chân 1.8 giây.', cd: 10, fx: [{ t: 'dmg', area: 'circle', r: 2.5, pct: 160, st: { root: 1.8 } }] } });
+  mar('demon', 'acquy', 'Ác Quỷ Báo Thù', 'Trụ cột', { mods: { hp: 20, def: 8, atk: -5 }, ps: { immuneKnock: 1, deathRetaliate: { pct: 12 } }, psd: 'Không bị đẩy lùi; khi chết nổ gây 12% máu tối đa cho kẻ hạ gục.',
+    act: { name: 'Cõi Chết', desc: 'Khiêu khích địch trong 3.5 ô (3 giây) và nhận khiên 20% máu tối đa.', cd: 12, fx: [{ t: 'taunt', r: 3.5, dur: 3 }, { t: 'shield', who: 'self', maxPct: 20, dur: 4 }] } });
+  mar('demon', 'damma', 'Dạ Ma Săn Mồi', 'Sát thủ', { mods: { hp: -8, atk: 10, spd: 6 }, ps: { killStealth: { heal: 15, dur: 1 } }, psd: 'Sau khi hạ gục: hồi 15% máu và tàng hình 1 giây.',
+    act: { name: 'Tiếng Hét Kinh Hoàng', desc: 'Hét vang 3 ô: 90% sức tấn công, câm lặng 2.2 giây và chậm 30%.', cd: 11, fx: [{ t: 'dmg', area: 'self', r: 3, pct: 90, st: { silence: 2.2, slow: 30, dur: 2 } }] } });
+
+  mar('beast', 'thusoai', 'Thú Soái', 'Cân bằng', { ps: { aura: { r: 4, atk: 6 } }, psd: 'Hào quang 4 ô: đồng minh xung quanh +6% sức tấn công.' });
+  mar('beast', 'gauchien', 'Gấu Chiến', 'Trụ cột', { mods: { hp: 25, atk: -5 }, ps: { immuneKnock: 1, crowdDef: { n: 3, def: 15 } }, psd: 'Không bị đẩy lùi; có từ 3 địch sát bên thì +15% giáp.',
+    act: { name: 'Gầm Địa Chấn', desc: 'Giậm đất 2.4 ô: 130% sức tấn công và hất tung 1 giây.', cd: 9, fx: [{ t: 'dmg', area: 'self', r: 2.4, pct: 130, st: { air: 1 } }] } });
+  mar('beast', 'soinguyet', 'Sói Nguyệt', 'Đội hình', { mods: { spd: 8 }, ps: { cleave: { n: 2, pct: 40 } }, psd: 'Chém lan: mỗi đòn còn chém thêm tối đa 2 địch cạnh mục tiêu (40%).',
+    act: { name: 'Hú Triệu Bầy', desc: 'Đồng minh trong 5 ô +25% tốc đánh và +20% tốc di trong 5 giây.', cd: 14, fx: [{ t: 'buff', who: 'allies', r: 5, as: 25, spd: 20, dur: 5 }] } });
+  mar('beast', 'dahu', 'Dạ Hổ', 'Sát thủ', { mods: { hp: -8, atk: 12, spd: 6 }, ps: { killStealth: { heal: 15, dur: 1 } }, psd: 'Sau khi hạ gục: hồi 15% máu và tàng hình 1 giây.',
+    act: { name: 'Vồ Chí Mạng', desc: 'Nhảy ra sau mục tiêu: 230% sức tấn công và choáng 0.9 giây.', cd: 8, fx: [{ t: 'blink', to: 'target', pct: 230, st: { stun: .9 } }] } });
+  mar('beast', 'toctruong', 'Tộc Trưởng Đại Ngàn', 'Khống chế', { mods: { hp: 10, atk: -4 }, ps: { ccChance: { pct: 20, st: { slow: 30, dur: 2 } } }, psd: '20% đòn đánh làm chậm mục tiêu 30% trong 2 giây.',
+    act: { name: 'Vòng Xiềng Rừng', desc: 'Dây rừng trói địch trong 3 ô: 120% sức tấn công, trói chân 2 giây.', cd: 10, fx: [{ t: 'dmg', area: 'circle', r: 3, pct: 120, st: { root: 2 } }] } });
+  TT.defaultMarshal = function (race) { return MAR_ORDER[race][0]; };
+  TT.marshalOf = function (race, id) { var m = MARS[id]; return m && m.race === race ? m : MARS[MAR_ORDER[race][0]]; };
 
   /* ================= Lệnh Soái (tự động trong giao tranh) =================
      Mở ở Đời I / III / IV. Mỗi lệnh dùng tối đa 1 lần mỗi giao tranh, tự kích hoạt khi đủ điều kiện. */
@@ -265,6 +359,11 @@
       { age: 1, name: 'Linh Nhãn', when: 'start', desc: 'Đầu giao tranh: quân tầm xa +2 tầm trong 8 giây.', fx: { t: 'buffAll', cls: 'xa', rng: 2, dur: 8 } },
       { age: 3, name: 'Gió Thần', when: 'engage', desc: 'Khi giao chiến lần đầu: toàn quân +30% tốc di và +15% tốc đánh 5 giây.', fx: { t: 'buffAll', spd: 30, as: 15, dur: 5 } },
       { age: 4, name: 'Thiên Mạc', when: 'hp50', desc: 'Khi tổng máu dưới 50%: khiên 20% máu tối đa cho toàn quân 4 giây.', fx: { t: 'shieldAll', maxPct: 20, dur: 4 } }
+    ],
+    beast: [
+      { age: 1, name: 'Tiếng Gầm Săn Mồi', when: 'engage', desc: 'Khi giao chiến lần đầu: địch trong 4 ô quanh đội ta đang đánh bị trói chân 1.5 giây và chậm 35% trong 3 giây.', fx: { t: 'ccArea', r: 4, st: { root: 1.5, slow: 35, dur: 3 } } },
+      { age: 3, name: 'Bẫy Sập', when: 'crowd', desc: 'Khi có từ 8 địch áp sát một đội ta: địch quanh đó (4 ô) bị choáng 1.5 giây.', fx: { t: 'ccArea', r: 4, st: { stun: 1.5 } } },
+      { age: 4, name: 'Thú Triều', when: 'hp50', desc: 'Khi tổng máu quân ta dưới 50%: toàn quân +25% tốc đánh, +25% tốc di và miễn khống chế 5 giây.', fx: { t: 'buffAll', as: 25, spd: 25, cc: 1, dur: 5 } }
     ],
     demon: [
       { age: 1, name: 'Lời Nguyền', when: 'engage', desc: 'Khi giao chiến lần đầu: địch trong 4 ô quanh đội ta đang đánh −20% tốc đánh 5 giây.', fx: { t: 'debuffArea', r: 4, slowAs: 20, dur: 5 } },
@@ -289,6 +388,11 @@
     cutam:   { tier: 2, name: 'Cự Tâm',     st: { hp: 350 }, fx: { regenPct: 1 }, desc: '+350 máu; hồi 1% máu tối đa mỗi giây.' },
     huyetkiem:{ tier: 2, name: 'Huyết Kiếm', st: { atk: 18, ls: 12 }, desc: '+18 ATK, hút máu 12%.' },
     cohieu:  { tier: 2, name: 'Cờ Hiệu',    aura: { asPct: 10 }, desc: 'Hào quang: cả đội +10% tốc đánh.' },
+    bangnha: { tier: 2, name: 'Băng Nhãn',   st: { atk: 14 }, fx: { ccChance: { pct: 18, st: { slow: 35, dur: 2 } } }, desc: '+14 ATK; 18% đòn làm chậm mục tiêu 35% trong 2 giây.' },
+    thanhdang:{ tier: 2, name: 'Khiên Thần Tốc', st: { hp: 160, def: 10 }, fx: { startShield: 18 }, desc: '+160 máu, +10 DEF; vào trận có khiên 18% máu tối đa.' },
+    huyetan: { tier: 2, name: 'Vết Thương Sâu', st: { atk: 14, crit: 6 }, fx: { ccChance: { pct: 100, st: { antiheal: 40, dur: 3 } } }, desc: '+14 ATK, +6% chí mạng; đòn đánh giảm 40% hồi máu của mục tiêu trong 3 giây.' },
+    giaprai: { tier: 2, name: 'Giáp Gai', st: { def: 25, hp: 100 }, fx: { reflect: 18 }, desc: '+25 DEF, +100 máu; phản 18% sát thương cận chiến nhận.' },
+    mattrang:{ tier: 2, name: 'Mặt Trăng Nhỏ', st: { hp: 120, mp0: 20 }, fx: { svamp: 20 }, desc: '+120 máu, +20 MP; kỹ năng hút 20% sát thương thành máu.' },
     cunglinh:{ tier: 2, name: 'Cung Linh',  st: { asPct: 18, mp0: 30 }, fx: { mpPerHit: 3 }, desc: '+18% tốc đánh, +30 MP; mỗi đòn +3 MP.' },
     // Đời III
     phongtoc:{ tier: 3, name: 'Phong Tốc',  st: { asPct: 30 }, fx: { everyN: { n: 4, pct: 100 } }, desc: '+30% tốc đánh; mỗi đòn thứ 4 đánh hai lần.' },
@@ -297,10 +401,21 @@
     binhlinh:{ tier: 3, name: 'Bình Linh',  st: { hp: 250, mp0: 30 }, fx: { lowHeal: { below: 40, pct: 25 } }, desc: '+250 máu, +30 MP; lần đầu dưới 40% máu hồi 25%.' },
     quanky:  { tier: 3, name: 'Quân Kỳ',    aura: { defPct: 10, atkPct: 8 }, desc: 'Hào quang: cả đội +10% DEF và +8% ATK.' },
     truonglinh:{ tier: 3, name: 'Trượng Linh', st: { mp0: 30 }, fx: { skillDmg: 25 }, desc: '+30 MP; kỹ năng +25% sát thương và hồi máu.' },
+    thuylong:{ tier: 3, name: 'Búa Choáng', st: { atk: 28 }, fx: { ccChance: { pct: 12, st: { stun: .8 } } }, desc: '+28 ATK; 12% đòn đánh làm choáng mục tiêu 0.8 giây.' },
+    satphat: { tier: 3, name: 'Sát Phạt', st: { atk: 22, hp: 150 }, fx: { berserk: { below: 40, pct: 30 } }, desc: '+22 ATK, +150 máu; dưới 40% máu gây thêm 30% sát thương.' },
+    ladien:  { tier: 3, name: 'Lôi Chùy', st: { atk: 18, asPct: 12 }, fx: { thunder: { chance: 22, pct: 90 } }, desc: '+18 ATK, +12% tốc đánh; 22% đòn đánh bổ sét 90% sức tấn công vào địch gần đó.' },
+    xichxich:{ tier: 3, name: 'Xích Trói', st: { asPct: 10, mp0: 20 }, fx: { skillCc: { root: 1.2 } }, desc: '+10% tốc đánh, +20 MP; kỹ năng trói chân mục tiêu trúng 1.2 giây.' },
+    cauam:   { tier: 3, name: 'Câm Lặng Ấn', st: { mp0: 30, hp: 120 }, fx: { skillCc: { silence: 1.5 } }, desc: '+30 MP, +120 máu; kỹ năng khiến mục tiêu trúng bị câm lặng 1.5 giây.' },
+    nhatchieu:{ tier: 3, name: 'Nhật Hỏa Giáp', st: { def: 22, hp: 200 }, fx: { pulse: { pct: 25, r: 2 } }, desc: '+22 DEF, +200 máu; mỗi giây thiêu 25% sức tấn công lên địch trong 2 ô.' },
+    daitu:   { tier: 3, name: 'Đại Hydra', st: { atk: 24, hp: 100 }, fx: { cleave: { n: 2, pct: 55 } }, desc: '+24 ATK, +100 máu; đòn đánh chém lan tối đa 2 địch cạnh (55%).' },
+    kienhuyet:{ tier: 3, name: 'Huyết Linh Khí', st: { hp: 200 }, fx: { killMp: 25, tenacity: 30 }, desc: '+200 máu; hạ gục +25 MP; giảm 30% thời gian bị khống chế.' },
     // Đời IV
     thankiem:{ tier: 4, name: 'Thần Kiếm',  st: { atk: 45, asPct: 15 }, fx: { armorPen: 25 }, desc: '+45 ATK, +15% tốc đánh, bỏ qua 25% giáp.' },
     battu:   { tier: 4, name: 'Ấn Bất Tử',  st: { hp: 300 }, fx: { revive: 40 }, desc: '+300 máu; chết lần đầu hồi sinh với 40% máu.' },
     longgiap:{ tier: 4, name: 'Long Lân Giáp', st: { def: 40, hp: 400 }, fx: { dr: 15 }, desc: '+40 DEF, +400 máu, giảm 15% sát thương nhận.' },
+    kimcuong:{ tier: 4, name: 'Bùa Kim Cang', st: { hp: 250, def: 20 }, fx: { spellShield: 1, tenacity: 25 }, desc: '+250 máu, +20 DEF; chặn hoàn toàn kỹ năng địch đầu tiên trúng mình; giảm 25% khống chế.' },
+    langkhach:{ tier: 4, name: 'Gậy Long Đình', st: { atk: 35, asPct: 10 }, fx: { hpDmg: 4, ccHit: { n: 4, st: { air: .9 } } }, desc: '+35 ATK, +10% tốc đánh; đòn đánh gây thêm 4% máu hiện tại của mục tiêu; mỗi đòn thứ 4 hất tung 0.9 giây.' },
+    thanbang:{ tier: 4, name: 'Trượng Sương Giá', st: { mp0: 40, hp: 300 }, fx: { skillDmg: 30, skillCc: { slow: 40, dur: 2.5 }, svamp: 15 }, desc: '+40 MP, +300 máu; kỹ năng +30% sát thương, làm chậm 40% trong 2.5 giây và hút 15% thành máu.' },
     thientam:{ tier: 4, name: 'Thiên Tâm',  aura: { atkPct: 15, asPct: 15 }, desc: 'Hào quang: cả đội +15% ATK và +15% tốc đánh.' }
   };
   TT.ITEM_ORDER = Object.keys(TT.ITEMS);
@@ -365,6 +480,38 @@
     ['tietkiem', 3, 'role:nguyensoai', 'Tiết Kiệm Linh Lực', { summonMp: 20 }, 'Triệu hồi cần ít hơn 20% MP.'],
     ['tinhnhuehoa', 3, 'role:nguyensoai', 'Tinh Nhuệ Hóa', { summonPct: 30 }, 'Lính triệu hồi mạnh thêm 30%.'],
     ['vuongquyen', 4, 'role:nguyensoai', 'Vương Quyền', { summonN: 1, summonPct: 25, mpRegen: 2, hpPct: 20 }, 'Triệu hồi thêm 1 lính, lính mạnh thêm 25%, Nguyên soái hồi thêm 2 MP/giây và +20% máu.'],
+    // E3. Lõi khống chế, chủ động, phong cách mới (cảm hứng TFT / LoL / Dota 2 / roguelite)
+    ['bangcham', 1, 'all', 'Cú Chạm Băng', { ccChance: { pct: 12, st: { slow: 35, dur: 2 } } }, 'Mọi đòn 12% làm chậm mục tiêu 35% trong 2 giây.'],
+    ['kiencuong', 2, 'all', 'Ý Chí Kiên Cường', { tenacity: 30 }, 'Toàn quân giảm 30% thời gian bị khống chế.'],
+    ['khienmodau', 2, 'all', 'Khiên Mở Màn', { startShield: 15 }, 'Vào trận toàn quân có khiên 15% máu tối đa.'],
+    ['hutphep', 2, 'all', 'Hút Phép', { svamp: 15 }, 'Kỹ năng hút 15% sát thương thành máu.'],
+    ['vetthuong', 2, 'all', 'Vết Thương Hở', { ccChance: { pct: 100, st: { antiheal: 35, dur: 3 } } }, 'Mọi đòn giảm 35% hồi máu của mục tiêu trong 3 giây.'],
+    ['satluc', 3, 'all', 'Sấm Truyền', { thunder: { chance: 15, pct: 80 } }, '15% đòn đánh bổ sét 80% sức tấn công vào địch gần đó.'],
+    ['khatmau', 3, 'all', 'Cơn Khát Máu', { berserk: { below: 40, pct: 30 } }, 'Quân dưới 40% máu gây thêm 30% sát thương.'],
+    ['sankeyeu', 3, 'all', 'Săn Kẻ Yếu', { huntP: 15 }, 'Gây thêm 15% sát thương lên địch đang bị khống chế (choáng, trói, chậm, câm).'],
+    ['hiente', 3, 'all', 'Hiến Tế Mana', { killMp: 20 }, 'Mỗi lần hạ gục hồi 20 MP cho tướng.'],
+    ['xuyengiap', 3, 'all', 'Xuyên Giáp Nhiệt', { ccChance: { pct: 100, st: { shred: 8, dur: 3 } } }, 'Mọi đòn giảm 8% giáp mục tiêu trong 3 giây.'],
+    ['bualinh', 4, 'all', 'Bùa Hộ Mệnh', { spellShield: 1 }, 'Mỗi quân chặn hoàn toàn kỹ năng địch đầu tiên trúng mình.'],
+    ['trois', 3, 'cls:xa', 'Lưới Trói', { ccChance: { pct: 12, st: { root: 1 } } }, 'Quân tầm xa 12% trói chân mục tiêu 1 giây.'],
+    ['dongchoang', 3, 'cls:can', 'Đòn Choáng', { ccChance: { pct: 8, st: { stun: .8 } } }, 'Quân cận chiến 8% làm choáng mục tiêu 0.8 giây.'],
+    ['nhathoa', 2, 'cls:can', 'Nhật Hỏa', { pulse: { pct: 20, r: 2 } }, 'Quân cận chiến mỗi giây thiêu 20% sức tấn công lên địch trong 2 ô.'],
+    ['thuongtung', 3, 'role:ky', 'Giáo Hất Tung', { ccHit: { n: 4, st: { air: .8 } } }, 'Kỵ binh mỗi đòn thứ 4 hất tung mục tiêu 0.8 giây.'],
+    ['phongan', 3, 'role:phapsu', 'Phong Ấn', { skillCc: { silence: 1.5 } }, 'Kỹ năng Pháp sư khiến mục tiêu bị câm lặng 1.5 giây.'],
+    ['phathanhd', 3, 'role:congthanh', 'Kẻ Phá Hoại', { skillCc: { stun: .7 } }, 'Kỹ năng Công thành làm choáng mục tiêu 0.7 giây.'],
+    ['vankiem', 2, 'role:linh', 'Vạn Kiếm Quy Tông', { cleave: { n: 2, pct: 40 } }, 'Lính chém lan tối đa 2 địch cạnh mục tiêu (40%).'],
+    ['satthuvl', 3, 'role:thichkhach', 'Nhát Cắt Máu', { hpDmg: 5 }, 'Đòn của Thích khách gây thêm 5% máu hiện tại của mục tiêu.'],
+    ['taivan', 1, 'econ', 'Tài Vận', { goldNow: 2 }, 'Nhận ngay 2 Vàng.'],
+    ['sannghiep', 2, 'econ', 'Sản Nghiệp', { goldDaily: 1, interestAdd: 1 }, 'Mỗi ngày +1 Vàng và lãi tối đa +1.'],
+    ['hoiphuc', 2, 'role:nguyensoai', 'Hồi Phục Nhanh', { regen: 10 }, 'Nguyên soái hồi thêm 10 máu mỗi giây.'],
+    ['hieulenhvang', 2, 'role:nguyensoai', 'Hiệu Lệnh Vang', { summonPct: 15, summonN: 0 }, 'Lính triệu hồi mạnh thêm 15%.'],
+    ['rongho', 2, 'race:dragon', 'Hơi Thở Rồng', { burnOnHit: { pct: 15, dur: 2 } }, 'Quân Rồng: đòn đánh thiêu đốt mục tiêu 2 giây.'],
+    ['kyluat2', 2, 'race:human', 'Hiệp Sĩ Đoàn', { defPct: 10, hpPct: 10 }, 'Quân Nhân +10% giáp và +10% máu.'],
+    ['vudieu', 2, 'race:fairy', 'Vũ Điệu Lá', { dodge: 8, asPct: 8 }, 'Quân Tiên +8% né và +8% tốc đánh.'],
+    ['nghile', 2, 'race:demon', 'Nghi Lễ Máu', { ls: 6, atkPct: 6 }, 'Quân Quỷ hút máu 6% và +6% ATK.'],
+    ['langthu', 2, 'race:beast', 'Tốc Độ Sói', { spdPct: 12, dodge: 6 }, 'Quân Thú +12% tốc di và +6% né.'],
+    ['xiengrung', 3, 'race:beast', 'Xiềng Xích Rừng', { ccAdd: 25 }, 'Khống chế của quân Thú kéo dài thêm 25%.'],
+    ['danhthuc', 3, 'race:beast', 'Dã Tính Thức Tỉnh', { huntP: 18 }, 'Quân Thú đánh mạnh thêm 18% lên địch đang bị khống chế.'],
+    ['bayhoang', 4, 'race:beast', 'Chúa Tể Bầy Đàn', { ccChance: { pct: 14, st: { stun: .8 } }, atkPct: 10, hpPct: 10 }, 'Quân Thú +10% ATK và máu; 14% đòn đánh làm choáng 0.8 giây.'],
     // F. Riêng tộc
     ['huyetmach', 3, 'race:dragon', 'Huyết Mạch Long', { longhuyetX2: 1 }, 'Long Huyết mạnh gấp đôi (mỗi 1% máu mất +1% tốc đánh).'],
     ['vaycodai', 3, 'race:dragon', 'Giáp Vảy Cổ', { def: 15, reflect: 10 }, 'Quân Rồng +15 DEF và phản 10% sát thương cận chiến.'],

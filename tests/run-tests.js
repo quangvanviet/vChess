@@ -203,7 +203,7 @@ function battleOf(build, opts) {
   ok(a.hash === b.hash && a.ticks === b.ticks, 'cùng đội hình + seed → cùng kết quả');
   ok(a.players.some(function (x) { return x.rank === 1; }) && a.players.some(function (x) { return x.rank === 2; }), 'xếp hạng 1 và 2');
   // bão sau 5 phút: hai đội "giữ vị trí" không gặp nhau vẫn kết thúc
-  var t = battleOf(function (p, ctx) { var z = ctx.zone; army(p, ctx, 'thuan', 3, z.x0 + 2, z.y0 + 5); P.apply(p, { c: 'stance', sq: gens(p)[0].id, s: 'giu' }, ctx); });
+  var t = battleOf(function (p, ctx) { var z = ctx.zone; army(p, ctx, 'thuan', 3, z.x0 + 2, z.y0 + 5); P.apply(p, { c: 'stance', sq: gens(p)[0].id, s: 'giu' }, ctx); P.apply(p, { c: 'stance', sq: P.marshal(p).id, s: 'giu' }, ctx); });
   var r = t.B.run();
   ok(t.B.ended && r.sec > CFG.battleMaxSec && r.sec < CFG.battleMaxSec + 30, 'sau 5 phút sát thương tăng dần kết thúc trận (' + r.sec + 's)');
   // cờ Xanh: không tấn công khi đang hành quân
@@ -343,6 +343,53 @@ console.log('— Bản đồ chiến thuật (đối xứng, nối thông, vùng
       ok(m.towers.length >= 1 && m.towers.every(function (t) { return !zs.some(function (z) { return TT.inZone(z, t[0], t[1]); }); }), 'bản đồ ' + key + ' có tháp ngoài vùng xuất quân');
     });
   });
+})();
+
+console.log('— Thú nhân, khống chế, Nguyên soái đa dạng, Lõi & trang bị mới');
+(function () {
+  ok(TT.FACTION_ORDER.length === 5 && TT.FACTIONS.beast && TT.TALENTS.beast.length === 3 && TT.ORDERS.beast.length === 3, 'có tộc Thú nhân đủ thiên phú và Lệnh Soái');
+  ok(TT.ROLE_ORDER.every(function (r) { var u = TT.UNITS['beast.' + r]; return u && u.sk && u.psd; }), 'Thú nhân đủ 11 binh chủng có nội tại và kỹ năng');
+  var ids = Object.keys(TT.MARSHALS);
+  ok(ids.length >= 25 && TT.FACTION_ORDER.every(function (r) { return TT.MARSHAL_ORDER[r].length >= 5; }), 'mỗi tộc ≥ 5 Nguyên soái (' + ids.length + ' mẫu)');
+  ok(ids.every(function (id) { var m = TT.MARSHALS[id]; return m.name && m.psd && m.ps && (!m.act || (m.act.fx.length && m.act.cd > 0)); }), 'Nguyên soái đều có nội tại; kỹ năng chủ động hợp lệ');
+  var cast = 0, errs = 0;
+  ids.forEach(function (id) {
+    var m = TT.MARSHALS[id], race = m.race;
+    try {
+      var M = mk([race, race === 'human' ? 'beast' : 'human']); M.map = TT.buildMap(2, 'binhnguyen', 1);
+      M.players[0].mar = id;
+      M.players.forEach(function (p, i) { p.lv = 3; p.gold = 999; var z = C(M, p).zone; army(p, C(M, p), 'linh', 5, z.x0 + 10, z.y0 + 6); });
+      var B = TT.Battle.create(MT.battleInput(M)), seen = false;
+      for (var k = 0; k < 20 * 70 && !B.ended; k++) { B.step(); B.events.forEach(function (e) { if (e.e === 'sk' && m.act && e.n === m.act.name) seen = true; }); }
+      if (m.act && seen) cast++;
+    } catch (e) { errs++; console.log('   lỗi Nguyên soái ' + id + ': ' + e.message); }
+  });
+  ok(errs === 0, 'cả ' + ids.length + ' Nguyên soái chạy được trong giao tranh');
+  ok(cast >= 18, 'đa số Nguyên soái tự dùng kỹ năng chủ động (' + cast + ' mẫu đã dùng)');
+  // khống chế: hất tung, trói chân, câm lặng, kéo
+  var seenFx = {};
+  ['tuong', 'cung', 'phapsu', 'thanthu'].forEach(function (role) {
+    var M = mk(['beast', 'human']); M.map = TT.buildMap(2, 'binhnguyen', 1);
+    M.players.forEach(function (p, i) { p.lv = 4; p.gold = 999; var z = C(M, p).zone; army(p, C(M, p), i ? 'linh' : role, i ? 6 : 3, z.x0 + 8, z.y0 + 6); });
+    var B = TT.Battle.create(MT.battleInput(M));
+    for (var k = 0; k < 20 * 90 && !B.ended; k++) { B.step(); B.units.forEach(function (u) { if (u.airT > 0) seenFx.air = 1; if (u.rootT > 0) seenFx.root = 1; if (u.silT > 0) seenFx.sil = 1; if (u.stun > 0) seenFx.stun = 1; }); }
+  });
+  ok(seenFx.air && seenFx.root && seenFx.stun, 'hiệu ứng khống chế (hất tung, trói chân, choáng) xảy ra trong trận');
+  // trang bị & Lõi mới
+  ok(TT.ITEM_ORDER.length >= 35 && TT.CORE_ORDER.length >= 90, 'đủ số trang bị (' + TT.ITEM_ORDER.length + ') và Lõi (' + TT.CORE_ORDER.length + ')');
+  ok(TT.CORE_ORDER.every(function (k) { var c = TT.CORES[k]; return c.name && c.desc && c.tier >= 1 && c.tier <= 4 && /^(all|econ|cls:|role:|race:)/.test(c.scope); }), 'mọi Lõi có tên, mô tả, bậc và phạm vi hợp lệ');
+  // một trận có mọi Lõi/trang bị mới không lỗi
+  var errs2 = 0;
+  [['ccChance', 'bangnha'], ['thunder', 'ladien'], ['pulse', 'nhatchieu'], ['spellShield', 'kimcuong'], ['hpDmg', 'langkhach'], ['skillCc', 'xichxich'], ['cleave', 'daitu']].forEach(function (pr) {
+    try {
+      var M = mk(['human', 'beast']); M.map = TT.buildMap(2, 'binhnguyen', 1);
+      M.players.forEach(function (p, i) { p.lv = 4; p.gold = 999; var z = C(M, p).zone; army(p, C(M, p), 'linh', 5, z.x0 + 10, z.y0 + 6); if (i === 0) { gens(p)[0].it = [pr[1]]; p.cores = ['satluc', 'khatmau', 'bualinh', 'sankeyeu', 'kiencuong']; } });
+      var B = TT.Battle.create(MT.battleInput(M)); B.run();
+    } catch (e) { errs2++; console.log('   lỗi ' + pr[1] + ': ' + e.message); }
+  });
+  ok(errs2 === 0, 'trang bị/Lõi hiệu ứng mới chạy được trong giao tranh');
+  var rules = require('fs').readFileSync(__dirname + '/../database.rules.json', 'utf8');
+  ok(/'thu'/.test(rules) && /"mar"/.test(rules), 'luật Firebase có tộc "thu" và trường "mar"');
 })();
 
 console.log('\nKết quả: ' + pass + ' đạt, ' + fail + ' lỗi');

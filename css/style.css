@@ -1668,3 +1668,10 @@ html body .hud-top .speed button { flex: 1; }
 .gi-ic { display: grid; place-items: center; }
 .gi-ic > svg { width: 70% !important; height: 70% !important; display: block; }
 .su-role { display: inline-grid; place-items: center; } .su-role > svg { width: 75% !important; height: 75% !important; display: block; }
+
+/* menu tướng: nút tròn chỉ icon */
+.act-menu { gap: 5px; padding: 4px; border-radius: 22px; }
+.ga-b { width: 36px; height: 36px; min-width: 0 !important; padding: 0 !important; border-radius: 50%; justify-content: center; font-size: 0; }
+.ga-b svg { width: 62%; height: 62%; }
+.ga-b .price-b { top: -6px; left: -6px; }
+@media (max-width: 760px), (max-height: 520px) { .act-menu { padding: 3px; gap: 4px; } .ga-b { width: 32px; height: 32px; } .act-menu button { padding: 0 !important; } .act-menu button svg { width: 62%; height: 62%; } }

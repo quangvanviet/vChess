@@ -583,21 +583,22 @@
         continue;
       }
       var f, name, pas, home, ready, isMe = o.uid === uid && o.kind === 'human', isHost = o.uid === meta.hostUid && o.kind === 'human';
-      if (o.kind === 'human') { f = Net.RACE_INV[o.p.race] || 'dragon'; name = o.p.name; pas = o.p.passive; home = o.p.homeTileType; ready = o.p.ready || isHost; }
-      else { f = o.b.faction; name = o.b.name + ' ' + s; pas = o.b.talent; home = o.b.start; ready = true; }
+      var marId;
+      if (o.kind === 'human') { f = Net.RACE_INV[o.p.race] || 'dragon'; name = o.p.name; pas = o.p.passive; home = o.p.homeTileType; ready = o.p.ready || isHost; marId = TT.marshalOf(f, o.p.mar).id; }
+      else { f = o.b.faction; name = o.b.name + ' ' + s; pas = o.b.talent; home = o.b.start; ready = true; marId = TT.marshalOf(f, o.b.mar).id; }
       var fd = F[f], pd = TT.TALENTS[f].filter(function (x) { return x.id === pas; })[0], hk = TT.START_ITEMS[home] ? home : 'gold', sit = TT.ITEMS[TT.START_ITEMS[hk] || 'kiem'];
       var stale = o.kind === 'human' && typeof o.p.lastSeen === 'number' && Net.B.now() - o.p.lastSeen > 45000;
-      var lv = o.kind === 'bot' ? App.botLv(s) : '';
+      var lv = o.kind === 'bot' ? App.botLv(s) : '', skHex = (TT.SKINS[skinMap[s]] || {}).c, snap = TT.marshalSnap ? TT.marshalSnap(f, marId, skHex, 120, 150) : '';
       App.INFO['seat' + s] = [esc(name) + ' — ' + fd.name,
         '<b>' + fd.base.name + '</b>: ' + fd.base.desc + '</p><p style="color:#b0303c"><b>' + fd.weak.name + '</b>: ' + fd.weak.desc + '</p><p>Thiên phú <b>' + (pd ? pd.name : '') + '</b>: ' + (pd ? pd.desc : '') + '</p><p>Khởi đầu <b>' + sit.name + '</b>: ' + sit.desc + (o.kind === 'bot' ? '</p><p>' + (App.INFO[lv] ? App.INFO[lv][1] : '') : '')];
       var foot = '';
       if (o.kind === 'bot') foot = host && !fin ? '<select class="bot-sel" data-s="' + s + '" title="Độ khó của Bot">' + App.LV.map(function (l) { return '<option value="' + l[0] + '"' + (l[0] === lv ? ' selected' : '') + '>Bot · ' + l[1] + '</option>'; }).join('') + '</select>' : '<span class="rchip lv-' + lv + '">Bot · ' + TT.Bot.levelName(lv) + '</span>';
       var kick = host && !isMe && !fin ? '<button class="kick" data-act="free" data-s="' + s + '" title="' + (o.kind === 'bot' ? 'Gỡ Bot' : 'Mời ra') + '">' + I.ui('close', 12) + '</button>' : '';
       html += '<div class="sc filled' + (isMe ? ' me' : '') + (ready ? ' rdy' : '') + '" style="--fc:' + fd.color + ';--sc:' + TT.SEAT_COLORS[s] + '">' +
-        '<div class="sc-art">' + I.crest(f, 84) + '<span class="sk-dot" style="--sk:' + (TT.SKINS[skinMap[s]] || {}).c + '" title="Màu quân: ' + ((TT.SKINS[skinMap[s]] || {}).name || '') + '"></span>' + (isMe && !fin && !(me && me.ready && !host) ? '<button type="button" class="skin-btn" data-act="skin" title="Đổi skin màu quân">' + I.ui('palette', 16) + '<span>Skin</span></button>' : '') + '<div class="ready ' + (ready ? 'yes' : 'no') + '">' + (o.kind === 'bot' ? 'Bot' : isHost ? 'Chủ phòng' : ready ? 'Sẵn sàng' : 'Chưa sẵn') + '</div></div>' +
+        '<div class="sc-art">' + (snap ? '<img class="sc-mar" alt="" src="' + snap + '">' : I.crest(f, 60)) + (isMe && !fin && !(me && me.ready && !host) ? '<button type="button" class="mar-btn" data-act="skin" title="Đổi nguyên soái và skin">' + I.ui('rotl', 14) + '</button>' : '') + '<div class="ready ' + (ready ? 'yes' : 'no') + '">' + (o.kind === 'bot' ? 'Bot' : isHost ? 'Chủ phòng' : ready ? 'Sẵn sàng' : 'Chưa sẵn') + '</div></div>' +
         '<div class="sc-body"><div class="pname">' + (isHost ? '<span class="crown" title="Chủ phòng">' + I.ui('crown', 15) + '</span>' : '') + '<span class="pn">' + esc(name) + '</span>' + (stale ? ' <small title="Mất kết nối">' + I.ui('warn', 14, '#e0a000') + '</small>' : '') + '</div>' +
         '<div class="fac">' + fd.name + ' · ' + (opt.teamMode ? (n % 2 ? 'Đội A' : 'Đội B') : sideName) + '</div>' +
-        '<div class="chips"><span class="rchip" title="Thiên phú: ' + esc(pd ? pd.desc : '') + '">' + I.ui('diamond', 10) + (pd ? pd.name : '') + '</span><span class="rchip" title="' + esc(sit.desc) + '">' + I.item(TT.START_ITEMS[hk] || 'kiem', 12) + sit.name + '</span></div>' +
+        '<div class="chips"><span class="rchip" title="' + esc(fd.name) + '">' + I.crest(f, 12) + fd.short + '</span><span class="rchip" title="Thiên phú: ' + esc(pd ? pd.desc : '') + '">' + I.ui('diamond', 10) + (pd ? pd.name : '') + '</span><span class="rchip" title="' + esc(sit.desc) + '">' + I.item(TT.START_ITEMS[hk] || 'kiem', 12) + sit.name + '</span></div>' +
         (foot ? '<div class="sc-foot">' + foot + '</div>' : '') + '</div>' +
         '<div class="sc-corner"><span class="info-i" role="button" tabindex="0" data-info="seat' + s + '" title="Chi tiết">i</span>' + kick + '</div></div>';
     }
@@ -666,38 +667,65 @@
       '<div class="lo2-body t-' + tab + '">' + body + '</div></div>';
     function save(patch) {
       var nf = patch.race ? Net.RACE_INV[patch.race] : f;
-      try { localStorage.setItem('ttkc.loadout2', JSON.stringify({ faction: nf, talent: patch.passive || tal, start: patch.homeTileType || start })); } catch (e) { }
+      try { var sv0 = JSON.parse(localStorage.getItem('ttkc.loadout2') || '{}'); sv0.faction = nf; sv0.talent = patch.passive || tal; sv0.start = patch.homeTileType || start; if (patch.mar) sv0.mar = patch.mar; localStorage.setItem('ttkc.loadout2', JSON.stringify(sv0)); } catch (e) { }
       Net.setMe(App.code, patch).catch(function (e) { App.toast(e.message, 'err'); });
     }
     $$('.lo2-tabs button', el).forEach(function (b) { b.onclick = function () { App.loTab = b.dataset.tab; renderLoadout(App.room, myRec(), App.room.meta.hostUid === Net.user.uid); }; });
-    $$('.fac-opt', el).forEach(function (d) { d.onclick = function () { var k = d.dataset.f; if (k === f) return; save({ race: Net.RACE[k], passive: TT.TALENTS[k][0].id }); }; });
+    $$('.fac-opt', el).forEach(function (d) { d.onclick = function () { var k = d.dataset.f; if (k === f) return; save({ race: Net.RACE[k], passive: TT.TALENTS[k][0].id, mar: TT.defaultMarshal(k) }); }; });
     $$('.rune', el).forEach(function (d) { d.onclick = function () { save({ passive: d.dataset.p }); }; });
     $$('.home-opt', el).forEach(function (d) { d.onclick = function () { save({ homeTileType: d.dataset.h }); }; });
   }
 
 
-  /* ---- popup chọn skin màu quân: bảng màu + xem trước Nguyên soái đổi màu ---- */
-  App.skinPopup = function (me, skinMap) {
+  /* ---- popup Nguyên soái: tab 1 chọn mẫu Nguyên soái (kỹ năng, nội tại, chỉ số), tab 2 chọn skin màu quân ---- */
+  function marStats(f, m) {
+    var R = TT.ROLES.nguyensoai, fm = F[f].mods, G = TT.CONFIG.gen, md = m.mods || {};
+    return {
+      hp: Math.round(R.hp * (fm.hp + (md.hp || 0)) / 100 * G.hp / 100), atk: Math.round(R.atk * (fm.atk + (md.atk || 0)) / 100 * G.atk / 100),
+      def: Math.round(R.def * (fm.def + (md.def || 0)) / 100 * G.def / 100), as: (R.as * (fm.as + (md.as || 0)) / 100).toFixed(2), spd: (R.spd * (fm.spd + (md.spd || 0)) / 100).toFixed(1)
+    };
+  }
+  App.skinPopup = App.marshalPopup = function (me, skinMap) {
     if (!me) return;
-    var f = Net.RACE_INV[me.race] || 'dragon', cur = me.skin && TT.SKINS[me.skin] ? me.skin : null, seat = me.seat;
+    var f = Net.RACE_INV[me.race] || 'dragon', curSkin = me.skin && TT.SKINS[me.skin] ? me.skin : null, seat = me.seat;
+    var curMar = TT.marshalOf(f, me.mar).id, pickMar = curMar, pickSkin = curSkin, tab = 'mar';
     var taken = {}; Object.keys(skinMap).forEach(function (k) { if (k !== seat) taken[skinMap[k]] = k; });
-    var shown = cur || skinMap[seat];
-    var grid = TT.SKIN_ORDER.map(function (k) { var sk = TT.SKINS[k], tk = taken[k]; return '<button type="button" class="skin-opt' + (k === cur ? ' active' : '') + (tk ? ' taken' : '') + '" data-k="' + k + '" style="--sk:' + sk.c + '" title="' + esc(sk.name) + (tk ? ' — người khác đang dùng' : '') + '" aria-label="' + esc(sk.name) + '"><i></i></button>'; }).join('');
-    var html = '<div class="skin-pop"><div class="skin-prev"><canvas id="skin-cv" width="360" height="440"></canvas></div>' +
-      '<div class="skin-side"><h2>' + I.ui('palette', 20) + ' Skin màu quân</h2><div class="skin-nm" id="skin-nm"></div><div class="skin-grid">' + grid + '</div>' +
-      '<button type="button" class="skin-auto' + (cur ? '' : ' active') + '" id="skin-auto">' + I.ui('bolt', 14) + ' Tự động</button></div></div>';
-    var pv = null, pick = cur;
-    var done = App.modal(html, [['Hủy', 'ghost', false], ['Xác nhận', 'gold', true]]).then(function (ok) { if (pv) pv.dispose(); pv = null; if (!ok) return; var patch = { skin: pick || null }; try { var sv = JSON.parse(localStorage.getItem('ttkc.loadout2') || '{}'); sv.skin = pick || null; localStorage.setItem('ttkc.loadout2', JSON.stringify(sv)); } catch (e) { } Net.setMe(App.code, patch).catch(function (e) { App.toast(e.message || String(e), 'err'); }); });
+    var ids = TT.MARSHAL_ORDER[f];
+    var html = '<div class="mp"><div class="mp-tabs"><button type="button" class="on" data-t="mar">' + I.ui('crown', 14) + ' Nguyên soái</button><button type="button" data-t="skin">' + I.ui('palette', 14) + ' Skin</button></div>' +
+      '<div class="mp-body"><div class="mp-prev"><canvas id="skin-cv" width="360" height="440"></canvas></div><div class="mp-main" id="mp-main"></div></div></div>';
+    var pv = null;
+    var done = App.modal(html, [['Hủy', 'ghost', false], ['Xác nhận', 'gold', true]]).then(function (ok) {
+      if (pv) pv.dispose(); pv = null; if (!ok) return;
+      var patch = { skin: pickSkin || null, mar: pickMar };
+      try { var sv = JSON.parse(localStorage.getItem('ttkc.loadout2') || '{}'); sv.skin = pickSkin || null; sv.mar = pickMar; localStorage.setItem('ttkc.loadout2', JSON.stringify(sv)); } catch (e) { }
+      Net.setMe(App.code, patch).catch(function (e) { App.toast(e.message || String(e), 'err'); });
+    });
+    function skHex() { return TT.SKINS[pickSkin || skinMap[seat]].c; }
     function paint() {
-      var k = pick || skinMap[seat], sk = TT.SKINS[k];
-      if (pv) pv.setSkin(sk.c);
-      $('#skin-nm').innerHTML = '<i style="background:' + sk.c + '"></i><b>' + esc(sk.name) + '</b>' + (pick ? '' : '<small>Tự động</small>');
-      $$('.skin-opt').forEach(function (b) { b.classList.toggle('active', b.dataset.k === pick); });
-      $('#skin-auto').classList.toggle('active', !pick);
+      var box = $('#mp-main'); if (!box) return;
+      $$('.mp-tabs button').forEach(function (b) { b.classList.toggle('on', b.dataset.t === tab); });
+      if (tab === 'mar') {
+        var m = TT.MARSHALS[pickMar], st = marStats(f, m);
+        var list = ids.map(function (id) { var mm = TT.MARSHALS[id], img = TT.marshalSnap ? TT.marshalSnap(f, id, skHex(), 96, 120) : ''; return '<button type="button" class="mp-it' + (id === pickMar ? ' on' : '') + '" data-m="' + id + '" title="' + esc(mm.name) + '">' + (img ? '<img alt="" src="' + img + '">' : I.crest(f, 30)) + '</button>'; }).join('');
+        var sm = TT.UNITS[f + '.nguyensoai'].sk;
+        box.innerHTML = '<div class="mp-list">' + list + '</div><div class="mp-info"><div class="mp-nm"><b>' + esc(m.name) + '</b><small>' + esc(m.tag) + '</small></div>' +
+          '<div class="mp-st"><span>' + I.ui('heart', 11) + ' ' + st.hp + '</span><span>' + I.ui('swords', 11) + ' ' + st.atk + '</span><span>' + I.ui('shield', 11) + ' ' + st.def + '</span><span>' + I.ui('bolt', 11) + ' ' + st.as + '/s</span><span>' + I.ui('move', 11) + ' ' + st.spd + '</span></div>' +
+          '<div class="mp-sk"><i>Nội tại</i> ' + esc(m.psd) + '</div>' +
+          (m.act ? '<div class="mp-sk"><i>' + esc(m.act.name) + '</i> ' + esc(m.act.desc) + ' <small>(hồi ' + m.act.cd + ' giây)</small></div>' : '') +
+          '<div class="mp-sk"><i>' + esc(sm.name) + '</i> Triệu hồi lính đã chọn khi đủ MP.</div></div>';
+        $$('.mp-it', box).forEach(function (b) { b.onclick = function () { pickMar = b.dataset.m; if (pv) pv.setRace(f, pickMar), pv.setSkin(skHex()); paint(); }; });
+      } else {
+        var grid = TT.SKIN_ORDER.map(function (k) { var sk = TT.SKINS[k], tk = taken[k]; return '<button type="button" class="skin-opt' + (k === pickSkin ? ' active' : '') + (tk ? ' taken' : '') + '" data-k="' + k + '" style="--sk:' + sk.c + '" title="' + esc(sk.name) + (tk ? ' — người khác đang dùng' : '') + '" aria-label="' + esc(sk.name) + '"><i></i></button>'; }).join('');
+        var sk0 = TT.SKINS[pickSkin || skinMap[seat]];
+        box.innerHTML = '<div class="skin-nm"><i style="background:' + sk0.c + '"></i><b>' + esc(sk0.name) + '</b>' + (pickSkin ? '' : '<small>Tự động</small>') + '</div><div class="skin-grid">' + grid + '</div>' +
+          '<button type="button" class="skin-auto' + (pickSkin ? '' : ' active') + '" id="skin-auto">' + I.ui('bolt', 14) + ' Tự động</button>';
+        $$('.skin-opt', box).forEach(function (b) { b.onclick = function () { pickSkin = b.dataset.k; if (pv) pv.setSkin(skHex()); paint(); }; });
+        $('#skin-auto').onclick = function () { pickSkin = null; if (pv) pv.setSkin(skHex()); paint(); };
+      }
     }
-    setTimeout(function () { var cv = $('#skin-cv'); if (!cv) return; pv = TT.marshalPreview ? TT.marshalPreview(cv, f) : null; paint(); }, 30);
-    $$('.skin-opt').forEach(function (b) { b.onclick = function () { pick = b.dataset.k; paint(); }; });
-    $('#skin-auto').onclick = function () { pick = null; paint(); };
+    $$('.mp-tabs button').forEach(function (b) { b.onclick = function () { tab = b.dataset.t; paint(); }; });
+    setTimeout(function () { var cv = $('#skin-cv'); if (!cv) return; pv = TT.marshalPreview ? TT.marshalPreview(cv, f, pickMar) : null; if (pv) pv.setSkin(skHex()); paint(); }, 30);
+    paint();
     return done;
   };
 

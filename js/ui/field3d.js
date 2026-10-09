@@ -11,7 +11,7 @@
   function col(c) { return new THREE.Color(c); }
   function rnd(a, b) { return a + Math.random() * (b - a); }
   function budget0(self) { return self.anims.length < 160; }
-  var FXC = { dragon: '#ff7a2a', human: '#ffe28a', fairy: '#6ff7e2', demon: '#b67bff', star: '#fff2a0', boom: '#ffb040', taunt: '#ff9966', curse: '#a066ff', blood: '#ff1f3d' };
+  var FXC = { dragon: '#ff7a2a', human: '#ffe28a', fairy: '#6ff7e2', demon: '#b67bff', beast: '#ffb03a', star: '#fff2a0', boom: '#ffb040', taunt: '#ff9966', curse: '#a066ff', blood: '#ff1f3d' };
   // địa hình liền mạch (heightmap): độ cao & màu gốc theo loại ô
   var TER_H = { '.': 0, 'F': .06, 'H': .9, '~': -.62, 'S': -.38, '=': .02, '#': 1.55, 'T': .12 };
   var TER_C = { '.': '#86c663', 'F': '#5a9f48', 'H': '#a6d071', '~': '#cdb88a', 'S': '#5f7a45', '=': '#c9a46c', '#': '#a59d8d', 'T': '#cbbf9f' };
@@ -531,7 +531,7 @@
     /* ================= quân (instanced) ================= */
     _kind: function (key) {
       var k = this.kinds[key]; if (k) return k;
-      var sp = key.split('.'), model = sp[0] === 'm' ? TT.Models.monster(sp[1]) : TT.Models.get(sp[0], sp[1], sp[2] === 'g');
+      var sp = key.split('.'), model = sp[0] === 'm' ? TT.Models.monster(sp[1]) : TT.Models.get(sp[0], sp[1], sp[2] === 'g', sp[3]);
       k = this.kinds[key] = { key: key, model: model, cap: 0, meshes: {}, list: [] };
       return k;
     },
@@ -565,7 +565,7 @@
       var vis = {}, self = this;
       list.forEach(function (u) {
         var v = self.vis[u.id] || { walk: Math.random() * 6, ph: Math.random() * 6, atk: -9, hit: -9 };
-        v.id = u.id; v.key = u.race + '.' + u.role + (u.cap ? '.g' : ''); v.x = u.x; v.y = u.y; v.px = u.x; v.py = u.y; v.face = u.face; v.seat = u.seat; v.cap = u.cap; v.sel = u.sel; v.ghost = u.ghost; v.alive = true; v.hpr = 1; v.mpr = 0; v.items = u.items || null; v.sq = u.sq; v.rad = u.rad || .35; v.race = u.race; v.role = u.role;
+        v.id = u.id; v.key = u.race + '.' + u.role + (u.cap ? '.g' : '') + (u.mid ? '.' + u.mid : ''); v.x = u.x; v.y = u.y; v.px = u.x; v.py = u.y; v.face = u.face; v.seat = u.seat; v.cap = u.cap; v.sel = u.sel; v.ghost = u.ghost; v.alive = true; v.hpr = 1; v.mpr = 0; v.items = u.items || null; v.sq = u.sq; v.rad = u.rad || .35; v.race = u.race; v.role = u.role;
         vis[u.id] = v;
       });
       this.vis = vis; this.prepList = list;
@@ -595,7 +595,7 @@
       this.panT = { x: cx, z: cz }; this.pan = { x: cx, z: cz };
     },
     _addVis: function (u) {
-      var key = u.monster ? 'm.' + u.mkind : u.race + '.' + u.role + (u.cap ? '.g' : '');
+      var key = u.monster ? 'm.' + u.mkind : u.race + '.' + u.role + (u.cap ? '.g' : '') + (u.mid ? '.' + u.mid : '');
       var items = u.cap && u.sq >= 0 && this.B && this.B.squads[u.sq] ? this.B.squads[u.sq].items : null;
       this.vis[u.id] = { items: items, mpr: u.mmp ? u.mp / u.mmp : 0, id: u.id, u: u, key: key, x: u.x / 1000, y: u.y / 1000, px: u.x / 1000, py: u.y / 1000, face: Math.atan2(u.fx, u.fy), walk: Math.random() * 6, ph: Math.random() * 6, atk: -9, hit: -9, alive: true, seat: u.seat, cap: u.cap, rad: u.rad / 1000, hpr: 1, die: 0, race: u.race, role: u.role, pop: performance.now() };
     },
@@ -617,7 +617,7 @@
           v.px = u.px / 1000; v.py = u.py / 1000; v.x = u.x / 1000; v.y = u.y / 1000;
           var dx = v.x - v.px, dy = v.y - v.py, d = Math.abs(dx) + Math.abs(dy);
           
-          v.face = Math.atan2(u.fx, u.fy); v.hpr = u.hp / u.mhp; v.mpr = u.mmp ? u.mp / u.mmp : 0; v.shield = u.shield > 0; v.stun = u.stun > 0; v.stealth = u.stealthT > 0; v.cap = u.cap;
+          v.face = Math.atan2(u.fx, u.fy); v.hpr = u.hp / u.mhp; v.mpr = u.mmp ? u.mp / u.mmp : 0; v.shield = u.shield > 0; v.stun = u.stun > 0; v.air = u.airT > 0 ? Math.min(1, u.airT / 6) : 0; v.stealth = u.stealthT > 0; v.cap = u.cap;
         }
       }
       if (this.acc > 12) this.acc = 12;
@@ -698,6 +698,10 @@
           if (e.k === 'shield') this.dome(now, fp, '#8ff7ff', 700);
           else if (e.k === 'buff' && budget) this.pillar(now, fp, '#ffe066', { h: 1.4, w: .5, dur: 600 });
           else if (e.k === 'rebirth') { this.pillar(now, fp, '#ffb03a', { h: 4, w: 1, dur: 1200 }); this.particles(now, { at: fp.clone().setY(fp.y + .4), n: 40, color: '#ffcf3a', speed: 1.4, up: 3, size: .3, dur: 1200, star: true }); this._text(e.a, 'Hồi sinh!', '#ffcf3a', 1.2, 1.4, true); }
+          else if (e.k === 'stun' && budget) this._text(e.a, 'Choáng', '#ffe066', .9, 1.5);
+          else if (e.k === 'air' && budget) { this._text(e.a, 'Hất tung', '#ffd36b', 1, 1.6); this.particles(now, { at: fp, n: 8, color: '#e8dcc0', speed: 1, up: 1.4, size: .35, dur: 600, drag: 2 }); }
+          else if (e.k === 'root' && budget) { this._text(e.a, 'Trói chân', '#9be36a', .9, 1.4); this.particles(now, { at: fp.clone().setY(fp.y + .1), n: 10, color: '#5fbf3a', speed: .5, up: .6, size: .25, dur: 800 }); }
+          else if (e.k === 'silence' && budget) this._text(e.a, 'Câm lặng', '#c59bff', .9, 1.4);
           else if (e.k === 'heal') this.particles(now, { at: fp, n: 14, color: '#8dffb4', speed: .4, up: 2, size: .24, dur: 900, grav: 0, star: true });
           break;
         }
@@ -885,7 +889,7 @@
           var tilt = mv * hs * (quadK ? .05 : .22) + (1 - mv) * Math.sin(tsec * 1.3 + v2.ph) * .035;
           var land = Math.pow(1 - ah, 3);
           var squash = mv * (land * (quadK ? .08 : .2) - ah * .08) + (1 - mv) * breathe * .03;
-          var fly = model.info.fly ? .55 + Math.sin(tsec * 2 + v2.ph) * .14 : 0;
+          var fly = model.info.fly ? .55 + Math.sin(tsec * 2 + v2.ph) * .14 : 0; if (v2.air) fly += Math.sin(Math.min(1, v2.air) * PI) * 1.1 + .15;
           // nhún tới khi ra đòn
           var atkK0 = (now - v2.atk) / (this.mode === 'battle' ? 380 / Math.max(1, this.speed * .7) : 380), lunge = atkK0 >= 0 && atkK0 < 1 ? Math.sin(atkK0 * PI) : 0;
           var fx0 = Math.sin(v2.fv) * lunge * .16 * sc, fz0 = Math.cos(v2.fv) * lunge * .16 * sc;
@@ -1044,7 +1048,8 @@
       if (this.dead) return;
       requestAnimationFrame(this.loop);
       if (!this.map || (this.showcase && this.pausedShow)) return;
-      var now = performance.now(); if (now - this.clock < 14.5) return;   // tối đa ~60 khung hình/giây (màn 120Hz không làm GPU gấp đôi)
+      if (document.hidden) return;
+      var now = performance.now(), minDt = this.lowGfx && this.mode !== 'battle' && !this.showcase ? 22 : 14.5; if (now - this.clock < minDt) return;   // tối đa ~60 khung hình/giây (màn 120Hz không làm GPU gấp đôi)
       var dt = Math.min(.1, (now - this.clock) / 1000); this.clock = now;
       this._govern(dt * 1000);
       var tsec = now / 1000, self = this;
@@ -1081,43 +1086,63 @@
 
 
   /* ---------- xem trước Nguyên soái đổi màu skin (popup ở phòng chờ) ---------- */
-  TT.marshalPreview = function (canvas, race) {
+  function marshalStage(w, h) {
+    var sc = new THREE.Scene(), cam = new THREE.PerspectiveCamera(26, w / h, .1, 60);
+    sc.add(new THREE.HemisphereLight('#ffffff', '#8fb27a', 1.1)); var dl = new THREE.DirectionalLight('#fff4dd', 2.2); dl.position.set(-3, 6, 5); sc.add(dl);
+    var spin = new THREE.Group(), inner = new THREE.Group(), meshes = [], tc = new THREE.Color(), st = { cur: null, shadow: null };
+    spin.add(inner); sc.add(spin);
+    var S = {
+      sc: sc, cam: cam, spin: spin,
+      clear: function () { meshes.forEach(function (m) { inner.remove(m); m.geometry.dispose(); m.dispose(); }); meshes = []; },
+      load: function (rc, mid) {
+        S.clear();
+        var model = TT.Models.get(rc, 'nguyensoai', true, mid), box = new THREE.Box3(), bb = new THREE.Box3();
+        for (var k in model.parts) {
+          var part = model.parts[k], geo = part.geo.clone(), m = new THREE.InstancedMesh(geo, unitMat(), 1), pv = part.pivot;
+          m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array([1, 1, 1]), 3);
+          geo.setAttribute('tcol', new THREE.InstancedBufferAttribute(new Float32Array(st.cur ? st.cur : [-1, -1, -1]), 3));
+          var mt = new THREE.Matrix4(); if (k === 'armR') mt.makeRotationX(-.5); else if (part.cape) mt.makeRotationX(.15);
+          var tr = new THREE.Matrix4().makeTranslation(pv[0], pv[1], pv[2]).multiply(mt); m.setMatrixAt(0, tr); m.frustumCulled = false; inner.add(m); meshes.push(m);
+          geo.computeBoundingBox(); bb.copy(geo.boundingBox).applyMatrix4(tr); box.union(bb);
+        }
+        var ctr = box.getCenter(new THREE.Vector3()), size = box.getSize(new THREE.Vector3());
+        inner.position.set(-ctr.x, -ctr.y, -ctr.z);
+        var fit = Math.max(size.y * 1.2, size.x * 1.3 / (w / h), size.z * 1.3 / (w / h)), dist = fit / 2 / Math.tan(cam.fov * Math.PI / 360);
+        cam.position.set(0, size.y * .08, dist + size.z * .5); cam.lookAt(0, 0, 0);
+        if (st.shadow) { sc.remove(st.shadow); st.shadow.geometry.dispose(); }
+        st.shadow = new THREE.Mesh(new THREE.CircleGeometry(Math.max(size.x, size.z) * .55, 28), new THREE.MeshBasicMaterial({ color: '#000', transparent: true, opacity: .16 }));
+        st.shadow.rotation.x = -PI / 2; st.shadow.position.y = -size.y / 2 + .01; sc.add(st.shadow);
+      },
+      skin: function (hex) { var v = hex ? (tc.set(hex), [tc.r, tc.g, tc.b]) : [-1, -1, -1]; st.cur = v; meshes.forEach(function (m) { var a = m.geometry.attributes.tcol; a.setXYZ(0, v[0], v[1], v[2]); a.needsUpdate = true; }); }
+    };
+    return S;
+  }
+  TT.marshalPreview = function (canvas, race, mid) {
     if (!TT.webglOK || !TT.Models) return null;
     var w = canvas.clientWidth || 220, h = canvas.clientHeight || 260, r;
     try { r = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true }); } catch (e) { return null; }
     r.setPixelRatio(Math.min(2, window.devicePixelRatio || 1)); r.setSize(w, h, false); r.outputColorSpace = THREE.SRGBColorSpace;
-    var sc = new THREE.Scene(), cam = new THREE.PerspectiveCamera(26, w / h, .1, 60);
-    sc.add(new THREE.HemisphereLight('#ffffff', '#8fb27a', 1.1)); var dl = new THREE.DirectionalLight('#fff4dd', 2.2); dl.position.set(-3, 6, 5); sc.add(dl);
-    var spin = new THREE.Group(), inner = new THREE.Group(), meshes = [], tc = new THREE.Color(), self = { dead: false }, shadow, cur = null;
-    spin.add(inner); sc.add(spin);
-    function load(rc) {
-      meshes.forEach(function (m) { inner.remove(m); m.geometry.dispose(); m.dispose(); }); meshes = [];
-      var model = TT.Models.get(rc, 'nguyensoai', true), box = new THREE.Box3(), bb = new THREE.Box3();
-      for (var k in model.parts) {
-        var part = model.parts[k], geo = part.geo.clone(), m = new THREE.InstancedMesh(geo, unitMat(), 1), pv = part.pivot;
-        m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array([1, 1, 1]), 3);
-        geo.setAttribute('tcol', new THREE.InstancedBufferAttribute(new Float32Array(cur ? cur : [-1, -1, -1]), 3));
-        var mt = new THREE.Matrix4(); if (k === 'armR') mt.makeRotationX(-.5); else if (part.cape) mt.makeRotationX(.15);
-        var tr = new THREE.Matrix4().makeTranslation(pv[0], pv[1], pv[2]).multiply(mt); m.setMatrixAt(0, tr); m.frustumCulled = false; inner.add(m); meshes.push(m);
-        geo.computeBoundingBox(); bb.copy(geo.boundingBox).applyMatrix4(tr); box.union(bb);
-      }
-      // đặt tâm hình học của nhân vật vào giữa khung (xoay quanh tâm đó), chân chạm đáy
-      var ctr = box.getCenter(new THREE.Vector3()), size = box.getSize(new THREE.Vector3());
-      inner.position.set(-ctr.x, -ctr.y, -ctr.z);
-      var fit = Math.max(size.y * 1.2, size.x * 1.3 / (w / h), size.z * 1.3 / (w / h));
-      var dist = fit / 2 / Math.tan(cam.fov * Math.PI / 360);
-      cam.position.set(0, size.y * .08, dist + size.z * .5); cam.lookAt(0, 0, 0);
-      if (shadow) sc.remove(shadow);
-      shadow = new THREE.Mesh(new THREE.CircleGeometry(Math.max(size.x, size.z) * .55, 28), new THREE.MeshBasicMaterial({ color: '#000', transparent: true, opacity: .16 }));
-      shadow.rotation.x = -PI / 2; shadow.position.y = -size.y / 2 + .01; sc.add(shadow);
-    }
-    load(race);
-    var t0 = performance.now();
-    self.setSkin = function (hex) { var v = hex ? (tc.set(hex), [tc.r, tc.g, tc.b]) : [-1, -1, -1]; cur = v; meshes.forEach(function (m) { var a = m.geometry.attributes.tcol; a.setXYZ(0, v[0], v[1], v[2]); a.needsUpdate = true; }); };
-    self.setRace = function (rc) { load(rc); };
-    self.dispose = function () { self.dead = true; meshes.forEach(function (m) { m.geometry.dispose(); m.dispose(); }); r.dispose(); };
-    (function loop() { if (self.dead || !canvas.isConnected) { if (!self.dead) self.dispose(); return; } requestAnimationFrame(loop); spin.rotation.y = .45 + Math.sin((performance.now() - t0) / 1500) * .8; r.render(sc, cam); })();
+    var S = marshalStage(w, h), self = { dead: false }, t0 = performance.now();
+    S.load(race, mid);
+    self.setSkin = function (hex) { S.skin(hex); };
+    self.setRace = function (rc, md) { S.load(rc, md); };
+    self.dispose = function () { self.dead = true; S.clear(); r.dispose(); };
+    (function loop() { if (self.dead || !canvas.isConnected) { if (!self.dead) self.dispose(); return; } requestAnimationFrame(loop); S.spin.rotation.y = .45 + Math.sin((performance.now() - t0) / 1500) * .8; r.render(S.sc, S.cam); })();
     return self;
+  };
+  /* ảnh tĩnh Nguyên soái (thẻ ghế, danh sách chọn): một renderer dùng chung, kết quả được nhớ lại theo (tộc, mẫu, màu) */
+  var SNAP = null, SNAP_C = {};
+  TT.marshalSnap = function (race, mid, skinHex, w, h) {
+    if (!TT.webglOK || !TT.Models) return '';
+    w = w || 120; h = h || 150;
+    var key = [race, mid || '', skinHex || '', w, h].join('|'); if (SNAP_C[key]) return SNAP_C[key];
+    try {
+      if (!SNAP) { var cv = document.createElement('canvas'); SNAP = { cv: cv, r: new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: true, preserveDrawingBuffer: true }) }; SNAP.r.outputColorSpace = THREE.SRGBColorSpace; }
+      SNAP.r.setPixelRatio(Math.min(2, window.devicePixelRatio || 1)); SNAP.r.setSize(w, h, false);
+      var S = marshalStage(w, h); S.skin(skinHex); S.load(race, mid); S.spin.rotation.y = .5;
+      SNAP.r.render(S.sc, S.cam); var url = SNAP.cv.toDataURL('image/png'); S.clear();
+      return (SNAP_C[key] = url);
+    } catch (e) { return ''; }
   };
 
   /* ---------- màn trưng bày ở trang đăng nhập ---------- */
@@ -1130,9 +1155,9 @@
     f.setMap(map, { mode: 2 }); f.el = .5; f.RT = f.R = 21; f.azT = f.az = .7; f.panT = { x: 0, z: 0 };
     var list = [], roles = ['linh', 'cung', 'ky', 'phapsu', 'y', 'thuan', 'chihuy', 'thichkhach'], big = ['thanthu', 'tuong', 'congthanh', 'thanthu'];
     TT.FACTION_ORDER.forEach(function (race, ri) {
-      var ang = ri / 4 * PI * 2 + PI / 4;
+      var ang = ri / TT.FACTION_ORDER.length * PI * 2 + PI / 4;
       for (var k = 0; k < 4; k++) { var a = ang + (k - 1.5) * .26, r = 5.6; list.push({ id: race + k, race: race, role: roles[(k + ri * 2) % roles.length], x: 9 + Math.cos(a) * r, y: 9 + Math.sin(a) * r, face: Math.atan2(9 - (9 + Math.cos(a) * r), 9 - (9 + Math.sin(a) * r)), seat: String(ri + 1) }); }
-      list.push({ id: race + 'B', race: race, role: big[ri], x: 9 + Math.cos(ang) * 3.2, y: 9 + Math.sin(ang) * 3.2, face: Math.atan2(-Math.cos(ang), -Math.sin(ang)), seat: String(ri + 1) });
+      list.push({ id: race + 'B', race: race, role: big[ri % 4], x: 9 + Math.cos(ang) * 3.2, y: 9 + Math.sin(ang) * 3.2, face: Math.atan2(-Math.cos(ang), -Math.sin(ang)), seat: String(ri + 1) });
     });
     f.setPrepUnits(list); f.mode = 'show';
     setInterval(function () {

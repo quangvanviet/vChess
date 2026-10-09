@@ -12,9 +12,10 @@
 
   /* Thiết lập ngẫu nhiên cho bot (tộc, thiên phú, trang bị khởi đầu) theo seed + ghế */
   Bot.loadout = function (seed, seat) {
-    var h = TT.hash32(seed, 'bot', seat), race = TT.FACTION_ORDER[h % 4];
+    var h = TT.hash32(seed, 'bot', seat), race = TT.FACTION_ORDER[h % TT.FACTION_ORDER.length];
     var tal = TT.TALENTS[race][(h >>> 3) % 3].id, start = ['gold', 'food', 'wood'][(h >>> 6) % 3];
-    return { race: race, talent: tal, start: start };
+    var ml = TT.MARSHAL_ORDER[race];
+    return { race: race, talent: tal, start: start, mar: ml[(h >>> 9) % ml.length] };
   };
 
   // trọng số thành phần quân theo tộc
@@ -22,6 +23,7 @@
     dragon: { linh: 4, thuan: 2.5, cung: 2.5, y: 1, ky: 1.5, chihuy: 1, thichkhach: 1, phapsu: 1.5, congthanh: 1, tuong: 1.2, thanthu: 1 },
     human: { linh: 4, thuan: 2.5, cung: 3, y: 1.2, ky: 1.5, chihuy: 1, thichkhach: 1, phapsu: 1.5, congthanh: 1.2, tuong: 1, thanthu: 1 },
     fairy: { linh: 2.5, thuan: 2.5, cung: 4, y: 1.2, ky: 1.5, chihuy: 1, thichkhach: 1.2, phapsu: 2, congthanh: 1, tuong: 1, thanthu: 1 },
+    beast: { linh: 4, thuan: 2.5, cung: 2.5, y: 1.5, ky: 1.5, chihuy: 1, thichkhach: 1, phapsu: 1.5, congthanh: 1, tuong: 1.2, thanthu: 1 },
     demon: { linh: 5, thuan: 2, cung: 2.5, y: 1.2, ky: 1.5, chihuy: 1, thichkhach: 1, phapsu: 1.5, congthanh: 1, tuong: 1, thanthu: 1 }
   };
   var SQ_MAX = { linh: 10, thuan: 8, cung: 8, y: 4, ky: 6, chihuy: 2, thichkhach: 4, phapsu: 5, congthanh: 3, tuong: 2, thanthu: 1 };
@@ -73,7 +75,7 @@
     // áp phương án: mua trang bị mới (ghi log), gắn cho tướng, phần thừa vào tủ, quá tủ thì bán
     pick.buy.forEach(function (it) { var sl = p.ishop.indexOf(it); if (sl >= 0) econ({ c: 'buyItem', slot: sl }); });
     p.squads = pick.squads; p.nid = pick.nid;
-    var msh = P.marshal(p); if (msh) { var sl2 = P.summonList(p), pref = ['cung', 'linh', 'thuan'].filter(function (r) { return sl2.indexOf(r) >= 0; }); msh.sm = pref[(+p.seat + M.day) % pref.length] || 'linh'; msh.st = 'giu'; }
+    var msh = P.marshal(p); if (msh) { var sl2 = P.summonList(p), pref = ['cung', 'linh', 'thuan'].filter(function (r) { return sl2.indexOf(r) >= 0; }); msh.sm = pref[(+p.seat + M.day) % pref.length] || 'linh'; msh.st = 'rut'; }
     p.gold -= P.armyValue(p);
     var all = pool.concat(p.inv); p.inv = [];
     var order = p.squads.slice().sort(function (x, y) { return squadVal(y) - squadVal(x) || x.id - y.id; });

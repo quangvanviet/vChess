@@ -162,6 +162,7 @@
     dragon: { skin: '#ffd9bd', hair: '#f2643a', hair2: '#ffab5c', armor: '#d9473a', armor2: '#9e2f26', trim: '#f5c25a', cloth: '#ffe0b0', horn: '#fff1d8', eye: '#8a2d10', iris: '#ff9a3c', metal: '#e9d6b0', leather: '#8f5332', accent: '#ff8a2a', gem: '#ff9e1f' },
     human: { skin: '#ffe0c6', hair: '#9a6237', hair2: '#d9a066', armor: '#e6edf5', armor2: '#9fb4cc', trim: '#e8b84e', cloth: '#3b7fe0', horn: null, eye: '#1f2b52', iris: '#4a8ee8', metal: '#eef3f8', leather: '#8c5c36', accent: '#ffe28a', gem: '#58c8ff' },
     fairy: { skin: '#ffeadc', hair: '#78e6c8', hair2: '#ffb8e2', armor: '#f6fff9', armor2: '#b8eed6', trim: '#2fc58c', cloth: '#58d6a4', horn: null, eye: '#0f5c44', iris: '#34c99a', metal: '#d8fff2', leather: '#86c890', accent: '#8ff3ff', gem: '#ff86d6', wing: '#d4fbff', wing2: '#ffd9f2' },
+    beast: { skin: '#f6d9a8', hair: '#8a5a2c', hair2: '#ffcf8a', armor: '#a9753f', armor2: '#6a4424', trim: '#86d65a', cloth: '#d49a58', horn: '#f3e8d2', eye: '#3a2410', iris: '#ffb43a', metal: '#cdbf9e', leather: '#7a4a28', accent: '#ffb43a', gem: '#86d65a' },
     demon: { skin: '#e8dbff', hair: '#d6c6ff', hair2: '#ff62a8', armor: '#7446b0', armor2: '#4a2a7c', trim: '#ff72b6', cloth: '#9658da', horn: '#3c2358', eye: '#c0103e', iris: '#ff3d6a', metal: '#bcaee0', leather: '#4a2f66', accent: '#c88cff', gem: '#ff3d7a' }
   };
   var TEAM = {};   // màu nào thuộc vùng đổi theo skin phe
@@ -220,6 +221,7 @@
   }
   function partEars(b, c, o) {
     if (o.ears === 'elf') both(function (sd) { b.x([[0, -.03], [.14, .05], [.02, .03]], .025, c.skin, sd * .2, HY + .01, -.01, [0, sd > 0 ? -.3 : PI + .3, 0], [1, 1, 1], .008, 'elf'); });
+    else if (o.ears === 'beast') both(function (sd) { b.n(.1, .24, c.hair, sd * .14, HY + .2, -.02, [0, 0, -sd * .28], 4); b.n(.055, .15, c.hair2, sd * .14, HY + .19, .01, [0, 0, -sd * .28], 4); });
     else both(function (sd) { b.e(.028, .04, .02, c.skin, sd * .21, HY - .01, 0, [0, sd * .3, 0], 0); });
   }
   // sừng: chuỗi chóp cong (Rồng cong ra sau, Quỷ xoắn lên)
@@ -443,9 +445,9 @@
   var GEN = false; // đang dựng TƯỚNG: to hơn, áo choàng bay, giáp vai vàng, chùm lông, huy hiệu
   // màu nhận diện phe cho vùng lớn (áo, khiên, áo choàng)
   function FAC(c) { return c === PAL.human || c === PAL.fairy ? c.cloth : c.armor; }
-  var CAPE = { dragon: '#c33a2a', human: '#2f6ad0', fairy: '#ffffff', demon: '#3a1d63' };
+  var CAPE = { dragon: '#c33a2a', human: '#2f6ad0', fairy: '#ffffff', demon: '#3a1d63', beast: '#5f8a2b' };
   for (var cr in CAPE) markTeam(CAPE[cr]);
-  var RACE_OPT = function (race, c) { return { dragon: { horns: 1, tail: c.armor, tail2: c.armor2, hairStyle: 'spiky', ears: 'round' }, human: { hairStyle: 'short', ears: 'round' }, fairy: { ears: 'elf', hairStyle: 'long' }, demon: { horns: 1, hornColor: c.horn, hornCurl: 'up', hairStyle: 'messy', ears: 'elf' } }[race]; };
+  var RACE_OPT = function (race, c) { return { dragon: { horns: 1, tail: c.armor, tail2: c.armor2, hairStyle: 'spiky', ears: 'round' }, human: { hairStyle: 'short', ears: 'round' }, fairy: { ears: 'elf', hairStyle: 'long' }, demon: { horns: 1, hornColor: c.horn, hornCurl: 'up', hairStyle: 'messy', ears: 'elf' }, beast: { hairStyle: 'messy', ears: 'beast', tail: c.hair, tail2: c.hair2 } }[race]; };
   // chibi: phóng đầu (và tóc, mũ, sừng...) lên 1.3 lần quanh cổ → đầu to, thân nhỏ
   function chibiHead(b, i0) { var k = 1.3, ny = .62; for (var i = i0; i < b.items.length; i++) { var it = b.items[i]; it[2] = [it[2][0] * k, ny + (it[2][1] - ny) * k, it[2][2] * k]; it[4] = Array.isArray(it[4]) ? it[4].map(function (v) { return v * k; }) : it[4] * k; } }
   function humanoid(race, o) {
@@ -468,7 +470,7 @@
     if (!o.robe) { var legs = partLegs(c, o); parts.legL = legs[0]; parts.legR = legs[1]; }
     if (race === 'fairy' && o.wings !== false) { var w = wingParts(c, 'fairy', 1, .52, -.1); parts.wingL = w[0]; parts.wingR = w[1]; }
     if (GEN) {
-      var pc = { dragon: '#ffd23a', human: '#ff5d5d', fairy: '#8ff7ff', demon: '#ff5fa8' }[race];
+      var pc = { dragon: '#ffd23a', human: '#ff5d5d', fairy: '#8ff7ff', demon: '#ff5fa8', beast: '#86d65a' }[race];
       both(function (sd) { body.e(.03, .03, .03, c.gem, sd * .19, .655, .06, 0, 0); });
       body.x([[0, -.06], [.05, 0], [0, .06], [-.05, 0]], .02, c.trim, 0, .5, .115, 0, 1, .006, 'emb'); body.e(.022, .022, .015, c.gem, 0, .5, .13, 0, 0);
       if (hm !== 'wizard' && hm !== 'crown' && hm !== 'plume' && hm !== 'brim') { body.x([[0, 0], [.035, .05], [.03, .17], [0, .21], [-.03, .17], [-.035, .05]], .035, pc, 0, HY + .2, -.08, [-.45, 0, 0], 1, .01, 'feather'); body.x([[0, 0], [.025, .04], [.02, .12], [0, .15], [-.02, .12], [-.025, .04]], .03, WHITE, 0, HY + .2, -.14, [-1, 0, 0], 1, .008, 'feather2'); }
@@ -535,9 +537,17 @@
   function wheel(b, col, hub, x, y, z, r) { b.a(CYL(r, r, .06, 10), col, [x, y, z], [0, 0, PI / 2]); b.a(TOR(r * .92, .018, 3, 10), hub, [x, y, z], [0, PI / 2, 0]); b.e(.04, .04, .04, hub, x * 1.12, y, z, 0, 0); }
 
   /* ======================= 44 MÔ HÌNH ======================= */
+  var MID = '';
+  var MLOOK = Models.MLOOK = {
+    hoalong: { cape: '#ff6a1a', gem: '#ff7a1a', horn: 1.8 }, thietlong: { cape: '#7a2a1a', shield: 1, belt: '#c9c9d0', scale: 1.14 }, longky: { cape: '#ffd23a', plume: '#ffd23a', light: 1 }, longmach: { cape: '#ffe9c4', weapon: 'staff', gem: '#8dffb4', light: 1 },
+    kiemthanh: { cape: '#1f4fa8', light: 1, weapon: 'sword', gem: '#9fe8ff' }, phapthanh: { cape: '#5a3fd0', weapon: 'staff', gem: '#9fe8ff', light: 1 }, thanhky: { cape: '#f0f4ff', shield: 1, belt: '#cfd8e8', scale: 1.14 }, xathu: { cape: '#2f7a3a', weapon: 'dagger', light: 1, gem: '#b6ff7a' },
+    nguyetnu: { cape: '#cfe0ff', weapon: 'staff', gem: '#e6f2ff', light: 1 }, hoatien: { cape: '#ffc6e8', weapon: 'staff', gem: '#ff86d6', light: 1 }, phongtien: { cape: '#bff7ff', light: 1, gem: '#7fffe0' }, anhtien: { cape: '#1d7a56', weapon: 'dagger', light: 1, noHalo: 1, gem: '#2fe0a0' },
+    huyetma: { cape: '#8a0f2a', gem: '#ff2e5a', horn: 1.8 }, taman: { cape: '#2a1648', weapon: 'staff', gem: '#c88cff', light: 1 }, acquy: { cape: '#1a1a24', shield: 1, scale: 1.16, horn: 1.9 }, damma: { cape: '#111122', weapon: 'dagger', light: 1, noHalo: 1, gem: '#7a7aff' },
+    gauchien: { cape: '#6a4424', shield: 1, scale: 1.18 }, soinguyet: { cape: '#9fb4cc', light: 1, gem: '#cfe8ff', horn: 1 }, dahu: { cape: '#d9822a', weapon: 'dagger', light: 1, noHalo: 1, gem: '#ffb43a' }, toctruong: { cape: '#86d65a', weapon: 'staff', gem: '#86d65a', scale: 1.12 }
+  };
   function build(race, role) {
     var c = PAL[race], parts = {}, scale = 1, info = { kind: 'humanoid' };
-    var plume = { dragon: '#ffd23a', human: '#ff5d5d', fairy: '#8ff7ff', demon: '#ff5fa8' }[race];
+    var plume = { dragon: '#ffd23a', human: '#ff5d5d', fairy: '#8ff7ff', demon: '#ff5fa8', beast: '#86d65a' }[race];
     var setH = function (h) { for (var k in h.parts) parts[k] = h.parts[k]; };
     switch (role) {
       case 'linh': {
@@ -587,11 +597,15 @@
         setH(h6); scale = .94; break;
       }
       case 'nguyensoai': {
-        var hm0 = humanoid(race, { helmet: 'crown', plume: plume, cape: race === 'human' ? '#b8242c' : race === 'fairy' ? '#ffffff' : race === 'dragon' ? '#ffb02e' : '#4a1d7a', heavy: 1, pauldrons: 1, hornSize: 1.3, chest: c.trim, halo: 1 });
-        hm0.body.k(.5, .05, .34, c.trim, 0, .43, 0, 0, .01);                    // đai vàng bản to
-        hm0.body.k(.14, .24, .05, c.gem || c.accent, 0, .62, .13, 0, .01);      // ngọc ngực lớn
-        W.sword(hm0.arm, c, .5, true);
-        setH(hm0); scale = 1.08; break;
+        var LK = MLOOK[MID] || {};
+        var hm0 = humanoid(race, { helmet: 'crown', plume: LK.plume || plume, cape: LK.cape || (race === 'human' ? '#b8242c' : race === 'fairy' ? '#ffffff' : race === 'dragon' ? '#ffb02e' : race === 'beast' ? '#5f8a2b' : '#4a1d7a'), heavy: LK.light ? 0 : 1, pauldrons: 1, hornSize: LK.horn || 1.3, chest: LK.chest || c.trim, halo: LK.noHalo ? 0 : 1 });
+        hm0.body.k(.5, .05, .34, LK.belt || c.trim, 0, .43, 0, 0, .01);                    // đai vàng bản to
+        hm0.body.k(.14, .24, .05, LK.gem || c.gem || c.accent, 0, .62, .13, 0, .01);      // ngọc ngực lớn
+        if (LK.weapon === 'staff') W.staff(hm0.arm, c, LK.gem || c.accent, 'orb');
+        else if (LK.weapon === 'dagger') W.dagger(hm0.arm, c);
+        else W.sword(hm0.arm, c, .5, true);
+        if (LK.shield) shield(hm0.body, c, 'round', FAC(c));
+        setH(hm0); scale = LK.scale || 1.08; break;
       }
       case 'thichkhach': {
         var hood = race === 'dragon' ? '#7a2414' : race === 'human' ? '#30364a' : race === 'fairy' ? '#1d7a56' : '#2a1848';
@@ -605,6 +619,7 @@
         var mount = race === 'dragon' ? quad({ color: '#e5543c', color2: '#ffb36b', belly: '#ffb36b', headKind: 'reptile', len: .64, h: .4, w: .28, t: .28, horn: c.horn, saddle: c.trim, saddle2: c.armor2, eye: '#ffcf3a', hoof: '#ffd36b' })
           : race === 'human' ? quad({ color: '#ffffff', color2: '#f0e6d8', mane: '#d9c4a6', mane2: '#c8b090', len: .62, h: .44, w: .28, t: .3, saddle: c.trim, saddle2: c.cloth })
           : race === 'fairy' ? quad({ color: '#ffffff', color2: '#f2fbff', mane: '#bff7ff', mane2: '#ffd9f2', len: .6, h: .44, w: .27, t: .29, saddle: c.trim, saddle2: c.cloth, horn1: '#fff3a8' })
+          : race === 'beast' ? quad({ color: '#c98a4a', color2: '#e8bb7a', mane: '#6a4424', mane2: '#8a5a2c', len: .62, h: .42, w: .3, t: .3, headKind: 'reptile', saddle: c.armor2, saddle2: c.trim, eye: '#ffb43a', hoof: '#6a4424' })
           : quad({ color: '#3a2a52', color2: '#4e3a6a', mane: '#ff5fa8', mane2: '#c88cff', len: .62, h: .44, w: .28, t: .3, saddle: c.armor2, saddle2: c.armor, eye: '#ff2e5a', hoof: '#c88cff' });
         var rd = rider(race, { helmet: race === 'human' ? 'plume' : race === 'fairy' ? 'tiara' : race === 'demon' ? 'horned' : 'crest', plume: plume, wings: false }, mount.top + .02);
         merge(mount.body, rd.body);
@@ -754,6 +769,6 @@
   }
 
   var CACHE = {};
-  Models.get = function (race, role, gen) { var k = race + '.' + role + (gen ? '.g' : ''); if (CACHE[k]) return CACHE[k]; GEN = !!gen; try { CACHE[k] = build(race, role); } finally { GEN = false; } return CACHE[k]; };
+  Models.get = function (race, role, gen, mid) { mid = role === 'nguyensoai' && mid && MLOOK[mid] ? mid : ''; var k = race + '.' + role + (gen ? '.g' : '') + (mid ? '.' + mid : ''); if (CACHE[k]) return CACHE[k]; GEN = !!gen; MID = mid; try { CACHE[k] = build(race, role); } finally { GEN = false; MID = ''; } return CACHE[k]; };
   Models.monster = function (kind) { var k = 'm.' + kind; return CACHE[k] || (CACHE[k] = buildMonster(kind)); };
 })(typeof window !== 'undefined' ? window : global);

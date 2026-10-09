@@ -42,7 +42,7 @@
     return {
       seed: M.seed, day: M.day, mode: M.mode, map: M.map, event: M.event, weather: M.weather, monster: M.monster,
       players: M.players.filter(function (p) { return !p.out; }).map(function (p) {
-        return { seat: p.seat, name: p.name, side: p.side, team: p.team, race: p.race, talent: p.talent, lv: p.lv, cores: p.cores.slice(), squads: P.clone(p.squads) };
+        return { seat: p.seat, name: p.name, side: p.side, team: p.team, race: p.race, talent: p.talent, mar: p.mar, lv: p.lv, cores: p.cores.slice(), squads: P.clone(p.squads) };
       })
     };
   };
