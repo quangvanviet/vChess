@@ -1,0 +1,10 @@
+{
+  "name": "Tứ Tộc Kỳ Chiến",
+  "short_name": "Tứ Tộc",
+  "start_url": "./index.html",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#3f95f0",
+  "theme_color": "#3f95f0",
+  "icons": [{ "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

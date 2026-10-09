@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#3f95f0">
+<link rel="manifest" href="manifest.webmanifest">
+<title>Tứ Tộc Kỳ Chiến</title>
+<meta name="description" content="Tứ Tộc Kỳ Chiến 2.0 — cờ tự động đánh (auto-battler) 4 tộc, 10 ngày, 2–4 người chơi online, đồ họa 3D khối bo góc.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/lobby.css">
+</head>
+<body>
+<canvas id="bg-fx" aria-hidden="true"></canvas>
+<div class="rotate-hint" id="rotate-hint" aria-hidden="true"><div class="rh-phone"></div><b>Hãy xoay ngang điện thoại</b><small>Game chỉ chơi theo chiều ngang</small><button class="btn gold small" id="rh-go">Chạm để vào toàn màn hình</button></div>
+
+<!-- ============ ĐĂNG NHẬP ============ -->
+<section id="screen-auth" class="screen active">
+  <div class="auth-3d" id="auth-3d"><canvas id="auth-3d-canvas"></canvas></div>
+  <div class="auth-wrap">
+    <div class="logo-block">
+      <div class="logo-crests" id="logo-crests"></div>
+      <h1 class="logo">TỨ TỘC<span>KỲ CHIẾN</span></h1>
+    </div>
+    <div class="panel auth-panel">
+      <div class="tabs" id="auth-tabs">
+        <button data-tab="login" class="active">Đăng nhập</button>
+        <button data-tab="register">Đăng ký</button>
+        <button data-tab="guest">Chơi thử</button>
+      </div>
+      <form id="form-login" class="auth-form active" autocomplete="on">
+        <label>Email<input type="email" name="email" required autocomplete="username" placeholder="ban@vidu.com"></label>
+        <label>Mật khẩu<input type="password" name="password" required autocomplete="current-password" minlength="6" placeholder="••••••"></label>
+        <label class="check"><input type="checkbox" name="remember" checked> Ghi nhớ đăng nhập</label>
+        <button class="btn gold big" type="submit">Vào trận</button>
+      </form>
+      <form id="form-register" class="auth-form" autocomplete="on">
+        <label>Tên hiển thị<input name="name" required maxlength="20" minlength="2" placeholder="Thống soái"></label>
+        <label>Email<input type="email" name="email" required autocomplete="username" placeholder="ban@vidu.com"></label>
+        <label>Mật khẩu<input type="password" name="password" required minlength="6" autocomplete="new-password" placeholder="ít nhất 6 ký tự"></label>
+        <label>Nhập lại mật khẩu<input type="password" name="password2" required minlength="6" autocomplete="new-password"></label>
+        <label class="check"><input type="checkbox" name="remember" checked> Ghi nhớ đăng nhập</label>
+        <button class="btn gold big" type="submit">Tạo tài khoản</button>
+      </form>
+      <form id="form-guest" class="auth-form">
+        <label>Tên người chơi<input name="name" required maxlength="20" minlength="2" placeholder="Nhập tên của bạn"></label>
+        <button class="btn gold big" type="submit">Chơi ngay</button>
+      </form>
+      <p class="form-msg" id="auth-msg" role="alert"></p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SẢNH ============ -->
+<section id="screen-lobby" class="screen">
+  <header class="topbar lb-top">
+    <div class="brand"><span class="brand-mark"><i data-ic="crown" data-s="22"></i></span> <span class="brand-name">Tứ Tộc Kỳ Chiến</span></div>
+    <div class="lb-spacer"></div>
+    <span class="online-pill" id="online-pill" title="Số người đang trực tuyến"><i class="dot"></i><span id="online-count"></span></span>
+    <nav class="lb-icons" id="lobby-nav">
+      <button class="ibtn" data-view="ranks" title="Bảng xếp hạng" aria-label="Bảng xếp hạng"><i data-ic="trophy" data-s="20"></i></button>
+      <button class="ibtn" data-view="guide" title="Hướng dẫn" aria-label="Hướng dẫn"><i data-ic="info" data-s="20"></i></button>
+      <button class="ibtn" data-view="codex" title="Bách khoa" aria-label="Bách khoa"><i data-ic="book" data-s="20"></i></button>
+      <button class="ibtn" id="btn-lobby-settings" title="Cài đặt" aria-label="Cài đặt"><i data-ic="gear" data-s="20"></i></button>
+    </nav>
+    <div class="me-chip" id="me-chip" title="Hồ sơ"></div>
+  </header>
+  <main class="lobby-main">
+    <div class="view active" id="view-play">
+      <div id="rejoin-banner" class="banner hidden"></div>
+      <div class="lb-actions">
+        <button class="act-card gold" id="btn-practice"><span class="ac-ic"><i data-ic="swords" data-s="30"></i></span><span class="ac-tx"><b>Đấu với Bot</b><small>Luyện tập ngay, không cần chờ</small></span></button>
+        <button class="act-card" id="btn-create"><span class="ac-ic"><i data-ic="plus" data-s="30"></i></span><span class="ac-tx"><b>Tạo phòng</b><small>Mở phòng cho bạn bè</small></span></button>
+        <button class="act-card" id="btn-join-code"><span class="ac-ic"><i data-ic="lock" data-s="28"></i></span><span class="ac-tx"><b>Vào bằng mã</b><small>Nhập mã 6 ký tự</small></span></button>
+      </div>
+      <div class="panel rooms-panel">
+        <div class="panel-head">
+          <h2>Phòng đang mở <span class="room-count" id="room-count"></span></h2>
+          <div class="room-tools"><button class="ibtn light" id="room-filter-btn" title="Tìm kiếm / lọc phòng" aria-label="Tìm kiếm / lọc phòng"><i data-ic="search" data-s="18"></i></button></div>
+        </div>
+        <div class="room-filter-bar hidden" id="room-filter-bar">
+          <input id="room-search" placeholder="Tìm tên / mã phòng…">
+          <select id="room-filter"><option value="">Mọi chế độ</option><option value="2">1 đấu 1</option><option value="3">3 người</option><option value="4">4 người</option><option value="team">2 đấu 2</option></select>
+        </div>
+        <div class="room-list" id="room-list"></div>
+      </div>
+    </div>
+  </main>
+  <!-- cửa sổ phụ: xếp hạng / hướng dẫn / bách khoa / hồ sơ -->
+  <div class="lb-sheet hidden" id="lb-sheet">
+    <div class="lb-sheet-box">
+      <div class="lb-sheet-head"><h2 id="lb-sheet-title"></h2><button class="ibtn light" id="lb-sheet-x" title="Đóng" aria-label="Đóng"><i data-ic="close" data-s="16"></i></button></div>
+      <div class="lb-sheet-body">
+        <div class="view" id="view-guide"></div>
+        <div class="view" id="view-codex"></div>
+        <div class="view" id="view-ranks"></div>
+        <div class="view" id="view-profile"></div>
+      </div>
+    </div>
+  </div>
+  <!-- kênh thế giới: bong bóng chat -->
+  <button class="chat-bubble" id="lobby-chat-btn" title="Kênh thế giới" aria-label="Kênh thế giới"><i data-ic="chat" data-s="24"></i><span class="badge hidden" id="lobby-chat-badge"></span></button>
+  <div class="chat-pop hidden" id="lobby-chat-pop">
+    <div class="cp-head"><b>Kênh thế giới</b><button class="ibtn light" id="lobby-chat-x" title="Đóng" aria-label="Đóng"><i data-ic="close" data-s="14"></i></button></div>
+    <div class="chat-log" id="lobby-chat"></div>
+    <form class="chat-form" id="lobby-chat-form"><input maxlength="200" placeholder="Nhắn gì đó…" autocomplete="off"><button class="btn small">Gửi</button></form>
+  </div>
+</section>
+
+<!-- ============ PHÒNG CHỜ ============ -->
+<section id="screen-room" class="screen">
+  <header class="topbar room-top rm-top">
+    <button class="btn ghost" id="btn-leave-room" title="Rời phòng"><i data-ic="back" data-s="16"></i> <span class="lbl">Rời phòng</span></button>
+    <div class="room-title"><span id="room-name">Phòng</span><button class="code-chip" id="room-code" title="Sao chép mã phòng"></button></div>
+    <div class="room-opts" id="room-opts"></div>
+    <button class="ibtn" id="btn-room-settings" title="Cài đặt phòng" aria-label="Cài đặt phòng"><i data-ic="gear" data-s="20"></i></button>
+  </header>
+  <main class="room-main">
+    <div class="seats" id="seats"></div>
+    <div class="panel loadout" id="loadout"></div>
+    <div class="room-actions">
+      <div class="room-status" id="room-status"></div>
+      <button class="btn big" id="btn-ready">Sẵn sàng</button>
+      <button class="btn gold big" id="btn-start">Bắt đầu trận</button>
+    </div>
+  </main>
+  <button class="chat-bubble" id="room-chat-btn" title="Trò chuyện" aria-label="Trò chuyện"><i data-ic="chat" data-s="24"></i><span class="badge hidden" id="room-chat-badge"></span></button>
+  <div class="chat-pop hidden" id="room-chat-pop">
+    <div class="cp-head"><b>Trò chuyện</b><button class="ibtn light" id="room-chat-x" title="Đóng" aria-label="Đóng"><i data-ic="close" data-s="14"></i></button></div>
+    <div class="chat-log" id="room-chat"></div>
+    <form class="chat-form" id="room-chat-form"><input maxlength="200" placeholder="Nhắn cho cả phòng…" autocomplete="off"><button class="btn small">Gửi</button></form>
+  </div>
+</section>
+
+<!-- ============ LOADING ============ -->
+<section id="screen-loading" class="screen">
+  <div class="loading-cards" id="loading-cards"></div>
+  <div class="loading-foot">
+    <div class="tip" id="loading-tip"></div>
+    <div class="bar"><div class="fill" id="loading-fill"></div></div>
+  </div>
+</section>
+
+<!-- ============ TRẬN ĐẤU ============ -->
+<section id="screen-game" class="screen">
+  <div class="board-wrap" id="board-wrap">
+    <canvas id="board"></canvas>
+  </div>
+  <div class="tip-box hidden" id="tip-box"></div>
+  <button class="hud-btn" id="btn-menu" title="Menu"><i data-ic="menu" data-s="22"></i></button>
+  <!-- thanh trên cùng -->
+  <div class="hud hud-top">
+    <div class="day-banner" id="day-banner"></div>
+    <div class="top-ctrl" id="top-ctrl">
+      <div class="timer" id="phase-timer"><div class="fill"></div><span></span></div>
+      <div class="prep-ctrl" id="prep-ctrl">
+        <button class="btn round" id="btn-undo" title="Hoàn tác (Ctrl+Z)"><i data-ic="undo" data-s="20"></i></button>
+        <button class="btn round" id="btn-auto" title="Xếp đội hình tự động"><i data-ic="wand" data-s="20"></i></button>
+        <button class="btn gold end-btn" id="btn-go">Sẵn sàng</button>
+      </div>
+      <div class="battle-ctrl hidden" id="battle-ctrl">
+        <div class="speed" id="speed-btns"><button data-s="1" class="active">x1</button><button data-s="2">x2</button><button data-s="4">x4</button></div>
+        <button class="btn round" id="btn-skip" title="Tua tới kết quả"><i data-ic="skip" data-s="18"></i></button>
+      </div>
+    </div>
+  </div>
+  <!-- người chơi: thẻ nhỏ góc phải, chạm để xem đầy đủ -->
+  <aside class="hud hud-players" id="g-players"></aside>
+  <!-- thông báo chế độ thao tác -->
+  <div class="hud mode-pill hidden" id="g-mode"></div>
+  <!-- bảng thông tin tướng (tự đặt trái/phải để không che tướng) -->
+  <div class="hud win hud-info hidden" id="g-info"></div>
+  <!-- menu ngang nổi trên đầu tướng -->
+  <div class="hud act-menu hidden" id="g-act"></div>
+  <!-- thanh hành quân (cắm cờ) -->
+  <div class="hud flag-bar hidden" id="flag-bar"></div>
+  <!-- bảng Chiến thuật: cách đánh · đội hình · vị trí tướng (mở ở đầu màn hình) -->
+  <div class="hud tac-pop hidden" id="tac-pop"></div>
+  <!-- nhật ký + chat (bật/tắt) -->
+  <button class="hud-btn chat-btn" id="btn-chat" title="Nhật ký và chat"><i data-ic="chat" data-s="20"></i></button>
+  <div class="hud win hud-chat" id="g-chatbox">
+    <div class="win-title">
+      <div class="tabs mini" id="log-tabs"><button data-t="log" class="active">Nhật ký</button><button data-t="chat">Chat</button></div>
+      <button class="win-x" id="chat-x" title="Đóng"><i data-ic="close" data-s="12"></i></button>
+    </div>
+    <div class="chat-body">
+      <div class="chat-log" id="g-log"></div>
+      <div class="chat-log hidden" id="g-chat"></div>
+      <form class="chat-form hidden" id="g-chat-form"><input maxlength="200" placeholder="Nhắn trong trận…"><button class="btn small">Gửi</button></form>
+    </div>
+  </div>
+  <!-- cửa hàng gộp: Lõi + Trang bị (bật/tắt) -->
+  <!-- thanh dưới: bản thân · Tướng/Lính · tủ đồ · cửa hàng -->
+  <div class="hud game-bar" id="g-bar">
+    <div class="gb-me" id="gb-me"></div>
+    <div class="gb-buy">
+      <div class="gb-tabs" id="gb-tabs"></div>
+      <div class="gb-cards" id="gb-cards"></div>
+    </div>
+    <div class="gb-inv" id="gb-inv" title="Tủ đồ: trang bị chưa đeo và Lõi (Lõi trong tủ là có hiệu lực)"></div>
+  </div>
+  <div class="drag-ghost hidden" id="drag-ghost"></div>
+  <div class="center-msg hidden" id="center-msg"></div>
+  <div class="overlay hidden" id="result-overlay"></div>
+  <div class="overlay hidden" id="over-overlay"></div>
+  <div class="overlay hidden" id="menu-overlay"></div>
+</section>
+
+<div class="modal hidden" id="modal"><div class="modal-box" id="modal-box"></div></div>
+<div class="toasts" id="toasts"></div>
+
+<script src="js/vendor/firebase-app-compat.js"></script>
+<script src="js/vendor/firebase-auth-compat.js"></script>
+<script src="js/vendor/firebase-database-compat.js"></script>
+<script src="js/vendor/firebase-analytics-compat.js"></script>
+<script src="js/net/firebase-config.js"></script>
+<script src="js/core/data.js"></script>
+<script src="js/core/maps.js"></script>
+<script src="js/core/prep.js"></script>
+<script src="js/core/battle.js"></script>
+<script src="js/core/match.js"></script>
+<script src="js/core/bot.js"></script>
+<script src="js/net/db.js"></script>
+<script src="js/net/service.js"></script>
+<script src="js/ui/icons.js"></script>
+<script src="js/ui/sound.js"></script>
+<script src="js/vendor/three-bundle.min.js"></script>
+<script src="js/ui/models.js"></script>
+<script src="js/ui/field3d.js"></script>
+<script src="js/ui/content.js"></script>
+<script src="js/ui/app.js"></script>
+<script src="js/ui/game.js"></script>
+</body>
+</html>
