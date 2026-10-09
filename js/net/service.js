@@ -132,7 +132,9 @@
     var saved = {}; try { saved = JSON.parse(localStorage.getItem('ttkc.loadout2') || '{}'); } catch (e) { }
     var f = saved.faction && TT.FACTIONS[saved.faction] ? saved.faction : 'dragon';
     var tal = TT.TALENTS[f].some(function (t) { return t.id === saved.talent; }) ? saved.talent : TT.TALENTS[f][0].id;
-    return { seat: seat, name: Net.user.name.slice(0, 24), race: Net.RACE[f], passive: tal, homeTileType: TT.START_ITEMS[saved.start] ? saved.start : 'gold', ready: false, lastSeen: Net.B.TS };
+    var pl = { seat: seat, name: Net.user.name.slice(0, 24), race: Net.RACE[f], passive: tal, homeTileType: TT.START_ITEMS[saved.start] ? saved.start : 'gold', ready: false, lastSeen: Net.B.TS };
+    if (saved.skin && TT.SKINS[saved.skin]) pl.skin = saved.skin;
+    return pl;
   };
 
   Net.createRoom = function (o) {
@@ -330,7 +332,7 @@
       if (bySeat[s]) {
         var pp = bySeat[s].p, race = Net.RACE_INV[pp.race] || 'dragon';
         var tal = TT.TALENTS[race].some(function (t) { return t.id === pp.passive; }) ? pp.passive : TT.TALENTS[race][0].id;
-        players.push({ seat: s, uid: uid, name: pp.name, race: race, talent: tal, start: TT.START_ITEMS[pp.homeTileType] ? pp.homeTileType : 'gold', bot: null });
+        players.push({ seat: s, uid: uid, name: pp.name, race: race, talent: tal, start: TT.START_ITEMS[pp.homeTileType] ? pp.homeTileType : 'gold', skin: TT.SKINS[pp.skin] ? pp.skin : null, bot: null });
       } else {
         var b = Net.botLoadout(meta.seed, s);
         players.push({ seat: s, uid: uid, name: b.name + ' ' + s, race: b.faction, talent: b.talent, start: b.start, bot: true });

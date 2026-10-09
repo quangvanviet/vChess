@@ -19,7 +19,7 @@
       code: code, room: room, setup: setup, M: M, host: room.meta.hostUid === uid, seat: mine ? mine.seat : null,
       prepMs: room.meta.turnLimitMs || 90000, days: {}, quit: {}, unsub: [], phase: 'load', field: null,
       P: null, cryLog: [], undo: [], sel: null, flagMode: null, buyRole: null, itemSel: null, committed: false, pending: null,
-      tab: 'gen', shop: false, speed: +(lsGet('ttkc.speed') || 1), log: [], results: [], botPk: {}, revealed: {}, lockTry: {}, finTry: {}, revTry: {},
+      tab: 'gen', shop: false, speed: 1, log: [], results: [], botPk: {}, revealed: {}, lockTry: {}, finTry: {}, revTry: {},
       bots: setup.players.filter(function (p) { return p.bot; }).map(function (p) { return p.seat; })
     };
     renderLoading();
@@ -187,7 +187,7 @@
     if (lag > 40) { for (var k = 0; k < lag && !B.ended; k++) { B.step(); B.events = []; } }
     S.battle = B; S.battleInput = input;
     S.field.setHL({}); S.sel = null; S.tab = 'gen'; unpinTip();
-    S.field.setSpeed(S.speed);
+    S.speed = 1; S.field.setSpeed(1);
     S.field.startBattle(B, { speed: S.speed, onEvent: onBattleEvent, onEnd: function () { if (S && S.battle === B) battleDone(); } });
     log('Giao tranh bắt đầu!', 'day');
     TT.Sound.play('turn');
@@ -200,7 +200,7 @@
     else if (e.e === 'die' && Math.random() < .25) TT.Sound.play('hit');
   }
   function battleDone() {
-    S.battle = null;
+    S.battle = null; S.speed = 1; if (S.field) S.field.setSpeed(1); renderTop();
     // chơi một mình với bot: không cần chờ đồng hồ chung, bỏ qua giao tranh thì sang ngày sớm
     if (S.setup.players.filter(function (x) { return !x.bot; }).length === 1) S.nextPrep = Math.min(S.nextPrep, now() + RESULT);
     S.phase = S.M.over ? 'over-wait' : 'result';
@@ -212,19 +212,8 @@
   /* ================= sân 3D ================= */
   function initField() {
     if (!TT.webglOK || !TT.Field3D) { App.toast('Trình duyệt không hỗ trợ WebGL — không hiển thị được chiến trường 3D', 'err', 8000); return; }
-    var f = S.field = new TT.Field3D($('#board'), $('#board-wrap'), { lowRes: lsGet('ttkc.gfx') === 'low' });
+    var f = S.field = new TT.Field3D($('#board'), $('#board-wrap'), { lowRes: autoLow() });
     f.seatColor = TT.SEAT_COLORS;
-    // chạm đúp vào khoảng trống: chế độ xem (mọi giao diện trượt ra), chạm đúp lần nữa để quay lại
-    var lastTap = { t: 0, x: 0, y: 0 };
-    f.c.addEventListener('click', function (e) {
-      if (!S || S.phase === 'over' || S.scoreOpen) return;
-      var now = Date.now(), dbl = now - lastTap.t < 380 && Math.abs(e.clientX - lastTap.x) < 26 && Math.abs(e.clientY - lastTap.y) < 26;
-      lastTap = { t: dbl ? 0 : now, x: e.clientX, y: e.clientY };
-      if (!dbl) return;
-      if (S.preview) { S.preview = false; renderAll(); return; }
-      if (S.tac || S.flagMode || S.moveSq != null || S.placeRole || S.solRole || S.dragSq != null || unitAtE(e)) return;
-      S.preview = true; S.sel = null; S.itemSel = null; unpinTip(); renderAll();
-    });
     f.onClick = onFieldClick; f.onRight = function () { clearModes(); S.sel = null; renderAll(); };
     f.onDragStart = onDragStart; f.onDragMove = onDragMove; f.onDragEnd = onDragEnd;
     f.onHover = onHover; f.onHoverMove = onHover;
@@ -232,12 +221,18 @@
     if (S.M.day > 0) setupFieldForDay();
     requestAnimationFrame(followLoop);
   }
+  // chất lượng đồ họa: 'low' / 'high' do người chơi chọn, mặc định tự nhận máy yếu (cảm ứng, ít nhân CPU, ít RAM)
+  function autoLow() {
+    var pref = lsGet('ttkc.gfx'); if (pref === 'low') return true; if (pref === 'high') return false;
+    var touch = matchMedia && matchMedia('(pointer: coarse)').matches;
+    return !!(touch || (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4) || (navigator.deviceMemory && navigator.deviceMemory <= 4));
+  }
   function setupFieldForDay() {
     var f = S.field, M = S.M; if (!f) return;
     var p = me(), side = p ? p.side : 0;
+    var sks = {}; M.players.forEach(function (x) { if (x.skin && TT.SKINS[x.skin]) sks[x.seat] = TT.SKINS[x.skin].c; }); f.seatSkin = sks;
     if (f.map !== M.map) f.setMap(M.map, { mode: M.mode, zones: M.players.filter(function (x) { return !x.out; }).map(function (x) { return Object.assign({ color: TT.SEAT_COLORS[x.seat], mine: x.seat === S.seat }, TT.zoneOf(M.mode, x.side)); }) });
     if (S.phase !== 'battle') { f.stopBattle(); f.mode = 'prep'; f.setView(side, TT.zoneOf(M.mode, side)); S.spec = null; }
-    S.preview = false;
     refreshField();
   }
   function prepUnits() {
@@ -261,7 +256,8 @@
     var hl = { cells: [], paths: [], circles: [] };
     if (S.hoverCell) { hl.hover = S.hoverCell; hl.hoverOk = S.hoverOk; hl.hoverColor = S.moveSq != null ? '#7ff0ff' : '#ffffff'; }
     if (S.P) S.P.squads.forEach(function (q) {
-      if (!q.fl.length || (S.sel != null && S.sel !== q.id && !S.showAllFlags)) return;
+      if (!q.fl.length || !(S.sel === q.id || (S.flagMode && S.flagMode.sq === q.id))) return;   // cờ chỉ hiện khi chọn đúng tướng đó
+      hl.flagKey = q.id;
       var pts = [[q.x + .5, q.y + .5]], cols = [], flags = [], dash = [];
       q.fl.forEach(function (fl) {
         var tp = flagTarget(fl); if (!tp) return;
@@ -320,7 +316,7 @@
     return r;
   }
   function onFieldClick(cell, e) {
-    if (!S || S.phase === 'over' || S.preview) return;
+    if (!S || S.phase === 'over') return;
     if (S.phase === 'battle') { var bv = unitAtE(e); if (bv) { pinTip(unitTip(bv), e.clientX, e.clientY); } else unpinTip(); return; }
     if (S.tac) { // bảng Chiến thuật đang mở: chạm tướng khác để chuyển, chạm chỗ trống để đóng bảng
       var vt = unitAtE(e);
@@ -331,6 +327,10 @@
     if (S.flagMode) { flagClick(cell, e); return; }
     if (S.placeRole) { buyGenAt(S.placeRole, cell); return; }
     var v = unitAtE(e);
+    if (S.sel != null && S.moveSq == null && !S.solRole && S.itemSel == null) {
+      var qf = P.squadById(S.P, S.sel), fh = qf && qf.fl.length ? flagAt(qf, cell, null, e, false) : -1;
+      if (fh >= 0) { S.flagMode = { sq: qf.id }; S.flagMenu = { sq: qf.id, i: fh, x: e.clientX, y: e.clientY }; TT.Sound.play('click'); renderAll(); return; }
+    }
     if (S.moveSq != null) {
       if (cell && inMyZone(cell)) { doOp({ c: 'move', sq: S.moveSq, x: cell[0], y: cell[1] }); TT.Sound.play('click'); }
       else App.toast('Chọn chỗ trong vùng xuất quân của bạn', 'err');
@@ -372,18 +372,27 @@
     if (fl.c === 'V') { var t = P.squadById(S.P, fl.sq); return t ? [t.x + .5, t.y + .5] : null; }
     var gv = S.field && S.field.vis[fl.seat + ':' + fl.sq + ':0']; return gv ? [gv.x, gv.y] : null;
   }
-  function flagAt(q, cell, v) { // cờ nào của đội đang bị chạm?
-    var best = -1, bd = 1e9;
-    q.fl.forEach(function (f, i) {
-      if (f.c === 'V') { if (v && !v.ghost && v.sq === f.sq) { best = i; bd = -1; } return; }
-      if (f.c === 'T') { if (v && v.ghost) { var pr = String(v.id).split(':'); if (String(pr[0]) === String(f.seat) && +pr[1] === f.sq) { best = i; bd = -1; } } return; }
-      if (!cell || bd < 0) return; var d = Math.max(Math.abs(cell[0] - f.x), Math.abs(cell[1] - f.y)); if (d <= 1 && d <= bd) { bd = d; best = i; }
+  function flagAt(q, cell, v, e, byUnit) { // cờ nào của đội đang bị chạm? (vùng chạm là cả cột cờ trên màn hình)
+    var best = -1, bd = 1e9, f0 = S.field, th = (matchMedia && matchMedia('(pointer: coarse)').matches) ? 30 : 22;
+    if (e && f0) {
+      var rc = f0.c.getBoundingClientRect(), mx = e.clientX, my = e.clientY;
+      q.fl.forEach(function (f, i) {
+        var tp = flagTarget(f); if (!tp) return;
+        var sc = (f.c === 'V' || f.c === 'T') ? 2.4 : 1, a = f0.project(tp[0], tp[1], 0), b = f0.project(tp[0], tp[1], 1.45 * sc);
+        var dx = b.x - a.x, dy = b.y - a.y, l2 = dx * dx + dy * dy || 1, t = Math.max(0, Math.min(1, ((mx - a.x) * dx + (my - a.y) * dy) / l2)), px = a.x + dx * t, py = a.y + dy * t, d = Math.hypot(mx - px, my - py);
+        if (d <= th + 4 && d < bd) { bd = d; best = i; }
+      });
+      if (best >= 0) return best;
+    }
+    if (byUnit) q.fl.forEach(function (f, i) {
+      if (f.c === 'V') { if (v && !v.ghost && v.sq === f.sq) best = i; return; }
+      if (f.c === 'T') { if (v && v.ghost) { var pr = String(v.id).split(':'); if (String(pr[0]) === String(f.seat) && +pr[1] === f.sq) best = i; } }
     });
     return best;
   }
   function flagClick(cell, e) {
     var fm = S.flagMode, q = P.squadById(S.P, fm.sq); if (!q) { S.flagMode = null; renderAll(); return; }
-    var v = unitAtE(e), hit = flagAt(q, cell, v);
+    var v = unitAtE(e), hit = flagAt(q, cell, v, e, true);
     if (hit >= 0) { S.flagMenu = { sq: q.id, i: hit, x: e.clientX, y: e.clientY }; TT.Sound.play('click'); renderFlagMenu(); return; }
     S.flagMenu = null; renderFlagMenu();
     var fl = q.fl.slice();
@@ -563,14 +572,14 @@
     document.body.classList.toggle('prep-locked', !canPrep());
     renderTop(); renderPlayers(); renderBar(); renderInfo(); renderAct(); renderTac(); renderFlagBar(); refreshField();
     // chế độ tập trung: giao diện khác trượt/mờ đi để dễ thao tác trên bản đồ
-    var focus = S.scoreOpen || S.preview ? 'score' : S.tac ? 'tac' : S.flagMode ? 'flag' : (S.moveSq != null || S.dragSq != null) ? 'move' : '';
+    var focus = S.scoreOpen ? 'score' : S.tac ? 'tac' : S.flagMode ? 'flag' : (S.moveSq != null || S.dragSq != null) ? 'move' : '';
     document.body.dataset.focus = focus; document.body.classList.toggle('flag-top', focus === 'flag' && !!S.flagTop);
     var bar = $('#g-bar'); if (bar && !bar.classList.contains('hidden')) document.documentElement.style.setProperty('--barh', Math.round(bar.offsetHeight + (parseFloat(getComputedStyle(bar).bottom) || 8) + 8) + 'px');
     $('#g-mode').classList.toggle('hidden', !(S.placeRole || S.solRole || S.moveSq != null));
     document.body.classList.toggle('mode-bottom', S.moveSq != null);
-    if (S.placeRole) $('#g-mode').innerHTML = I.ui('plus', 14) + ' Chạm vùng xuất quân để đặt tướng <b>' + esc(TT.unitName(S.P.race, S.placeRole)) + '</b><button class="btn small ghost" id="mode-x">Hủy</button>';
-    else if (S.solRole) $('#g-mode').innerHTML = I.ui('plus', 14) + ' Chạm tướng <b>' + esc(TT.unitName(S.P.race, S.solRole)) + '</b> để thêm lính<button class="btn small ghost" id="mode-x">Xong</button>';
-    else if (S.moveSq != null) $('#g-mode').innerHTML = I.ui('move', 14) + ' Chạm chỗ mới trong vùng xuất quân<button class="btn small ghost" id="mode-x">Hủy</button>';
+    if (S.placeRole) $('#g-mode').innerHTML = I.ui('plus', 14) + ' Chạm vùng xuất quân để đặt tướng <b>' + esc(TT.unitName(S.P.race, S.placeRole)) + '</b><button class="x-circ" id="mode-x" title="Hủy" aria-label="Hủy">' + I.ui('close', 11) + '</button>';
+    else if (S.solRole) $('#g-mode').innerHTML = I.ui('plus', 14) + ' Chạm tướng <b>' + esc(TT.unitName(S.P.race, S.solRole)) + '</b> để thêm lính<button class="x-circ" id="mode-x" title="Xong" aria-label="Xong">' + I.ui('close', 11) + '</button>';
+    else if (S.moveSq != null) $('#g-mode').innerHTML = I.ui('move', 14) + ' Chạm chỗ mới trong vùng xuất quân<button class="x-circ" id="mode-x" title="Hủy" aria-label="Hủy">' + I.ui('close', 11) + '</button>';
     var mx = $('#mode-x'); if (mx) mx.onclick = function () { clearModes(); renderAll(); };
   }
   function renderTop() {
@@ -598,7 +607,7 @@
     }
     $('#btn-undo').disabled = !canPrep() || !S.undo.length;
     $('#btn-auto').disabled = !canPrep();
-    $$('#speed-btns button').forEach(function (b) { b.classList.toggle('active', +b.dataset.s === S.speed); });
+    var sb = $('#btn-speed'); if (sb) { sb.textContent = 'x' + S.speed; sb.dataset.s = S.speed; sb.classList.toggle('active', S.speed > 1); }
   }
   function tickUI() {
     if (!S || App.screen !== 'game') return;
@@ -606,7 +615,7 @@
     if (S.phase === 'battle' && S.battle && S.field && !S.field.ended && t > S.finAt + S.dur + 600) S.field.skipBattle(); // máy chậm: bắt kịp đồng hồ chung
     if (S.phase === 'battle' && S.battle) {
       var sec = Math.floor(S.battle.tick / 20), m = Math.floor(sec / 60), s = sec % 60;
-      span.textContent = 'Giao tranh ' + m + ':' + ('0' + s).slice(-2) + (S.battle.storm ? ' · Bão ×' + S.battle.storm : '');
+      span.textContent = m + ':' + ('0' + s).slice(-2);
       fill.style.width = Math.min(100, sec / CFG.battleMaxSec * 100) + '%'; tm.classList.toggle('low', !!S.battle.storm);
       if (t % 1000 < 260) renderPlayers();
     } else if (S.M.day > 0 && (S.phase === 'prep' || S.phase === 'locked')) {
@@ -695,7 +704,7 @@
     // ---- khu mua hàng gộp: Tướng · Lõi · Trang bị (chọn tướng → chuyển sang Lính của tướng đó) ----
     var selQ = S.sel != null && canPrep() ? P.squadById(p, S.sel) : null;
     if (!selQ && S.tab === 'sol') S.tab = 'gen';
-    var tabs = selQ ? [['sol', 'soldier2', 'Lính'], ['item', 'shield', 'Trang bị'], ['core', 'diamond', 'Lõi']] : [['gen', 'crown', 'Tướng'], ['core', 'diamond', 'Lõi'], ['item', 'shield', 'Trang bị']];
+    var tabs = selQ ? [['sol', 'soldier2', selQ && ROLES[selQ.t].marshal ? 'Triệu hồi' : 'Lính'], ['item', 'shield', 'Trang bị'], ['core', 'diamond', 'Lõi']] : [['gen', 'crown', 'Tướng'], ['core', 'diamond', 'Lõi'], ['item', 'shield', 'Trang bị']];
     if (!tabs.some(function (t) { return t[0] === S.tab; })) S.tab = tabs[0][0];
     $('#gb-tabs').innerHTML = (selQ ? '<span class="gb-ctx" style="--fc:' + F[p.race].color + '">' + I.role(selQ.t, '#fff', 14) + '<b>' + esc(TT.unitName(p.race, selQ.t)) + '</b><button id="gb-ctx-x" title="Bỏ chọn tướng">' + I.ui('close', 10) + '</button></span>' : '') +
       tabs.map(function (t) { return '<button data-t="' + t[0] + '" class="' + (S.tab === t[0] ? 'active' : '') + '">' + I.ui(t[1], 13) + ' ' + t[2] + '</button>'; }).join('');
@@ -750,6 +759,14 @@
   }
   function solCards(p, q, free) {
     var R = ROLES[q.t];
+    if (R.marshal) {
+      var MS = CFG.marshal.summon, cur = q.sm || 'linh', smd = P.hasCoreFx(p, 'summonMp') || 0;
+      return TT.ROLE_ORDER.filter(function (r) { return MS[r]; }).map(function (r) {
+        var lock = ROLES[r].age > p.lv, mp = Math.max(10, Math.floor(MS[r].mp * (100 - Math.min(60, smd)) / 100));
+        return '<div class="bcard sm' + (lock ? ' lock' : '') + (cur === r && !lock ? ' on' : '') + '" data-sm="' + r + '" style="--fc:' + F[p.race].color + '"><div class="bc-ic">' + I.role(r, '#fff', 28) + '</div>' +
+          (lock ? '<i class="bc-lk">' + I.ui('lock', 12) + '<b>' + TT.AGE_ROMAN[ROLES[r].age] + '</b></i>' : '<span class="sm-mp">' + I.ui('bolt', 10) + mp + '</span><i class="bc-has">x' + MS[r].n + '</i>') + '</div>';
+      }).join('');
+    }
     if (R.unique) return '<div class="gb-note">' + I.ui('info', 14) + ' Thần thú chiến đấu một mình, không có lính. Mua trang bị cho thần thú ở tab Trang bị.</div>';
     var cost = TT.unitCost(p.race, q.t), maxBuy = Math.max(0, Math.min(Math.floor(p.gold / cost), Math.floor(free / R.pop)));
     var bad = maxBuy < 1;
@@ -787,6 +804,11 @@
       var r = b.dataset.r;
       b.addEventListener('pointerdown', function (e) { if (b.classList.contains('lock')) { App.toast('Cần Đời ' + TT.AGE_ROMAN[ROLES[r].age] + ' — bấm nút Đời để mua EXP', 'err'); return; } startDrag(e, 'gen', r, '<div class="dg-ic gen" style="--fc:' + F[p.race].color + '">' + I.role(r, '#fff', 32) + '</div>'); });
       tipFor(b, function () { return cardTip(r, true); });
+    });
+    $$('#gb-cards .bcard.sm').forEach(function (b) {
+      var r = b.dataset.sm;
+      b.onclick = function () { if (b.classList.contains('lock')) { App.toast('Cần Đời ' + TT.AGE_ROMAN[ROLES[r].age] + ' để triệu hồi loại này', 'err'); return; } if (q && doOp({ c: 'summon', sq: q.id, r: r }).ok) TT.Sound.play('click'); };
+      tipFor(b, function () { var M = CFG.marshal.summon[r]; return '<b>Triệu hồi ' + esc(TT.unitName(p.race, r)) + '</b><div class="tt-d">Khi đủ ' + M.mp + ' MP, Nguyên soái triệu hồi ' + M.n + ' lính (sức mạnh ' + M.pct + '%) đứng cạnh, tồn tại trong ngày. Lính càng mạnh càng tốn nhiều MP.</div>'; });
     });
     var sc = $('#gb-cards .bcard.sol');
     if (sc && q) {
@@ -879,21 +901,21 @@
     var slots = ''; for (var i = 0; i < CFG.genItems; i++) slots += q.it[i] ? '<button class="gi-it" data-slot="' + i + '">' + I.item(q.it[i], 26) + '</button>' : '<div class="gi-it empty" title="Chạm trang bị trong tủ đồ rồi chạm tướng">+</div>';
     var upN = (q.up || []).reduce(function (a, b) { return a + (b | 0); }, 0), upMax = CFG.solUp.max * CFG.solUp.stats.length;
     if (!R.unique) slots += '<button class="gi-up' + (S.solUp === q.id ? ' on' : '') + '" id="gi-up" title="Nâng cấp lính">' + I.ui('up', 16) + '<span>Lính</span><i>' + upN + '/' + upMax + '</i></button>';
-    el.innerHTML = '<div class="gi-c1"><div class="gi-head" style="--fc:' + F[p.race].color + '"><div class="gi-ic">' + I.role(q.t, '#fff', 30) + '<i>' + I.ui('crown', 10) + '</i></div><div><div class="gi-n">' + esc(ud.name || R.name) + '</div><div class="gi-s">Tướng ' + R.name + ' · ' + TT.CLS_NAME[R.cls] + ' · ' + R.pop * q.n + ' dân</div></div><button class="gi-more" id="gi-more" title="Chi tiết">' + I.ui(S.infoMore ? 'close' : 'info', 12) + '<span>' + (S.infoMore ? 'Thu gọn' : 'Chi tiết') + '</span></button><button class="win-x" id="gi-x">' + I.ui('close', 12) + '</button></div>' +
+    el.innerHTML = '<div class="gi-c1"><div class="gi-head" style="--fc:' + F[p.race].color + '"><div class="gi-ic">' + I.role(q.t, '#fff', 30) + '<i>' + I.ui('crown', 10) + '</i></div><div><div class="gi-n">' + esc(ud.name || R.name) + '</div><div class="gi-s">' + (R.marshal ? 'Ngã là thua ngày · ' : 'Tướng ' + R.name + ' · ') + TT.CLS_NAME[R.cls] + (R.marshal ? '' : ' · ' + R.pop * q.n + ' dân') + '</div></div><button class="gi-more" id="gi-more" title="Chi tiết">' + I.ui(S.infoMore ? 'close' : 'info', 12) + '<span>' + (S.infoMore ? 'Thu gọn' : 'Chi tiết') + '</span></button><button class="win-x" id="gi-x">' + I.ui('close', 12) + '</button></div>' +
       '<div class="gi-stats"><span>' + I.ui('heart', 11) + ' ' + g.hp + '</span><span>' + I.ui('swords', 11) + ' ' + g.atk + '</span><span>' + I.ui('shield', 11) + ' ' + g.def + '</span><span>Tốc ' + g.as.toFixed(2) + '</span><span>Tầm ' + g.rng + '</span><span>MP ' + g.mp0 + '/' + g.mp + '</span></div>' +
       '<div class="gi-items">' + slots + '</div></div><div class="gi-c2">' +
       (ud.sk ? '<div class="gi-txt"><b>' + esc(ud.sk.name) + '</b> (đầy MP): ' + esc(ud.sk.desc) + '</div>' : '') + (ud.psd ? '<div class="gi-txt"><b>Nội tại:</b> ' + esc(ud.psd) + '</div>' : '') + '</div><div class="gi-c3">' +
       '<div class="gi-sol"><div><b>' + (q.n - 1) + ' lính</b><small>' + (R.unique ? '' : (upN ? 'Đã nâng ' + upN + ' cấp · ' : '') + 'chạm <b>Lính</b> ở trên để xem và nâng cấp') + '</small></div>' +
-      (R.unique ? '<small class="muted">Không có lính</small>' : '<button class="btn small teal pb-host" id="gi-add">' + priceB(TT.unitCost(p.race, q.t), p.gold < TT.unitCost(p.race, q.t)) + '+ Lính</button>') + '</div>' +
+      (R.marshal ? '<small class="muted">Chọn lính triệu hồi ở thanh dưới</small>' : R.unique ? '<small class="muted">Không có lính</small>' : '<button class="btn small teal pb-host" id="gi-add">' + priceB(TT.unitCost(p.race, q.t), p.gold < TT.unitCost(p.race, q.t)) + '+ Lính</button>') + '</div>' +
       '<div class="gi-row"><span>Chiến thuật</span><b>' + TT.STANCES[q.st].name + ' · ' + TT.FORMATIONS[q.fm || 'khoi'].name + '</b></div><div class="gi-row"><span>Hành quân</span><b>' + (q.fl.length ? q.fl.length + ' cờ' : 'Tự do') + '</b></div>' +
-      '<div class="gi-sell"><button class="btn small" id="gi-sellsol" ' + (q.n > 1 ? '' : 'disabled') + '>' + I.svg('coin2', null, 12) + ' Bán lính</button><button class="btn small red" id="gi-sell">' + I.ui('crown', 12) + ' Bán tướng</button></div></div>';
+      (R.marshal ? '' : '<div class="gi-sell"><button class="btn small" id="gi-sellsol" ' + (q.n > 1 ? '' : 'disabled') + '>' + I.svg('coin2', null, 12) + ' Bán lính</button><button class="btn small red" id="gi-sell">' + I.ui('crown', 12) + ' Bán tướng</button></div>') + '</div>';
     $('#gi-x').onclick = function () { S.sel = null; renderAll(); };
     el.classList.toggle('more', !!S.infoMore);
     $('#gi-more').onclick = function () { S.infoMore = !S.infoMore; renderInfo(); };
     var ad = $('#gi-add'); if (ad) ad.onclick = function () { addSoldier(q.id); };
     var gu = $('#gi-up'); if (gu) { gu.onclick = function () { S.solUp = S.solUp === q.id ? null : q.id; TT.Sound.play('click'); renderInfo(); }; tipFor(gu, '<b>Nâng cấp lính</b><div class="tt-d">Xem chỉ số lính và dùng Vàng nâng Máu, Tấn công, Giáp, Tốc đánh cho mọi lính của tướng này.</div>'); }
     var ss = $('#gi-sellsol'); if (ss) ss.onclick = function () { sellSoldiersPopup(q.id); };
-    $('#gi-sell').onclick = function () { sellGeneralPopup(q.id); };
+    var gsl = $('#gi-sell'); if (gsl) gsl.onclick = function () { sellGeneralPopup(q.id); };
     $$('#g-info .gi-it[data-slot]').forEach(function (d) { var sl = +d.dataset.slot; d.onclick = function () { var rc = d.getBoundingClientRect(), k = q.it[sl], it = TT.ITEMS[k]; pinTip(itemTip(k) + '<div class="tt-act"><button class="btn small" data-act="unequip" data-v="' + q.id + ',' + sl + '">Tháo vào tủ</button><button class="btn small red" data-act="sellEq" data-v="' + q.id + ',' + sl + '">Bán +' + it.price + '</button></div>', rc.right + 6, rc.top); }; tipFor(d, function () { return itemTip(q.it[sl], 'Chạm để tháo hoặc bán'); }); });
     placeInfo();
     if (S.solUp != null && S.solUp !== q.id) S.solUp = null;
@@ -1096,7 +1118,7 @@
         '<div class="lp-btns"><button class="btn small ghost" id="pos-reset"' + (q.cu && q.cu.length ? '' : ' disabled') + '>' + I.ui('undo', 11) + ' Về hình mẫu</button><span class="lp-fm">Hình mẫu: <b>' + TT.FORMATIONS[fm].name + '</b></span></div>' + spaceSliderHtml(q) + '</div></div>';
     }
     el.innerHTML = '<div class="tc-head" style="--fc:' + F[p.race].color + '">' + I.role(q.t, '#fff', 18) + '<b>' + esc(TT.unitName(p.race, q.t)) + '</b><div class="tc-tabs">' +
-      tabs.map(function (t) { return '<button data-tt="' + t[0] + '" class="' + (tab === t[0] ? 'active' : '') + '">' + I.ui(t[1], 12) + '<span>' + t[2] + '</span></button>'; }).join('') + '</div><button class="tc-x" id="tc-x" title="Xong">' + I.ui('check', 14) + '<span>Xong</span></button></div><div class="tc-body">' + body + '</div>';
+      tabs.map(function (t) { return '<button data-tt="' + t[0] + '" class="' + (tab === t[0] ? 'active' : '') + '">' + I.ui(t[1], 12) + '<span>' + t[2] + '</span></button>'; }).join('') + '</div><button class="x-circ tc-x" aria-label="Đóng" id="tc-x" title="Xong">' + I.ui('close', 12) + '</button></div><div class="tc-body">' + body + '</div>';
     $('#tc-x').onclick = function () { S.tac = null; renderAll(); };
     $$('#tac-pop [data-tt]').forEach(function (b) { b.onclick = function () { S.tac.tab = b.dataset.tt; renderTac(); }; });
     $$('#tac-pop [data-st]').forEach(function (b) { b.onclick = function () { doOp({ c: 'stance', sq: q.id, s: b.dataset.st }); TT.Sound.play('click'); }; tipFor(b, '<b>' + TT.STANCES[b.dataset.st].name + '</b><div class="tt-d">' + TT.STANCES[b.dataset.st].desc + ' Lính làm theo tướng.</div>'); });
@@ -1121,7 +1143,7 @@
     if (S.field && gp) { var pt = S.field.project(gp[0], gp[1], 1); atTop = pt.y > innerHeight * .5 && pt.x < innerWidth * .5; }
     S.flagTop = atTop; el.classList.toggle('at-top', atTop);
     var leg = [['D', 'Chạm đất', 'tiến công'], ['V', 'Chạm tướng mình', 'hộ tống'], ['T', 'Chạm địch', 'diệt mục tiêu']].map(function (l) { return '<span class="fb-lg" style="--c:' + FLAG_COL[l[0]] + '"><i></i>' + l[1] + ': <b>cờ ' + FLAG_NAME[l[0]] + '</b></span>'; }).join('');
-    el.innerHTML = '<div class="fb-top">' + I.ui('flag', 13) + '<span class="fb-t">Cắm cờ · <b>' + esc(TT.unitName(S.P.race, q.t)) + '</b></span><span class="fb-cnt">' + q.fl.length + ' cờ</span><button class="fb-exit" id="fb-done" title="Thoát chế độ cắm cờ">' + I.ui('close', 11) + '<span>Thoát</span></button></div>' +
+    el.innerHTML = '<div class="fb-top">' + I.ui('flag', 13) + '<span class="fb-t">Cắm cờ · <b>' + esc(TT.unitName(S.P.race, q.t)) + '</b></span><span class="fb-cnt">' + q.fl.length + ' cờ</span><button class="x-circ" id="fb-done" title="Thoát chế độ cắm cờ" aria-label="Thoát">' + I.ui('close', 11) + '</button></div>' +
       '<div class="fb-legend">' + leg + '<span class="fb-lg" style="--c:' + FLAG_COL.X + '"><i></i>Chạm cờ: <b>sửa / xóa</b></span></div>' +
       '<div class="fb-act"><button class="btn small ghost" id="fb-undo" ' + (q.fl.length ? '' : 'disabled') + '>' + I.ui('undo', 11) + ' Bỏ cờ cuối</button><button class="btn small ghost" id="fb-clear" ' + (q.fl.length ? '' : 'disabled') + '>' + I.ui('trash', 11) + ' Xóa hết</button></div>';
     $$('.fb-lg', el).forEach(function (b, k) { var t = ['D', 'V', 'T', 'X'][k]; tipFor(b, '<b>' + TT.FLAGS[t].name + '</b><div class="tt-d">' + TT.FLAGS[t].desc + (t === 'D' ? ' Cờ xanh (đi thẳng không đánh) đổi được trong menu của cờ.' : '') + '</div>'); });
@@ -1189,9 +1211,8 @@
 
   /* ================= menu ================= */
   function openMenu() {
-    var o = $('#menu-overlay'), low = lsGet('ttkc.gfx') === 'low';
-    o.innerHTML = '<div class="win menu-box"><h2>Menu</h2>' +
-      '<button class="btn wide" id="mn-close">Tiếp tục</button>' +
+    var o = $('#menu-overlay'), low = autoLow();
+    o.innerHTML = '<div class="win menu-box"><div class="mn-head"><h2>Menu</h2><button class="x-circ" id="mn-close" title="Đóng" aria-label="Đóng">' + I.ui('close', 12) + '</button></div>' +
       '<button class="btn wide ghost" id="mn-guide">' + I.ui('info', 14) + ' Cách chơi nhanh</button>' +
       '<button class="btn wide ghost" id="mn-gfx">Đồ họa: ' + (low ? 'Nhẹ (điện thoại)' : 'Đẹp') + '</button>' +
       '<button class="btn wide ghost" id="mn-snd">' + (TT.Sound.on ? I.ui('sound') + ' Âm thanh: Bật' : I.ui('mute') + ' Âm thanh: Tắt') + '</button>' +
@@ -1224,7 +1245,7 @@
     $('#btn-go').onclick = function () { if (!S) return; if (S.committed) uncommit(); else commitMine(); };
     $('#btn-undo').onclick = function () { undo(); };
     $('#btn-auto').onclick = function () { doOp({ c: 'auto' }); };
-    $$('#speed-btns button').forEach(function (b) { b.onclick = function () { S.speed = +b.dataset.s; lsSet('ttkc.speed', S.speed); if (S.field) S.field.setSpeed(S.speed); renderTop(); }; });
+    var spb = $('#btn-speed'); if (spb) spb.onclick = function () { S.speed = S.speed === 1 ? 2 : S.speed === 2 ? 4 : 1; if (S.field) S.field.setSpeed(S.speed); renderTop(); };
     $('#btn-skip').onclick = function () { if (S && S.field && S.field.B) S.field.skipBattle(); };
     $('#btn-chat').onclick = function () { var c = $('#g-chatbox'); c.classList.toggle('open'); document.body.classList.toggle('chat-open', c.classList.contains('open')); $('#btn-chat').classList.remove('ping'); };
     $('#chat-x').onclick = function () { $('#g-chatbox').classList.remove('open'); document.body.classList.remove('chat-open'); };
@@ -1234,7 +1255,7 @@
   document.addEventListener('keydown', function (e) {
     if (!S || App.screen !== 'game' || /INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)) return;
     var k = e.key.toLowerCase();
-    if (k === 'escape') { S.preview = false; clearModes(); S.sel = null; S.tac = null; unpinTip(); renderAll(); }
+    if (k === 'escape') { clearModes(); S.sel = null; S.tac = null; unpinTip(); renderAll(); }
     else if (k === 'z' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); undo(); }
     else if (k === ' ' && S.P && S.phase === 'prep') { e.preventDefault(); if (S.committed) uncommit(); else commitMine(); }
     else if (k === 'd') { S.tab = S.tab === 'core' ? 'item' : 'core'; renderAll(); }

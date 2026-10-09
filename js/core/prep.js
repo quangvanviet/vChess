@@ -17,6 +17,7 @@
       pop: 0, ishop: [null, null, null, null, null, null], irIdx: 0, freeIr: 0,
       out: 0
     };
+    p.squads.push({ id: p.nid++, t: 'nguyensoai', n: 1, x: 0, y: 0, st: 'giu', fm: 'khoi', lp: 4, it: [], fl: [], up: [0, 0, 0, 0], sm: 'linh' });
     p.inv.push(TT.START_ITEMS[o.start] || 'kiem');
     return p;
   };
@@ -42,6 +43,9 @@
   P.armyValue = function (p) { var s = 0; p.squads.forEach(function (q) { s += P.squadCost(p, q); }); return s; };
   P.interest = function (p) { return Math.min(CFG.interestMax + P.hasCoreFx(p, 'interestAdd'), Math.floor(Math.max(0, p.gold) / CFG.interestPer)); };
   P.squadAt = function (p, x, y) { for (var i = 0; i < p.squads.length; i++) if (p.squads[i].x === x && p.squads[i].y === y) return p.squads[i]; return null; };
+  P.marshal = function (p) { for (var i = 0; i < p.squads.length; i++) if (TT.ROLES[p.squads[i].t].marshal) return p.squads[i]; return null; };
+  /* lính Nguyên soái có thể triệu hồi theo Đời hiện tại */
+  P.summonList = function (p) { return TT.ROLE_ORDER.filter(function (r) { return CFG.marshal.summon[r] && TT.ROLES[r].age <= p.lv; }); };
   P.squadById = function (p, id) { for (var i = 0; i < p.squads.length; i++) if (p.squads[i].id === id) return p.squads[i]; return null; };
 
   /* ---------- bảng Lõi ---------- */
@@ -111,7 +115,7 @@
       case 'buySol': {
         var g = P.squadById(p, c.sq); if (!g) return err('Lính phải nhập vào đạo quân của một tướng');
         var RS = TT.ROLES[g.t], k = Math.max(1, c.k | 0);
-        if (RS.unique) return err(TT.unitName(p.race, g.t) + ' không có lính');
+        if (RS.unique) return err(RS.marshal ? 'Nguyên soái không mua lính — hãy chọn lính để triệu hồi' : TT.unitName(p.race, g.t) + ' không có lính');
         k = Math.min(k, Math.floor((P.capacity(p) - P.usedPop(p)) / RS.pop));
         if (k <= 0) return err('Hết Sức chứa — lên Đời để chứa thêm quân');
         var cs = TT.unitCost(p.race, g.t); k = Math.min(k, Math.floor(p.gold / cs));
@@ -121,6 +125,7 @@
       }
       case 'sell': {
         var s = P.squadById(p, c.sq); if (!s) return err('Không thấy đạo quân');
+        if (TT.ROLES[s.t].marshal) return err('Không thể bán Nguyên soái');
         var kk = c.k == null ? s.n : c.k | 0;
         if (kk < s.n) { // bán lính
           kk = Math.max(1, Math.min(kk, s.n - 1));
@@ -150,6 +155,12 @@
         if (lvU >= U.max) return err('Đã nâng tối đa');
         if (!pay(p, U.cost[lvU], ctx)) return err('Không đủ Vàng');
         uq.up[si] = lvU + 1; return { ok: true, sq: uq.id, lv: lvU + 1 };
+      }
+      case 'summon': { // chọn loại lính Nguyên soái sẽ triệu hồi
+        var ms = P.squadById(p, c.sq); if (!ms || !TT.ROLES[ms.t].marshal) return err('Chỉ Nguyên soái mới triệu hồi');
+        if (!CFG.marshal.summon[c.r]) return err('Không triệu hồi được loại này');
+        if (!P.unitUnlocked(p, c.r)) return err('Cần Đời ' + TT.AGE_ROMAN[TT.ROLES[c.r].age] + ' để triệu hồi ' + TT.unitName(p.race, c.r));
+        ms.sm = c.r; return { ok: true };
       }
       case 'stance': { var st = P.squadById(p, c.sq); if (!st || !TT.STANCES[c.s]) return err('Chiến thuật không hợp lệ'); st.st = c.s; return { ok: true }; }
       case 'formation': {
@@ -300,7 +311,8 @@
     var rows = { front: [], mid: [], back: [], wing: [] };
     p.squads.forEach(function (q) {
       var r = q.t;
-      if (r === 'thichkhach' || r === 'ky') rows.wing.push(q);
+      if (TT.ROLES[r].marshal) rows.back.push(q);
+      else if (r === 'thichkhach' || r === 'ky') rows.wing.push(q);
       else if (r === 'linh' || r === 'thuan' || r === 'tuong' || r === 'thanthu') rows.front.push(q);
       else if (r === 'y' || r === 'chihuy') rows.mid.push(q);
       else rows.back.push(q);
@@ -327,7 +339,7 @@
   P.makePackage = function (p, econLog) {
     return {
       c: econLog.slice(),
-      a: p.squads.map(function (q) { return [q.id, q.t, q.n, q.x, q.y, q.st, q.it.join('|'), q.fl.length ? q.fl.map(function (f) { return f.c === 'V' ? 'V' + f.sq + (f.k ? ':' + f.k : '') : f.c === 'T' ? 'T' + f.seat + ':' + f.sq : f.c + f.x + ',' + f.y; }).join(';') : '', q.fm || 'khoi', q.lp == null ? 4 : q.lp, (q.up || []).some(Boolean) ? q.up.join(',') : '', q.sp && q.sp !== 100 ? q.sp : 0, q.cu && q.cu.length ? q.cu.map(function (v) { return v[0] + ',' + v[1]; }).join(';') : '']; }),
+      a: p.squads.map(function (q) { return [q.id, q.t, q.n, q.x, q.y, q.st, q.it.join('|'), q.fl.length ? q.fl.map(function (f) { return f.c === 'V' ? 'V' + f.sq + (f.k ? ':' + f.k : '') : f.c === 'T' ? 'T' + f.seat + ':' + f.sq : f.c + f.x + ',' + f.y; }).join(';') : '', q.fm || 'khoi', q.lp == null ? 4 : q.lp, (q.up || []).some(Boolean) ? q.up.join(',') : '', q.sp && q.sp !== 100 ? q.sp : 0, q.cu && q.cu.length ? q.cu.map(function (v) { return v[0] + ',' + v[1]; }).join(';') : '', q.sm || '']; }),
       i: p.inv.join('|'), n: p.nid
     };
   };
@@ -350,7 +362,7 @@
       (pkg.c || []).forEach(function (c) { if (!P.ECON[c.c]) throw new Error('lệnh lạ'); var r = P.apply(p, c, rctx); if (!r.ok) throw new Error(r.err); });
       if (p._ghost) throw new Error('bán trang bị không có');
       var np = clone(p);
-      np.squads = (pkg.a || []).map(function (a) { return { id: a[0] | 0, t: String(a[1]), n: a[2] | 0, x: a[3] | 0, y: a[4] | 0, st: String(a[5] || 'tc'), it: a[6] ? String(a[6]).split('|') : [], fl: parseFlags(a[7]), fm: String(a[8] || 'khoi'), lp: a[9] == null ? 4 : a[9] | 0, up: a[10] ? String(a[10]).split(',').map(function (v) { return +v; }) : [0, 0, 0, 0], sp: a[11] ? +a[11] : 100, cu: a[12] ? String(a[12]).split(';').map(function (t) { var xy = t.split(','); return [+xy[0], +xy[1]]; }) : null }; });
+      np.squads = (pkg.a || []).map(function (a) { return { id: a[0] | 0, t: String(a[1]), n: a[2] | 0, x: a[3] | 0, y: a[4] | 0, st: String(a[5] || 'tc'), it: a[6] ? String(a[6]).split('|') : [], fl: parseFlags(a[7]), fm: String(a[8] || 'khoi'), lp: a[9] == null ? 4 : a[9] | 0, up: a[10] ? String(a[10]).split(',').map(function (v) { return +v; }) : [0, 0, 0, 0], sp: a[11] ? +a[11] : 100, cu: a[12] ? String(a[12]).split(';').map(function (t) { var xy = t.split(','); return [+xy[0], +xy[1]]; }) : null, sm: a[13] ? String(a[13]) : (TT.ROLES[String(a[1])] && TT.ROLES[String(a[1])].marshal ? 'linh' : undefined) }; });
       np.inv = pkg.i ? String(pkg.i).split('|') : [];
       np.nid = Math.max(p.nid, pkg.n | 0);
       var e = P.validateArmy(np, ctx); if (e) throw new Error(e);
@@ -366,7 +378,7 @@
     }
   };
   P.validateArmy = function (p, ctx) {
-    var ids = {}, pos = {}, beast = 0, totalFlags = 0;
+    var ids = {}, pos = {}, beast = 0, totalFlags = 0, marshals = 0;
     for (var i = 0; i < p.squads.length; i++) {
       var q = p.squads[i], R = TT.ROLES[q.t];
       if (!R) return 'binh chủng lạ';
@@ -376,7 +388,7 @@
       if (ids[q.id]) return 'trùng id'; ids[q.id] = 1;
       if (!TT.inZone(ctx.zone, q.x, q.y)) return 'ngoài vùng xuất quân';
       var k = q.x + ',' + q.y; if (pos[k]) return 'trùng ô'; pos[k] = 1;
-      if (R.unique) beast++;
+      if (R.marshal) { marshals++; if (!CFG.marshal.summon[q.sm || 'linh'] || TT.ROLES[q.sm || 'linh'].age > p.lv) return 'lính triệu hồi sai'; } else if (R.unique) beast++;
       if (!TT.STANCES[q.st]) return 'chiến thuật sai';
       if (!TT.FORMATIONS[q.fm || 'khoi'] || !((q.lp == null ? 4 : q.lp) >= 0 && (q.lp == null ? 4 : q.lp) <= 8)) return 'đội hình sai';
       if (q.it.length > CFG.genItems) return 'quá ' + CFG.genItems + ' trang bị';
@@ -392,6 +404,7 @@
     for (var m = 0; m < p.inv.length; m++) if (!TT.ITEMS[p.inv[m]]) return 'tủ đồ sai';
     if (P.invUsed(p) > CFG.invSize) return 'tủ đồ quá ' + CFG.invSize + ' ô';
     if (beast > 1) return 'quá 1 Thần thú';
+    if (marshals !== 1) return 'phải có đúng 1 Nguyên soái';
     if (P.usedPop(p) > P.capacity(p)) return 'vượt Sức chứa';
     for (var n = 0; n < p.squads.length; n++) { var v = validFlags(p, p.squads[n], p.squads[n].fl, ctx); if (v) return v; }
     return null;

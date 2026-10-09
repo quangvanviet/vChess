@@ -41,32 +41,26 @@
   }
   Models.B = B; Models.RBox = roundedBox;
   // đa diện bo tròn đơn vị (low-poly) — ép tỉ lệ thành khối trứng/hạt đậu
-  var ICO = function (det) { return gk('ico' + det, function () { return new THREE.IcosahedronGeometry(1, det); }); };
+  // VOXEL: mọi khối 'trứng' đều thành khối lập phương kiểu Minecraft (chibi + Ragnarok: đầu to, thân gọn)
+  var ICO = function (det) { return gk('vox', function () { return new THREE.BoxGeometry(1.72, 1.72, 1.72); }); };
   var DOD = function () { return gk('dod', function () { return new THREE.DodecahedronGeometry(1, 0); }); };
   // khối tiện: profile [[r,y]...] quay quanh trục Y
-  function LA(prof, seg, phi0, phiL) { return gk('la' + seg + (phi0 || 0) + (phiL || 0) + JSON.stringify(prof), function () { return new THREE.LatheGeometry(prof.map(function (p) { return V2(p[0], p[1]); }), seg || 8, phi0 || 0, phiL || PI * 2); }); }
+  function LA(prof, seg, phi0, phiL) { seg = Math.min(seg || 8, 6); return gk('la' + seg + (phi0 || 0) + (phiL || 0) + JSON.stringify(prof), function () { return new THREE.LatheGeometry(prof.map(function (p) { return V2(p[0], p[1]); }), seg || 8, phi0 || 0, phiL || PI * 2); }); }
   // ống thon bo tròn hai đầu (capsule tiện): bán kính r1 (dưới) → r2 (trên), dài h, tâm ở 0
   function CAP(r1, r2, h, seg) {
-    var a = -h / 2, b = h / 2;
-    return LA([[0, a - r1 * .62], [r1 * .62, a - r1 * .45], [r1, a], [(r1 + r2) / 2 * 1.04, 0], [r2, b], [r2 * .62, b + r2 * .45], [0, b + r2 * .62]], seg || 7);
+    return gk('cap' + r1 + '_' + r2 + '_' + h, function () {
+      var L = h + r1 * .6 + r2 * .6, g = new THREE.CylinderGeometry(r2 * 1.25, r1 * 1.25, L, 4, 1); g.rotateY(PI / 4); g.translate(0, (r2 * .6 - r1 * .6) / 2, 0); return g;
+    });
   }
   /* ống capsule THON (tay, chân): CapsuleGeometry của three.js rồi bóp bán kính từ r1 (đầu dưới, cổ tay/cổ chân) lên r2 (đầu trên, vai/hông).
      Pháp tuyến tính lại → bề mặt mượt (smooth shading). */
   function TCAP(r1, r2, h) {
     return gk('tc' + r1 + '_' + r2 + '_' + h, function () {
-      var g = new THREE.CapsuleGeometry(1, h, 2, 6), p = g.attributes.position, hh = h / 2;
-      for (var i = 0; i < p.count; i++) {
-        var x = p.getX(i), y = p.getY(i), z = p.getZ(i), r, ny;
-        if (y < -hh) { r = r1; ny = -hh + (y + hh) * r1; }
-        else if (y > hh) { r = r2; ny = hh + (y - hh) * r2; }
-        else { var t = (y + hh) / h; r = r1 + (r2 - r1) * t; ny = y; }
-        p.setXYZ(i, x * r, ny, z * r);
-      }
-      g.computeVertexNormals(); return g;
+      var g = new THREE.CylinderGeometry(r2 * 1.22, r1 * 1.22, h + r1 + r2, 4, 1); g.rotateY(PI / 4); g.translate(0, (r2 - r1) / 2, 0); return g;
     });
   }
   function CONE(r, h, seg) { return gk('cn' + r + h + seg, function () { var c = new THREE.ConeGeometry(r, h, seg || 6, 1); return c; }); }
-  function CYL(rt, rb, h, seg) { return gk('cy' + rt + rb + h + seg, function () { return new THREE.CylinderGeometry(rt, rb, h, seg || 8, 1); }); }
+  function CYL(rt, rb, h, seg) { return gk('cy' + rt + rb + h + seg, function () { return new THREE.CylinderGeometry(rt, rb, h, Math.min(seg || 8, 6), 1); }); }
   function TOR(R, r, rs, ts, arc) { return gk('to' + R + r + rs + ts + arc, function () { return new THREE.TorusGeometry(R, r, rs || 4, ts || 10, arc || PI * 2); }); }
   // khối ép đùn có vát cạnh từ đường viền 2D (lưỡi kiếm, khiên, tóc, tai, cánh, áo choàng)
   function EX(pts, depth, bevel, key) {
@@ -84,7 +78,10 @@
   // a(geo, màu, vị trí, góc xoay, tỉ lệ, viền)
   // FLAT = true khi đang dựng giáp/mũ/vũ khí → mặt phẳng (flat shading) để tương phản chất liệu với da, tóc, vải mượt
   var FLAT = false, FLATC = {};
-  Part.prototype.a = function (geo, color, p, r, s, ol) { this.items.push([geo, color, p || [0, 0, 0], r || [0, 0, 0], s == null ? 1 : s, ol == null ? 1 : ol, FLAT || !!FLATC[color]]); return this; };
+  Part.prototype.a = function (geo, color, p, r, s, ol) { this.items.push([geo, color, p || [0, 0, 0], r || [0, 0, 0], s == null ? 1 : s, ol == null ? 1 : ol, FLAT || !!FLATC[color], KEEP]); return this; };
+  var KEEP = false;   // true khi dựng khuôn mặt: mắt, mày, miệng luôn giữ
+  function keep(f) { var o = KEEP; KEEP = true; try { f(); } finally { KEEP = o; } }
+  var MIN_BIT = .1; // phong cách Minecraft: bỏ mọi chi tiết nhỏ hơn ngưỡng này (trừ khuôn mặt)
   function flat(f) { var o = FLAT; FLAT = true; try { f(); } finally { FLAT = o; } }
   // các "nét bút" điêu khắc
   Part.prototype.e = function (rx, ry, rz, color, x, y, z, r, det) { return this.a(ICO(det == null ? 1 : Math.min(det, 1)), color, [x || 0, y || 0, z || 0], r, [rx, ry, rz], Math.min(rx, ry, rz) > .018 ? 1 : 0); };   // khối trứng low-poly
@@ -122,8 +119,14 @@
     if (flipN) for (i = 0; i < N.length; i++) N[i] = -N[i];
   }
   Part.prototype.build = function () {
-    var pos = [], nor = [], onr = [], colr = [], olw = [], mr = [];
+    var pos = [], nor = [], onr = [], colr = [], olw = [], mr = [], tmk = [];
     this.items.forEach(function (it) {
+      if (!it[7]) {   // lọc chi tiết li ti: cỡ lớn nhất của khối sau khi co giãn < MIN_BIT thì bỏ
+        var bb = it[0].boundingBox || (it[0].computeBoundingBox(), it[0].boundingBox), sc0 = it[4], sx = Array.isArray(sc0) ? sc0[0] : sc0, sy = Array.isArray(sc0) ? sc0[1] : sc0, sz = Array.isArray(sc0) ? sc0[2] : sc0;
+        var ex = Math.max((bb.max.x - bb.min.x) * Math.abs(sx), (bb.max.y - bb.min.y) * Math.abs(sy), (bb.max.z - bb.min.z) * Math.abs(sz));
+        var e3 = [(bb.max.x - bb.min.x) * Math.abs(sx), (bb.max.y - bb.min.y) * Math.abs(sy), (bb.max.z - bb.min.z) * Math.abs(sz)], mn = Math.min(e3[0], e3[1], e3[2]);
+        if (ex < MIN_BIT || (ex < .32 && mn / ex < .22 && !it[6])) { Models._drop = (Models._drop || 0) + 1; return; }   // bỏ khối vụn và mảnh mỏng (lọn tóc, lông vũ, gai nhỏ) — giữ giáp/vũ khí kim loại (flat)
+      }
       var g = it[0].index ? it[0].toNonIndexed() : it[0].clone();
       var sc = it[4]; _s.set(Array.isArray(sc) ? sc[0] : sc, Array.isArray(sc) ? sc[1] : sc, Array.isArray(sc) ? sc[2] : sc);
       _m.compose(_v.set(it[2][0], it[2][1], it[2][2]), _q.setFromEuler(_e.set(it[3][0], it[3][1], it[3][2])), _s);
@@ -134,7 +137,7 @@
       g.computeVertexNormals();                // giáp/mũ/vũ khí: pháp tuyến theo mặt (flat)
       var P = g.attributes.position.array, N = g.attributes.normal.array, m = mrOf(it[1]), w0 = it[5] ? 1 : 0;
       for (var i = 0; i < P.length; i++) { pos.push(P[i]); nor.push(N[i]); onr.push(O[i]); }
-      for (var j = 0; j < P.length / 3; j++) { colr.push(_c.r, _c.g, _c.b); olw.push(w0); mr.push(m[0], m[1]); }
+      for (var j = 0; j < P.length / 3; j++) { var jt = 1 + (((((j / 3) | 0) * 2654435761 + pos.length) >>> 7) % 13 - 6) * .0015; colr.push(_c.r * jt, _c.g * jt, _c.b * jt); olw.push(w0); mr.push(m[0], m[1]); tmk.push(TEAM[it[1]] ? 1 : 0); }
       g.dispose();
     });
     var bg = new THREE.BufferGeometry();
@@ -143,6 +146,7 @@
     bg.setAttribute('onrm', new THREE.Float32BufferAttribute(onr, 3));   // pháp tuyến mượt cho viền
     bg.setAttribute('color', new THREE.Float32BufferAttribute(colr, 3));
     bg.setAttribute('olw', new THREE.Float32BufferAttribute(olw, 1)); // trọng số viền: 0 = chi tiết mảnh không viền
+    bg.setAttribute('tm', new THREE.Float32BufferAttribute(tmk, 1));   // 1 = vùng màu phe (giáp, áo, áo choàng) để đổi theo skin
     bg.setAttribute('mr', new THREE.Float32BufferAttribute(mr, 2));   // kim loại / độ nhám theo đỉnh
     bg.computeBoundingSphere();
     return bg;
@@ -160,9 +164,12 @@
     fairy: { skin: '#ffeadc', hair: '#78e6c8', hair2: '#ffb8e2', armor: '#f6fff9', armor2: '#b8eed6', trim: '#2fc58c', cloth: '#58d6a4', horn: null, eye: '#0f5c44', iris: '#34c99a', metal: '#d8fff2', leather: '#86c890', accent: '#8ff3ff', gem: '#ff86d6', wing: '#d4fbff', wing2: '#ffd9f2' },
     demon: { skin: '#e8dbff', hair: '#d6c6ff', hair2: '#ff62a8', armor: '#7446b0', armor2: '#4a2a7c', trim: '#ff72b6', cloth: '#9658da', horn: '#3c2358', eye: '#c0103e', iris: '#ff3d6a', metal: '#bcaee0', leather: '#4a2f66', accent: '#c88cff', gem: '#ff3d7a' }
   };
+  var TEAM = {};   // màu nào thuộc vùng đổi theo skin phe
+  function markTeam() { for (var i = 0; i < arguments.length; i++) if (arguments[i] && typeof arguments[i] === 'string') TEAM[arguments[i]] = 1; }
   var DARK = '#2a2236', WHITE = '#ffffff', BLUSH = '#ffb0a8', MOUTH = '#c8605a';
   (function () {
     for (var r in PAL) { var c = PAL[r]; MR[c.metal] = [.75, .28]; MR[c.trim] = [.85, .3]; MR[c.gem] = [.1, .12]; MR[c.skin] = [0, .6]; MR[c.hair] = [0, .5]; MR[c.hair2] = [0, .5]; MR[c.eye] = [0, .2]; MR[c.iris] = [0, .15]; MR[c.leather] = [0, .7]; MR[c.cloth] = [0, .9]; }
+    for (var r3 in PAL) markTeam(PAL[r3].armor, PAL[r3].armor2, PAL[r3].cloth);
     for (var r2 in PAL) { var c2 = PAL[r2]; [c2.metal, c2.trim, c2.gem].forEach(function (k) { FLATC[k] = 1; }); }
     FLATC['#ffd36b'] = FLATC['#ffe76a'] = 1;
     MR[WHITE] = [0, .35]; MR[DARK] = [0, .4]; MR['#ffd36b'] = [.85, .3]; MR['#ffe76a'] = [.6, .25];
@@ -195,16 +202,16 @@
     var hc = o.hairColor || c.hair, h2 = o.hair2 || c.hair2, st = o.hairStyle || 'short';
     b.e(HR * 1.08, HR * .96, HR * 1.05, hc, 0, HY + .035, -.022, 0, 1);       // chỏm tóc phủ đỉnh và gáy
     // mái: các lọn hình giọt nước ôm theo vòng trán
-    var lock = [[-.038, 0], [.038, 0], [.032, -.055], [.014, -.095], [0, -.108], [-.014, -.095], [-.032, -.055]];
-    for (var i = 0; i < 5; i++) { var lx = (i - 2) * .068, lz = Math.sqrt(Math.max(0, Math.pow(HR * 1.04, 2) - lx * lx)) * .93, ry = Math.atan2(lx, lz); b.x(lock, .03, hc, lx, HY + .125 - Math.abs(i - 2) * .012, lz, [-.28, ry, (i - 2) * -.12], [1, i === 2 ? 1.15 : 1, 1], .01, 'lock2'); }
-    both(function (sd) { b.x(lock, .028, hc, sd * .175, HY + .03, .08, [-.12, sd * .55, sd * .1], [.8, 1.25, 1], .01, 'lock2'); }); // tóc mai
+    // mái tóc kiểu Minecraft: một khối ngang trán + hai mảng tóc mai, không còn lọn nhỏ
+    b.k(HR * 1.78, .075, .12, hc, 0, HY + .105, HR * .86, [-.12, 0, 0], .008);
+    both(function (sd) { b.k(.06, .17, .13, hc, sd * HR * .93, HY - .0, .02, 0, .008); });
     if (st === 'spiky') { // Rồng: tóc dựng nhọn hất ra sau
-      [[0, .22, -.04, -.5, 0], [.1, .19, -.06, -.7, -.5], [-.1, .19, -.06, -.7, .5], [.05, .14, -.16, -1.2, -.3], [-.05, .14, -.16, -1.2, .3], [0, .08, -.2, -1.6, 0]].forEach(function (q, i) { b.n(.055, .16, i % 2 ? h2 : hc, q[0], HY + q[1], q[2], [q[3], 0, q[4]], 5); });
+      [[0, .22, -.04, -.5, 0], [.11, .17, -.08, -.8, -.5], [-.11, .17, -.08, -.8, .5]].forEach(function (q, i) { b.n(.075, .2, i % 2 ? h2 : hc, q[0], HY + q[1], q[2], [q[3], 0, q[4]], 5); });
     } else if (st === 'long') { // Tiên: tóc dài mềm chảy sau lưng
       [[-.1, -.12], [-.035, -.14], [.035, -.14], [.1, -.12]].forEach(function (q, i) { b.c(.045, .03, .26, i % 2 ? h2 : hc, q[0], HY + q[1] - .02, -.17, [.25, 0, q[0] * .8], 6); });
       both(function (sd) { b.c(.035, .022, .22, hc, sd * .2, HY - .12, -.03, [.1, 0, sd * .08], 6); });
     } else if (st === 'messy') { // Quỷ: lọn rối chĩa ngang
-      [[.17, .1, -.05, .9], [-.17, .1, -.05, -.9], [.13, .17, -.1, .5], [-.13, .17, -.1, -.5], [0, .2, -.13, 0]].forEach(function (q, i) { b.n(.05, .13, i % 2 ? h2 : hc, q[0], HY + q[1], q[2], [-.6, 0, -q[3]], 5); });
+      [[.17, .1, -.05, .9], [-.17, .1, -.05, -.9], [0, .2, -.13, 0]].forEach(function (q, i) { b.n(.07, .17, i % 2 ? h2 : hc, q[0], HY + q[1], q[2], [-.6, 0, -q[3]], 5); });
       b.e(HR * .95, HR * .7, HR * .5, hc, 0, HY - .04, -.13, 0, 1);
     } else { // ngắn gọn
       b.e(HR * .98, HR * .65, HR * .55, hc, 0, HY - .03, -.12, 0, 1);
@@ -220,12 +227,8 @@
     var hc = o.hornColor || c.horn, s = o.hornSize || 1, curl = o.hornCurl || 'back';
     both(function (sd) {
       var x = sd * .12, y = HY + .16, z = -.02;
-      for (var i = 0; i < 3; i++) {
-        var r = (.042 - i * .011) * s, h = .085 * s;
-        var ang = curl === 'up' ? [-.15 - i * .1, 0, -sd * (.5 - i * .35)] : [-.45 - i * .45, 0, -sd * (.35 - i * .1)];
-        b.n(r, h, hc, x, y, z, ang, 6);
-        x += sd * (curl === 'up' ? .028 - i * .02 : .012) * s; y += (curl === 'up' ? .07 : .05 - i * .012) * s; z += (curl === 'up' ? -.01 : -.05) * s;
-      }
+      b.n(.055 * s, .17 * s, hc, x, y, z, curl === 'up' ? [-.15, 0, -sd * .4] : [-.7, 0, -sd * .3], 6);
+      b.n(.04 * s, .12 * s, hc, x + sd * (curl === 'up' ? .03 : .012) * s, y + (curl === 'up' ? .12 : .08) * s, z + (curl === 'up' ? -.01 : -.07) * s, curl === 'up' ? [-.15, 0, -sd * .75] : [-1.2, 0, -sd * .25], 6);
     });
   }
   /* ---------- mũ giáp ---------- */
@@ -441,15 +444,17 @@
   // màu nhận diện phe cho vùng lớn (áo, khiên, áo choàng)
   function FAC(c) { return c === PAL.human || c === PAL.fairy ? c.cloth : c.armor; }
   var CAPE = { dragon: '#c33a2a', human: '#2f6ad0', fairy: '#ffffff', demon: '#3a1d63' };
+  for (var cr in CAPE) markTeam(CAPE[cr]);
   var RACE_OPT = function (race, c) { return { dragon: { horns: 1, tail: c.armor, tail2: c.armor2, hairStyle: 'spiky', ears: 'round' }, human: { hairStyle: 'short', ears: 'round' }, fairy: { ears: 'elf', hairStyle: 'long' }, demon: { horns: 1, hornColor: c.horn, hornCurl: 'up', hairStyle: 'messy', ears: 'elf' } }[race]; };
   // chibi: phóng đầu (và tóc, mũ, sừng...) lên 1.3 lần quanh cổ → đầu to, thân nhỏ
   function chibiHead(b, i0) { var k = 1.3, ny = .62; for (var i = i0; i < b.items.length; i++) { var it = b.items[i]; it[2] = [it[2][0] * k, ny + (it[2][1] - ny) * k, it[2][2] * k]; it[4] = Array.isArray(it[4]) ? it[4].map(function (v) { return v * k; }) : it[4] * k; } }
   function humanoid(race, o) {
     var c = PAL[race], body = new Part(), ro = RACE_OPT(race, c);
     for (var k in ro) if (o[k] == null) o[k] = ro[k];
+    markTeam(o.torsoColor, o.robeColor, o.hatColor, o.sleeve, o.hoodColor, o.cape, o.legColor, o.tabard, o.bandColor);
     var genCape = null;
     if (GEN) { o.pauldrons = 1; genCape = o.cape || CAPE[race]; o.cape = null; }
-    partTorso(body, c, o); var hi0 = body.items.length; partHead(body, c, o); partFace(body, c, o); partEars(body, c, o);
+    partTorso(body, c, o); var hi0 = body.items.length; partHead(body, c, o); keep(function () { partFace(body, c, o); }); partEars(body, c, o);
     var hm = o.helmet || 'hair';
     if (hm !== 'full' && hm !== 'hood') partHair(body, c, o);
     if (/^(full|plume|crest|horned|crown|tiara|cap)$/.test(hm)) flat(function () { partHelm(body, c, o); }); else partHelm(body, c, o);
@@ -580,6 +585,13 @@
         h6.body.e(.025, .025, .025, c.trim, -.1, 1.22, -.15, 0, 0);
         W.sword(h6.arm, c, .44, true);
         setH(h6); scale = .94; break;
+      }
+      case 'nguyensoai': {
+        var hm0 = humanoid(race, { helmet: 'crown', plume: plume, cape: race === 'human' ? '#b8242c' : race === 'fairy' ? '#ffffff' : race === 'dragon' ? '#ffb02e' : '#4a1d7a', heavy: 1, pauldrons: 1, hornSize: 1.3, chest: c.trim, halo: 1 });
+        hm0.body.k(.5, .05, .34, c.trim, 0, .43, 0, 0, .01);                    // đai vàng bản to
+        hm0.body.k(.14, .24, .05, c.gem || c.accent, 0, .62, .13, 0, .01);      // ngọc ngực lớn
+        W.sword(hm0.arm, c, .5, true);
+        setH(hm0); scale = 1.08; break;
       }
       case 'thichkhach': {
         var hood = race === 'dragon' ? '#7a2414' : race === 'human' ? '#30364a' : race === 'fairy' ? '#1d7a56' : '#2a1848';

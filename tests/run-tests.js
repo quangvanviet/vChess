@@ -4,6 +4,9 @@ var pass = 0, fail = 0;
 function ok(cond, name) { if (cond) pass++; else { fail++; console.log('  ✗ ' + name); } }
 function mk(races, mode) { var M = MT.create({ seed: 4242, mode: mode || 2, players: races.map(function (r, i) { return { seat: i + 1, name: 'P' + (i + 1), race: r, start: 'gold' }; }) }); MT.beginDay(M); return M; }
 function C(M, p) { return MT.ctx(M, p); }
+// danh sách đạo quân trừ Nguyên soái (mỗi người luôn có sẵn 1 Nguyên soái)
+function gens(p) { return p.squads.filter(function (q) { return !TT.ROLES[q.t].marshal; }); }
+function bsq(B) { return B.squads.filter(function (s) { return !TT.ROLES[s.role].marshal; }); }
 
 // mua 1 đạo quân: tướng + (n-1) lính
 function army(p, ctx, role, n, x, y) { var r = P.apply(p, { c: 'buyGen', t: role, x: x, y: y }, ctx); if (!r.ok) return r; if (n > 1) P.apply(p, { c: 'buySol', sq: r.sq, k: n - 1 }, ctx); return r; }
@@ -14,11 +17,11 @@ console.log('— Kinh tế (Vàng)');
   ok(a.lv === 1 && a.inv[0] === 'kiem', 'Đời I, trang bị khởi đầu trong tủ đồ');
   var z = C(M, a).zone, v0 = a.gold + P.armyValue(a);
   var r = army(a, C(M, a), 'linh', 3, z.x0, z.y0);
-  ok(r.ok && a.squads[0].n === 3 && a.gold === v0 - TT.genCost('dragon', 'linh') - 2 * TT.unitCost('dragon', 'linh'), 'mua tướng + 2 lính đúng giá');
-  P.apply(a, { c: 'sell', sq: a.squads[0].id, k: 1 }, C(M, a));
-  ok(a.squads[0].n === 2 && a.gold + P.armyValue(a) === v0, 'bán 1 lính hoàn đúng giá');
-  P.apply(a, { c: 'sell', sq: a.squads[0].id }, C(M, a));
-  ok(a.gold === v0 && a.squads.length === 0, 'bán cả đạo quân (tướng) hoàn đúng giá');
+  ok(r.ok && gens(a)[0].n === 3 && a.gold === v0 - TT.genCost('dragon', 'linh') - 2 * TT.unitCost('dragon', 'linh'), 'mua tướng + 2 lính đúng giá');
+  P.apply(a, { c: 'sell', sq: gens(a)[0].id, k: 1 }, C(M, a));
+  ok(gens(a)[0].n === 2 && a.gold + P.armyValue(a) === v0, 'bán 1 lính hoàn đúng giá');
+  P.apply(a, { c: 'sell', sq: gens(a)[0].id }, C(M, a));
+  ok(a.gold === v0 && gens(a).length === 0, 'bán cả đạo quân (tướng) hoàn đúng giá');
   ok(TT.genCost('dragon', 'linh') === TT.genCost('human', 'linh') + 1, 'tướng Rồng đắt hơn 1 Vàng');
   // dư giữ sang ngày sau + lãi
   a.gold = 7; MT.beginDay(M);
@@ -48,11 +51,11 @@ console.log('— Tướng & lính');
   var M = mk(['human', 'dragon']), p = M.players[0], ctx = C(M, p), z = ctx.zone;
   p.gold = 999;
   var g = army(p, ctx, 'linh', 1, z.x0 + 5, z.y0 + 2);
-  ok(g.ok && p.squads[0].n === 1, 'mua tướng tạo đạo quân mới');
+  ok(g.ok && gens(p)[0].n === 1, 'mua tướng tạo đạo quân mới');
   ok(!P.apply(p, { c: 'buyGen', t: 'linh', x: z.x0 + 5, y: z.y0 + 2 }, ctx).ok, 'không đặt 2 tướng chung một chỗ');
   var g2 = army(p, ctx, 'linh', 1, z.x0 + 7, z.y0 + 2);
   P.apply(p, { c: 'move', sq: g2.sq, x: z.x0 + 5, y: z.y0 + 2 }, ctx);
-  ok(p.squads.length === 2 && p.squads[1].x === z.x0 + 5, 'kéo tướng đè lên tướng khác = đổi chỗ, không gộp');
+  ok(gens(p).length === 2 && gens(p)[1].x === z.x0 + 5, 'kéo tướng đè lên tướng khác = đổi chỗ, không gộp');
   P.apply(p, { c: 'buySol', sq: g.sq, k: 99 }, ctx);
   ok(P.usedPop(p) === P.capacity(p), 'lính không vượt Sức chứa (' + P.capacity(p) + ')');
   ok(!P.apply(p, { c: 'buyGen', t: 'cung', x: z.x0 - 1, y: z.y0 }, ctx).ok, 'không đặt ngoài vùng xuất quân');
@@ -62,7 +65,7 @@ console.log('— Tướng & lính');
   ok(t.ok && !P.apply(p, { c: 'buySol', sq: t.sq, k: 1 }, ctx).ok, 'Thần thú chỉ có tướng, không có lính');
   ok(!P.apply(p, { c: 'buyGen', t: 'thanthu', x: z.x0 + 3, y: z.y0 }, ctx).ok, 'chỉ 1 Thần thú');
   P.apply(p, { c: 'buySol', sq: g.sq, k: 40 }, ctx);
-  ok(p.squads[0].n > 30, 'một đạo quân có thể rất đông (' + p.squads[0].n + ' quân)');
+  ok(gens(p)[0].n > 30, 'một đạo quân có thể rất đông (' + gens(p)[0].n + ' quân)');
 })();
 
 console.log('— Trang bị (chỉ tướng, 3 món) & tủ đồ 9 ô');
@@ -70,7 +73,7 @@ console.log('— Trang bị (chỉ tướng, 3 món) & tủ đồ 9 ô');
   var M = mk(['human', 'dragon']), p = M.players[0], ctx = C(M, p), z = ctx.zone;
   p.gold = 200;
   var sq = army(p, ctx, 'linh', 2, z.x0, z.y0).sq;
-  ok(P.apply(p, { c: 'equip', idx: 0, sq: sq }, ctx).ok && p.squads[0].it[0] === 'kiem', 'đeo trang bị khởi đầu cho tướng');
+  ok(P.apply(p, { c: 'equip', idx: 0, sq: sq }, ctx).ok && gens(p)[0].it[0] === 'kiem', 'đeo trang bị khởi đầu cho tướng');
   p.ishop = ['giap', 'bua', 'nhan', 'kiem', 'kiem', 'kiem'];
   ok(!P.apply(p, { c: 'buyItem', slot: 9 }, ctx).ok, 'ô cửa hàng không tồn tại không mua được');
   var g0 = p.gold; P.apply(p, { c: 'buyItem', slot: 0 }, ctx);
@@ -80,7 +83,7 @@ console.log('— Trang bị (chỉ tướng, 3 món) & tủ đồ 9 ô');
   p.ishop = ['giap', 'bua', 'nhan', 'kiem', 'kiem', 'kiem'];
   [0, 1, 2].forEach(function (k) { P.apply(p, { c: 'buyItem', slot: k }, ctx); });
   P.apply(p, { c: 'equip', idx: 0, sq: sq }, ctx); P.apply(p, { c: 'equip', idx: 0, sq: sq }, ctx);
-  ok(p.squads[0].it.length === 3 && !P.apply(p, { c: 'equip', idx: 0, sq: sq }, ctx).ok, 'tướng đeo tối đa 3 món');
+  ok(gens(p)[0].it.length === 3 && !P.apply(p, { c: 'equip', idx: 0, sq: sq }, ctx).ok, 'tướng đeo tối đa 3 món');
   for (var i = 0; i < 12; i++) { p.ishop = ['kiem', 'kiem', 'kiem', 'kiem', 'kiem', 'kiem']; P.apply(p, { c: 'buyItem', slot: 0 }, ctx); }
   ok(P.invUsed(p) === CFG.invSize, 'tủ đồ tối đa ' + CFG.invSize + ' ô');
   // tủ đầy: mua khi đang chọn tướng còn ô đồ → vào thẳng tướng; tướng đầy ô → báo lỗi
@@ -92,9 +95,9 @@ console.log('— Trang bị (chỉ tướng, 3 món) & tủ đồ 9 ô');
   ok(!P.apply(p, { c: 'buyItem', slot: 3, sq: sq3 }, ctx).ok, 'tướng đủ 3 món và tủ đầy thì không mua được');
   p.squads = p.squads.filter(function (q) { return q.id !== sq3; });
   ok(CFG.itemPrice[4] > CFG.itemPrice[3] && CFG.itemPrice[3] > CFG.itemPrice[2] && CFG.itemPrice[2] > CFG.itemPrice[1], 'bậc cao đắt hơn');
-  var g1 = p.gold, eq = p.squads[0].it.reduce(function (s, k) { return s + TT.ITEMS[k].price; }, 0), val = P.squadCost(p, p.squads[0]);
+  var g1 = p.gold, eq = gens(p)[0].it.reduce(function (s, k) { return s + TT.ITEMS[k].price; }, 0), val = P.squadCost(p, gens(p)[0]);
   P.apply(p, { c: 'sell', sq: sq }, ctx);
-  ok(p.squads.length === 0 && p.gold === g1 + val + eq, 'bán tướng: hoàn 100% tướng, lính và trang bị đang đeo');
+  ok(gens(p).length === 0 && p.gold === g1 + val + eq, 'bán tướng: hoàn 100% tướng, lính và trang bị đang đeo');
 })();
 
 console.log('— Nâng cấp lính (Vàng)');
@@ -113,7 +116,7 @@ console.log('— Nâng cấp lính (Vàng)');
   P.apply(p, { c: 'solUp', sq: sq, k: 1, d: 1 }, ctx);
   var pkg = P.makePackage(p, []), base = TT.Prep.clone(p); base.squads = []; base.gold = v0;
   var ap = P.applyPackage(base, pkg, ctx);
-  ok(ap.ok && ap.p.squads[0].up.join() === q.up.join() && ap.p.gold === p.gold, 'gói đội hình mang theo cấp nâng lính, đúng ngân sách');
+  ok(ap.ok && gens(ap.p)[0].up.join() === q.up.join() && ap.p.gold === p.gold, 'gói đội hình mang theo cấp nâng lính, đúng ngân sách');
   var bad = JSON.parse(JSON.stringify(pkg)); bad.a[0][10] = '99,1,1,1';
   ok(!P.applyPackage(base, bad, ctx).ok, 'gói khai cấp nâng lính sai bị từ chối');
   var poor = JSON.parse(JSON.stringify(pkg)); base.gold = v0 - p.gold - 1;
@@ -171,10 +174,10 @@ console.log('— Gói đội hình & chống gian lận');
   var M = mk(['dragon', 'fairy']), p0 = M.players[0]; p0.gold = 40; p0.ishop = ['bua', 'giap', 'nhan', 'kiem', 'kiem', 'kiem']; var ctx = C(M, p0), p = P.clone(p0), z = ctx.zone, log = [];
   army(p, ctx, 'linh', 3, z.x0 + 3, z.y0 + 2);
   [{ c: 'xp' }, { c: 'buyItem', slot: 0 }].forEach(function (c) { var r = P.apply(p, c, ctx); if (r.log) log = log.concat(r.log); });
-  P.apply(p, { c: 'equip', idx: 1, sq: p.squads[0].id }, ctx);
+  P.apply(p, { c: 'equip', idx: 1, sq: gens(p)[0].id }, ctx);
   var pkg = P.makePackage(p, log);
   var r = P.applyPackage(p0, pkg, ctx);
-  ok(r.ok && r.p.squads[0].n === 3 && r.p.gold === p.gold && r.p.xp === p.xp && r.p.squads[0].it[0] === 'bua', 'áp gói hợp lệ ra đúng trạng thái (Vàng, EXP, trang bị)');
+  ok(r.ok && gens(r.p)[0].n === 3 && r.p.gold === p.gold && r.p.xp === p.xp && gens(r.p)[0].it[0] === 'bua', 'áp gói hợp lệ ra đúng trạng thái (Vàng, EXP, trang bị)');
   var cheat = JSON.parse(JSON.stringify(pkg)); cheat.a[0][2] = 30;
   ok(!P.applyPackage(p0, cheat, ctx).ok, 'gói vượt ngân sách bị từ chối');
   var cheat2 = JSON.parse(JSON.stringify(pkg)); cheat2.a[0][1] = 'thanthu'; cheat2.a[0][2] = 1;
@@ -200,43 +203,43 @@ function battleOf(build, opts) {
   ok(a.hash === b.hash && a.ticks === b.ticks, 'cùng đội hình + seed → cùng kết quả');
   ok(a.players.some(function (x) { return x.rank === 1; }) && a.players.some(function (x) { return x.rank === 2; }), 'xếp hạng 1 và 2');
   // bão sau 5 phút: hai đội "giữ vị trí" không gặp nhau vẫn kết thúc
-  var t = battleOf(function (p, ctx) { var z = ctx.zone; army(p, ctx, 'thuan', 3, z.x0 + 2, z.y0 + 5); P.apply(p, { c: 'stance', sq: p.squads[0].id, s: 'giu' }, ctx); });
+  var t = battleOf(function (p, ctx) { var z = ctx.zone; army(p, ctx, 'thuan', 3, z.x0 + 2, z.y0 + 5); P.apply(p, { c: 'stance', sq: gens(p)[0].id, s: 'giu' }, ctx); });
   var r = t.B.run();
   ok(t.B.ended && r.sec > CFG.battleMaxSec && r.sec < CFG.battleMaxSec + 30, 'sau 5 phút sát thương tăng dần kết thúc trận (' + r.sec + 's)');
   // cờ Xanh: không tấn công khi đang hành quân
   var fx = battleOf(function (p, ctx, i) {
     var z = ctx.zone; army(p, ctx, 'cung', 4, z.x0 + 10, i ? z.y1 : z.y0);
-    if (i === 0) { var q = p.squads[0]; var flag = TT.rotPoint(2, 0, 19, 40); q.fl = [{ c: 'X', x: z.x0 + 10, y: z.y1 }]; }
-    else P.apply(p, { c: 'stance', sq: p.squads[0].id, s: 'giu' }, ctx);
+    if (i === 0) { var q = gens(p)[0]; var flag = TT.rotPoint(2, 0, 19, 40); q.fl = [{ c: 'X', x: z.x0 + 10, y: z.y1 }]; }
+    else P.apply(p, { c: 'stance', sq: gens(p)[0].id, s: 'giu' }, ctx);
   });
   var B = fx.B, attacked = false; for (var k = 0; k < 200; k++) { B.step(); B.events.forEach(function (e) { if (e.e === 'atk') { var u = B.byId[e.a]; if (u && u.pl === 0 && B.squads[u.sq].step === 0) attacked = true; } }); B.events = []; }
   ok(!attacked, 'Cờ Xanh: đội không bắn khi đang đi tới cờ');
   // cờ Tím: đội tấn công đúng đạo quân địch bị cắm cờ (bỏ qua đạo quân gần hơn)
   var ft = battleOf(function (p, ctx, i) {
     var z = ctx.zone;
-    if (i === 0) { army(p, ctx, 'ky', 3, z.x0 + 10, z.y0 + 2); }
-    else { army(p, ctx, 'linh', 4, z.x0 + 3, z.y0 + 6); army(p, ctx, 'cung', 3, z.x0 + 16, z.y0 + 9); P.apply(p, { c: 'stance', sq: p.squads[0].id, s: 'giu' }, ctx); P.apply(p, { c: 'stance', sq: p.squads[1].id, s: 'giu' }, ctx); }
+    if (i === 0) { p.lv = 3; p.gold = 99; army(p, ctx, 'ky', 6, z.x0 + 10, z.y0 + 2); }
+    else { army(p, ctx, 'linh', 4, z.x0 + 3, z.y0 + 6); army(p, ctx, 'cung', 3, z.x0 + 16, z.y0 + 9); P.apply(p, { c: 'stance', sq: gens(p)[0].id, s: 'giu' }, ctx); P.apply(p, { c: 'stance', sq: gens(p)[1].id, s: 'giu' }, ctx); }
   });
-  var tgtSeat = ft.M.players[1].seat, tgtSq = ft.M.players[1].squads[1].id;
-  ft.M.players[0].squads[0].fl = [{ c: 'T', seat: tgtSeat, sq: tgtSq }];
-  ok(P.validateArmy(ft.M.players[0], MT.ctx(ft.M, ft.M.players[0])) === null && !P.applyPackage(ft.M.players[0], { c: [], a: [[1, 'ky', 3, 0, 0, 'tc', '', 'T' + ft.M.players[0].seat + ':1']], i: '', n: 5 }, MT.ctx(ft.M, ft.M.players[0])).ok, 'Cờ Tím hợp lệ; cắm vào đội của chính mình bị từ chối');
+  var tgtSeat = ft.M.players[1].seat, tgtSq = gens(ft.M.players[1])[0].id;
+  gens(ft.M.players[0])[0].fl = [{ c: 'T', seat: tgtSeat, sq: tgtSq }];
+  ok(P.validateArmy(ft.M.players[0], MT.ctx(ft.M, ft.M.players[0])) === null && !P.applyPackage(ft.M.players[0], { c: [], a: [[1, 'ky', 3, 0, 0, 'tc', '', 'T' + ft.M.players[0].seat + ':' + gens(ft.M.players[0])[0].id]], i: '', n: 5 }, MT.ctx(ft.M, ft.M.players[0])).ok, 'Cờ Tím hợp lệ; cắm vào đội của chính mình bị từ chối');
   var Bt = TT.Battle.create(MT.battleInput(ft.M)), hitSq = {};
-  for (var kt = 0; kt < 900; kt++) { Bt.step(); Bt.events.forEach(function (e) { if (e.e === 'atk') { var u = Bt.byId[e.a], v = Bt.byId[e.b]; if (u && v && u.pl === 0 && Bt.squads[0].step === 0) hitSq[v.sq] = (hitSq[v.sq] || 0) + 1; } }); Bt.events = []; }
+  for (var kt = 0; kt < 900; kt++) { Bt.step(); Bt.events.forEach(function (e) { if (e.e === 'atk') { var u = Bt.byId[e.a], v = Bt.byId[e.b]; if (u && v && u.pl === 0 && bsq(Bt)[0].step === 0) hitSq[v.sq] = (hitSq[v.sq] || 0) + 1; } }); Bt.events = []; }
   var tgtIdx = Bt.squads.filter(function (q) { return String(q.seat) === String(tgtSeat) && q.id === tgtSq; })[0].idx, other = Bt.squads.filter(function (q) { return String(q.seat) === String(tgtSeat) && q.id !== tgtSq; })[0].idx;
   ok((hitSq[tgtIdx] || 0) > 0 && (hitSq[tgtIdx] || 0) > (hitSq[other] || 0), 'Cờ Tím: dồn đánh đạo quân bị cắm cờ (' + (hitSq[tgtIdx] || 0) + ' đòn so với ' + (hitSq[other] || 0) + ')');
-  ok(Bt.squads[0].step >= 1, 'Cờ Tím: diệt xong mục tiêu thì chuyển sang cờ kế tiếp');
+  ok(bsq(Bt)[0].step >= 1, 'Cờ Tím: diệt xong mục tiêu thì chuyển sang cờ kế tiếp');
   // cờ Vàng: Thuật sĩ đi theo đội Lính
   var fv = battleOf(function (p, ctx, i) {
     var z = ctx.zone; army(p, ctx, 'linh', 6, z.x0 + 4, z.y0 + 2); army(p, ctx, 'y', 2, z.x0 + 20, z.y0 + 9);
-    var y = p.squads[1]; y.fl = [{ c: 'V', sq: p.squads[0].id, k: 'sat' }];
+    var y = gens(p)[1]; y.fl = [{ c: 'V', sq: gens(p)[0].id, k: 'sat' }];
   });
   for (var k2 = 0; k2 < 240; k2++) fv.B.step();
-  var s0 = fv.B.squads[0], s1 = fv.B.squads[1], dd = Math.sqrt(Math.pow(s0.cx - s1.cx, 2) + Math.pow(s0.cy - s1.cy, 2)) / 1000;
+  var s0 = bsq(fv.B)[0], s1 = bsq(fv.B)[1], dd = Math.sqrt(Math.pow(s0.cx - s1.cx, 2) + Math.pow(s0.cy - s1.cy, 2)) / 1000;
   ok(dd < 7, 'Cờ Vàng: đội hộ tống bám sát đội đích (' + dd.toFixed(1) + ' ô)');
   // chỉ tướng dùng kỹ năng; tướng to và mạnh hơn lính
   var casters = {}; fv.B.units.forEach(function (u) { if (u.sk) casters[u.cap ? 'g' : 's'] = 1; });
   ok(casters.g && !casters.s, 'chỉ tướng có kỹ năng');
-  var gU = fv.B.squads[0].units[0], sU = fv.B.squads[0].units[1];
+  var gU = bsq(fv.B)[0].units[0], sU = bsq(fv.B)[0].units[1];
   ok(gU.cap && gU.mhp > sU.mhp * 2 && gU.rad > sU.rad, 'tướng máu cao gấp đôi và to hơn lính');
   // thuật sĩ hồi máu
   var heals = 0; for (var k3 = 0; k3 < 600 && !fv.B.ended; k3++) { fv.B.step(); fv.B.events.forEach(function (e) { if (e.e === 'heal' && e.v > 0) heals++; }); fv.B.events = []; }
@@ -244,34 +247,34 @@ function battleOf(build, opts) {
   // không vòng tròn hộ tống
   var M = mk(['human', 'fairy']), p = M.players[0], ctx = C(M, p), z = ctx.zone;
   p.gold = 99; army(p, ctx, 'linh', 2, z.x0, z.y0); army(p, ctx, 'cung', 2, z.x0 + 2, z.y0);
-  P.apply(p, { c: 'flags', sq: p.squads[0].id, fl: [{ c: 'V', sq: p.squads[1].id }] }, ctx);
-  ok(!P.apply(p, { c: 'flags', sq: p.squads[1].id, fl: [{ c: 'V', sq: p.squads[0].id }] }, ctx).ok, 'chặn hộ tống vòng tròn');
+  P.apply(p, { c: 'flags', sq: gens(p)[0].id, fl: [{ c: 'V', sq: gens(p)[1].id }] }, ctx);
+  ok(!P.apply(p, { c: 'flags', sq: gens(p)[1].id, fl: [{ c: 'V', sq: gens(p)[0].id }] }, ctx).ok, 'chặn hộ tống vòng tròn');
   var many = []; for (var q = 0; q <= CFG.flagMax; q++) many.push({ c: 'X', x: 1 + q % 20, y: 1 });
-  ok(!P.apply(p, { c: 'flags', sq: p.squads[1].id, fl: many }, ctx).ok, 'giới hạn an toàn ' + CFG.flagMax + ' cờ mỗi đội');
+  ok(!P.apply(p, { c: 'flags', sq: gens(p)[1].id, fl: many }, ctx).ok, 'giới hạn an toàn ' + CFG.flagMax + ' cờ mỗi đội');
 })();
 
 console.log('— Đội hình (hình dạng + vị trí tướng) & chiến thuật AI');
 (function () {
   TT.FORM_ORDER.forEach(function (fm) {
-    var b = battleOf(function (p, ctx, i) { var z = ctx.zone; if (i === 0) { army(p, ctx, 'linh', 18, z.x0 + 10, z.y0 + 6); p.squads[0].fm = fm; p.squads[0].lp = fm === 'vong' ? 4 : 1; } else army(p, ctx, 'linh', 2, z.x0 + 10, z.y0 + 6); });
-    var us = b.B.squads[0].units, pos = {}, dup = 0; us.forEach(function (u) { var k = u.spawnX + ',' + u.spawnY; if (pos[k]) dup++; pos[k] = 1; });
-    var ax = b.B.squads[0].ax, ay = b.B.squads[0].ay;
+    var b = battleOf(function (p, ctx, i) { var z = ctx.zone; if (i === 0) { army(p, ctx, 'linh', 18, z.x0 + 10, z.y0 + 6); gens(p)[0].fm = fm; gens(p)[0].lp = fm === 'vong' ? 4 : 1; } else army(p, ctx, 'linh', 2, z.x0 + 10, z.y0 + 6); });
+    var us = bsq(b.B)[0].units, pos = {}, dup = 0; us.forEach(function (u) { var k = u.spawnX + ',' + u.spawnY; if (pos[k]) dup++; pos[k] = 1; });
+    var ax = bsq(b.B)[0].ax, ay = bsq(b.B)[0].ay;
     ok(us.length === 18 && dup === 0 && us[0].cap && Math.abs(us[0].spawnX - ax) < 50 && Math.abs(us[0].spawnY - ay) < 50, 'đội hình "' + TT.FORMATIONS[fm].name + '": 18 quân không trùng, tướng đứng đúng ô đặt');
   });
   // vị trí tướng: Trước (lp=1) đứng phía trước lính, Sau (lp=7) đứng phía sau (hướng theo phe)
-  function depthOf(lp) { var b = battleOf(function (p, ctx, i) { var z = ctx.zone; army(p, ctx, 'linh', 12, z.x0 + 10, z.y0 + 6); p.squads[0].fm = 'vuong'; p.squads[0].lp = lp; }); var sq0 = b.B.squads[0], fw = TT.sideFwd[b.M.players[0].side], g = sq0.units[0], d = 0; sq0.units.slice(1).forEach(function (u) { d += ((g.spawnX - u.spawnX) * fw[0] + (g.spawnY - u.spawnY) * fw[1]); }); return d; }
+  function depthOf(lp) { var b = battleOf(function (p, ctx, i) { var z = ctx.zone; army(p, ctx, 'linh', 12, z.x0 + 10, z.y0 + 6); gens(p)[0].fm = 'vuong'; gens(p)[0].lp = lp; }); var sq0 = bsq(b.B)[0], fw = TT.sideFwd[b.M.players[0].side], g = sq0.units[0], d = 0; sq0.units.slice(1).forEach(function (u) { d += ((g.spawnX - u.spawnX) * fw[0] + (g.spawnY - u.spawnY) * fw[1]); }); return d; }
   ok(depthOf(1) > 0 && depthOf(7) < 0, 'chọn vị trí tướng: Trước → tướng đứng đầu, Sau → tướng đứng cuối');
   // tư thế
-  function run(stF, ticks, mod) { var b = battleOf(function (p, ctx, i) { var z = ctx.zone; if (i === 0) { army(p, ctx, 'linh', 6, z.x0 + 10, z.y0 + 2); p.squads[0].st = stF; } else army(p, ctx, 'linh', 3, z.x0 + 10, z.y0 + 2); }); for (var k = 0; k < ticks; k++) { if (mod) mod(b.B, k); b.B.step(); } return b.B; }
-  function drift(B) { var m = 0; B.squads[0].units.forEach(function (u) { m = Math.max(m, Math.hypot(u.x - u.spawnX, u.y - u.spawnY) / 1000); }); return m; }
+  function run(stF, ticks, mod) { var b = battleOf(function (p, ctx, i) { var z = ctx.zone; if (i === 0) { army(p, ctx, 'linh', 6, z.x0 + 10, z.y0 + 2); gens(p)[0].st = stF; } else army(p, ctx, 'linh', 3, z.x0 + 10, z.y0 + 2); }); for (var k = 0; k < ticks; k++) { if (mod) mod(b.B, k); b.B.step(); } return b.B; }
+  function drift(B) { var m = 0; bsq(B)[0].units.forEach(function (u) { m = Math.max(m, Math.hypot(u.x - u.spawnX, u.y - u.spawnY) / 1000); }); return m; }
   var gi = run('giu', 160), tc = run('tc', 160);
   ok(drift(gi) < 5.5 && drift(tc) > 8, 'Giữ vị trí: cả lính lẫn tướng không rời điểm đứng (' + drift(gi).toFixed(1) + ' ô) còn Tấn công thì tiến (' + drift(tc).toFixed(1) + ' ô)');
-  var ru = run('rut', 60, function (B, k) { if (k === 20) B.squads[0].units.forEach(function (u) { u.hp = Math.max(1, Math.floor(u.mhp * .2)); }); });
+  var ru = run('rut', 60, function (B, k) { if (k === 20) bsq(B)[0].units.forEach(function (u) { u.hp = Math.max(1, Math.floor(u.mhp * .2)); }); });
   var dBefore = drift(run('rut', 20)), dAfter = drift(ru);
   ok(dAfter < dBefore + 3, 'Rút khi yếu: dưới 30% máu thì lùi về điểm xuất phát (' + dBefore.toFixed(1) + ' → ' + dAfter.toFixed(1) + ' ô)');
   // Săn hậu tuyến: kỵ binh nhắm cung thủ phía sau thay vì Lính đứng trước
   function hunts(stF) {
-    var b = battleOf(function (p, ctx, i) { var z = ctx.zone; if (i === 0) { army(p, ctx, 'ky', 4, z.x0 + 10, z.y0 + 5); p.squads[0].st = stF; } else { army(p, ctx, 'linh', 4, z.x0 + 10, z.y0 + 5); army(p, ctx, 'cung', 4, z.x0 + 13, z.y0 + 5); } });
+    var b = battleOf(function (p, ctx, i) { var z = ctx.zone; if (i === 0) { army(p, ctx, 'ky', 4, z.x0 + 10, z.y0 + 5); gens(p)[0].st = stF; } else { army(p, ctx, 'linh', 4, z.x0 + 10, z.y0 + 5); army(p, ctx, 'cung', 4, z.x0 + 13, z.y0 + 5); } });
     var B = b.B, hit = 0, tot = 0;
     for (var k = 0; k < 400 && !B.ended; k++) { B.step(); B.events.forEach(function (e) { if (e.e === 'atk') { var u = B.byId[e.a], t = B.byId[e.b]; if (u && t && u.pl === 0 && !u.monster && t.pl === 1) { tot++; if (t.role === 'cung') hit++; } } }); B.events = []; }
     return tot ? hit / tot : 0;
@@ -282,7 +285,7 @@ console.log('— Đội hình (hình dạng + vị trí tướng) & chiến thu�
   var M2 = mk(['human', 'dragon']), pp = M2.players[0], cx2 = C(M2, pp); pp.gold = 60; var a2 = army(pp, cx2, 'linh', 5, cx2.zone.x0 + 3, cx2.zone.y0 + 2);
   P.apply(pp, { c: 'formation', sq: a2.sq, fm: 'non', lp: 7 }, cx2);
   var pk = P.makePackage(pp, []), ap = P.applyPackage(M2.players[0], pk, cx2);
-  ok(ap.ok && ap.p.squads[0].fm === 'non' && ap.p.squads[0].lp === 7 && !P.apply(pp, { c: 'formation', sq: a2.sq, fm: 'lạ' }, cx2).ok, 'gói mang đội hình + vị trí tướng; đội hình lạ bị từ chối');
+  ok(ap.ok && gens(ap.p)[0].fm === 'non' && gens(ap.p)[0].lp === 7 && !P.apply(pp, { c: 'formation', sq: a2.sq, fm: 'lạ' }, cx2).ok, 'gói mang đội hình + vị trí tướng; đội hình lạ bị từ chối');
   var bad = JSON.parse(JSON.stringify(pk)); bad.a[0][8] = 'xyz'; ok(!P.applyPackage(M2.players[0], bad, cx2).ok, 'gói có đội hình lạ bị từ chối');
 })();
 
@@ -299,6 +302,16 @@ console.log('— Điểm & kết thúc');
   MT.forfeit(M2, '3'); ok(M2.over && M2.winner[0] === '1', 'còn 1 người → thắng ngay');
 })();
 
+console.log('— Skin màu phe');
+(function () {
+  var a = TT.assignSkins([{ seat: '1', race: 'dragon' }, { seat: '2', race: 'dragon' }, { seat: '3', race: 'dragon' }, { seat: '4', race: 'dragon', skin: 'do' }]);
+  var v = Object.keys(a).map(function (k) { return a[k]; });
+  ok(v.length === 4 && v.filter(function (x, i) { return v.indexOf(x) === i; }).length === 4, '4 người cùng tộc vẫn nhận 4 màu khác nhau');
+  ok(a['4'] === 'do', 'màu người chơi tự chọn được giữ nguyên');
+  var b = TT.assignSkins([{ seat: '1', race: 'demon', skin: 'tim' }, { seat: '2', race: 'demon', skin: 'tim' }]);
+  ok(b['1'] === 'tim' && b['2'] !== 'tim', 'chọn trùng màu thì người sau được đổi');
+})();
+
 console.log('— Cả ván với bot (2/3/4 người, 3 mức)');
 (function () {
   var r1 = S.playMatch({ seed: 11, mode: 2, races: ['dragon', 'fairy'], levels: ['medium', 'easy'] });
@@ -311,7 +324,7 @@ console.log('— Cả ván với bot (2/3/4 người, 3 mức)');
   ok(r4.M.over && r4.M.winner.length === 2, 'ván 2 đấu 2 có 2 người thắng cùng đội');
   var t0 = Date.now(), M = r4.M; var B = TT.Battle.create(MT.battleInput(M)); B.run();
   ok(Date.now() - t0 < 3000, 'giao tranh 4 người chạy nhanh hơn thời gian thực (' + (Date.now() - t0) + 'ms)');
-  var hard = 0, n = 0; for (var s = 0; s < 4; s++) { var m = S.playMatch({ seed: 500 + s, mode: 2, races: [TT.FACTION_ORDER[s], TT.FACTION_ORDER[(s + 1) % 4]], levels: s % 2 ? ['easy', 'hard'] : ['hard', 'easy'] }); m.M.history.forEach(function (h) { n++; var hs = s % 2 ? '2' : '1'; if (h.ranks[hs] === 1) hard++; }); }
+  var hard = 0, n = 0; for (var s = 0; s < 8; s++) { var m = S.playMatch({ seed: 500 + s, mode: 2, races: [TT.FACTION_ORDER[s % 4], TT.FACTION_ORDER[(s + 1) % 4]], levels: s % 2 ? ['easy', 'hard'] : ['hard', 'easy'] }); m.M.history.forEach(function (h) { n++; var hs = s % 2 ? '2' : '1'; if (h.ranks[hs] === 1) hard++; }); }
   ok(hard > n * .6, 'bot Khó thắng bot Dễ phần lớn số ngày (' + hard + '/' + n + ')');
 })();
 

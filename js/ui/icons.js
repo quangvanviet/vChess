@@ -42,7 +42,7 @@
     hourglass: '<path d="M16 6 H48 M16 58 H48 M20 6 Q20 26 32 32 Q20 38 20 58 M44 6 Q44 26 32 32 Q44 38 44 58" fill="none" stroke="currentColor" stroke-width="4"/><path d="M24 50 Q32 42 40 50 Z" fill="currentColor"/>'
   };
   I.paths = P;
-  I.ROLE_ICON = { linh: 'soldier', thuan: 'shield', cung: 'archer', y: 'healer', ky: 'cavalry', chihuy: 'commander', thichkhach: 'assassin', phapsu: 'mage', congthanh: 'siege', tuong: 'elephant', thanthu: 'beast' };
+  I.ROLE_ICON = { linh: 'soldier', thuan: 'shield', cung: 'archer', y: 'healer', ky: 'cavalry', chihuy: 'commander', thichkhach: 'assassin', phapsu: 'mage', congthanh: 'siege', tuong: 'elephant', thanthu: 'beast', nguyensoai: 'commander' };
   I.ITEM_ICON = { kiem: 'it_sword', giap: 'it_armor', bua: 'it_heart', cunggio: 'it_bow', ngoc: 'it_gem', nhan: 'it_ring', daidao: 'it_axe', thanhtri: 'it_armor', cutam: 'it_heart', huyetkiem: 'it_sword', cohieu: 'it_flag', cunglinh: 'it_bow', phongtoc: 'it_bow', kiemda: 'it_sword', aogiaplon: 'it_armor', binhlinh: 'it_bottle', quanky: 'it_flag', truonglinh: 'it_staff', thankiem: 'it_sword', battu: 'it_seal', longgiap: 'it_armor', thientam: 'it_flag' };
   I.TIER_COLOR = { 1: '#b7c3d0', 2: '#5fb8ff', 3: '#c58bff', 4: '#ffc23a' };
   I.CORE_TIER = { 1: '#d9a066', 2: '#b9c6d6', 3: '#ffcf3a', 4: '#c58bff' };
@@ -133,6 +133,7 @@
 
   /* biểu tượng giao diện (thay emoji / ký hiệu) */
   var UI = {
+    palette: '<path d="M32 6C17 6 6 17 6 31c0 15 11 27 25 27 5 0 7-3 7-6 0-4-4-5-4-9 0-4 3-6 7-6h9c6 0 10-4 10-10C60 14 48 6 32 6Z" fill="none" stroke="currentColor" stroke-width="5" stroke-linejoin="round"/><circle cx="20" cy="30" r="4" fill="currentColor"/><circle cx="28" cy="18" r="4" fill="currentColor"/><circle cx="42" cy="18" r="4" fill="currentColor"/>',
     menu: '<path d="M10 18h44M10 32h44M10 46h44" stroke="currentColor" stroke-width="6" stroke-linecap="round"/>',
     undo: '<path d="M22 14 8 28l14 14" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 28h26a16 16 0 0 1 0 32H26" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round"/>',
     close: '<path d="M16 16 48 48M48 16 16 48" stroke="currentColor" stroke-width="7" stroke-linecap="round"/>',

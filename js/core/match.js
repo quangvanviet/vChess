@@ -10,9 +10,11 @@
       v: TT.RULE_VERSION, seed: setup.seed >>> 0, mode: setup.mode, team: !!setup.teamMode, lockMap: !!setup.lockMap,
       day: 0, phase: 'prep', players: [], scores: {}, history: [], over: false, winner: null
     };
+    var skins = TT.assignSkins(setup.players);
     setup.players.slice().sort(function (a, b) { return +a.seat - +b.seat; }).forEach(function (o) {
-      var p = P.newPlayer(o); p.side = TT.sideOfSeat(M.mode, o.seat);
+      var p = P.newPlayer(o); p.skin = skins[o.seat]; p.side = TT.sideOfSeat(M.mode, o.seat);
       p.team = M.team ? (+o.seat % 2) : p.side;
+      P.apply(p, { c: 'auto' }, MT.ctx({ mode: M.mode, seed: M.seed, day: 0 }, p)); // Nguyên soái vào vị trí ban đầu (hàng sau)
       M.players.push(p);
       M.scores[p.seat] = { pts: 0, rank: 0, kill: 0, killPop: 0, ranks: [], dayPts: [] };
     });

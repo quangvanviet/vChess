@@ -1557,3 +1557,114 @@ body[data-focus="score"] #btn-menu { transform: translate(-150%, 0); opacity: 0;
   body[data-focus="tac"] .hud-top, body[data-focus="move"] .hud-top { transform: translateY(-170%) !important; opacity: 0; pointer-events: none; }
   body[data-focus="tac"] .cam-bar { transform: translate(-50%, 170%) !important; opacity: 0; pointer-events: none; }
 }
+
+/* ===== 3.4.2 · bảng cắm cờ: cột dọc hẹp ở góc trái, nhường chỗ nhìn bản đồ ===== */
+html body .flag-bar, html body .flag-bar.at-top { left: 6px !important; top: 6px !important; bottom: auto !important; width: 168px !important; max-width: 168px !important; padding: 6px 7px !important; gap: 5px !important; }
+.flag-bar .fb-legend { flex-direction: column; flex-wrap: nowrap; gap: 3px; font-size: 10.5px; }
+.flag-bar .fb-act { flex-direction: column; gap: 4px; } .flag-bar .fb-act .btn { width: 100%; justify-content: center; }
+.flag-bar .fb-top { flex-wrap: wrap; row-gap: 3px; } .flag-bar .fb-top .fb-t { flex: 1 1 100%; white-space: normal; }
+@media (max-height: 520px) and (orientation: landscape) {
+  html body .flag-bar, html body .flag-bar.at-top { left: 3px !important; top: 3px !important; width: 142px !important; max-width: 142px !important; padding: 4px 6px !important; gap: 3px !important; }
+  .flag-bar .fb-legend { font-size: 9px; gap: 2px; } .flag-bar .fb-top { font-size: 10.5px; } .flag-bar .fb-exit { font-size: 10px; padding: 1px 7px 1px 4px; }
+  .flag-bar .fb-act .btn { padding: 2px 6px; font-size: 9.5px; }
+}
+@media (max-height: 520px) and (orientation: landscape) {
+  body[data-focus="flag"] .hud-players, body[data-focus="move"] .hud-players { transform: translateX(-160%) !important; opacity: 0; pointer-events: none; }
+  body[data-focus="flag"] #btn-menu { transform: translate(-160%, 0); opacity: 0; pointer-events: none; transition: transform .32s cubic-bezier(.3, .8, .3, 1), opacity .25s ease; }
+  body[data-focus="flag"] .hud-top { transform: translateY(-170%) !important; opacity: 0; pointer-events: none; }
+  body[data-focus="flag"] .cam-bar { transform: translate(-50%, 170%) !important; opacity: 0; pointer-events: none; }
+}
+
+/* Nguyên soái: chọn lính triệu hồi */
+.gb-cards .bcard.sm { cursor: pointer; border-color: #8fd3ff; background: linear-gradient(180deg, #f2fbff, #fff); }
+.gb-cards .bcard.sm.on { outline: 3px solid var(--fc, #ffb300); box-shadow: 0 0 10px var(--fc, #ffb300); }
+.bcard.sm .sm-mp { position: absolute; left: 50%; bottom: -2px; transform: translateX(-50%); background: #2a6fdb; color: #fff; font: 700 11px/1 system-ui; padding: 2px 6px; border-radius: 8px; display: inline-flex; gap: 2px; align-items: center; white-space: nowrap; }
+
+/* Skin màu quân ở phòng chờ */
+.sc-art .sk-dot { position: absolute; left: -2px; bottom: 0; width: 16px; height: 16px; border-radius: 50%; background: var(--sk); border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.25); }
+.skin-btn { position: absolute; right: -16px; bottom: -8px; display: inline-flex; align-items: center; gap: 4px; padding: 4px 9px 4px 6px; border-radius: 14px; border: 2px solid #fff; background: linear-gradient(180deg, #4f86f0, #2f5fd0); color: #fff; font: 700 12px/1 system-ui, sans-serif; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.35); z-index: 2; transition: transform .12s; }
+.skin-btn:hover { transform: scale(1.08); } .skin-btn:active { transform: scale(.96); }
+.skin-pop { display: flex; gap: 18px; align-items: center; justify-content: center; flex-wrap: wrap; padding: 4px 2px 0; }
+.skin-prev { flex: 0 0 auto; width: 210px; height: 250px; border-radius: 16px; background: radial-gradient(ellipse at 50% 38%, #ffffff 0%, #dcebff 62%, #c3d9f7 100%); box-shadow: inset 0 0 0 2px #fff, 0 2px 10px rgba(40,70,130,.18); display: grid; place-items: center; }
+.skin-prev canvas { width: 100%; height: 100%; display: block; }
+.skin-side { flex: 1 1 210px; min-width: 200px; max-width: 250px; display: flex; flex-direction: column; gap: 10px; }
+.skin-side h2 { margin: 0; font-size: 18px; display: flex; align-items: center; gap: 8px; }
+.skin-nm { display: flex; align-items: center; gap: 8px; font-size: 15px; min-height: 24px; }
+.skin-nm i { width: 18px; height: 18px; border-radius: 50%; border: 2px solid rgba(0,0,0,.2); }
+.skin-nm small { margin-left: auto; color: #6b7a93; font-size: 11px; background: #eef3fb; padding: 2px 8px; border-radius: 10px; }
+.skin-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.skin-opt { aspect-ratio: 1; border-radius: 50%; border: 3px solid #fff; background: var(--sk); box-shadow: 0 0 0 2px #cfd9e8, 0 2px 4px rgba(0,0,0,.2); cursor: pointer; padding: 0; position: relative; transition: transform .12s; }
+.skin-opt i { display: none; }
+.skin-opt:hover { transform: scale(1.1); }
+.skin-opt.active { box-shadow: 0 0 0 3px #ffb300, 0 2px 6px rgba(0,0,0,.3); transform: scale(1.12); }
+.skin-opt.taken::after { content: ''; position: absolute; right: -2px; top: -2px; width: 10px; height: 10px; border-radius: 50%; background: #8a94a6; border: 2px solid #fff; }
+.skin-auto { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 10px; border-radius: 12px; border: 2px solid #cfd9e8; background: #fff; color: #33415a; font: 700 13px/1 system-ui, sans-serif; cursor: pointer; }
+.skin-auto.active { border-color: #ffb300; background: #fff8e0; }
+@media (max-height: 520px), (max-width: 520px) { .skin-prev { width: 150px; height: 180px; } .skin-pop { gap: 10px; } .skin-side { gap: 6px; } .skin-grid { gap: 6px; } }
+
+/* nút tốc độ gộp: bấm đổi x1 → x2 → x4 */
+#speed-btns button { min-width: 46px; padding: 5px 12px; }
+html body .hud-top .speed button { flex: 1; }
+.bcard.sm .bc-has { top: 1px; right: 1px; bottom: auto; left: auto; font-size: 10px; padding: 0 4px; min-width: 0; }
+.bcard.sm .sm-mp { font-size: 10px; padding: 2px 5px; bottom: 0; }
+
+/* ===== nút đóng: chỉ một hình tròn có dấu X ===== */
+.x-circ { flex: none; width: 24px; height: 24px; padding: 0; border-radius: 50%; border: 2px solid #b9d3f2; background: #fff; color: #4d6788; display: inline-grid; place-items: center; cursor: pointer; box-shadow: 0 1px 3px rgba(36, 76, 140, .2); line-height: 1; }
+.x-circ:hover { background: #ffe9e9; color: #c0392b; border-color: #f0b0b0; }
+.x-circ svg { width: 11px; height: 11px; }
+.modal-box { position: relative; }
+.modal-x { position: absolute; top: 8px; right: 8px; z-index: 3; }
+.modal-box > h2 { padding-right: 30px; }
+.fb-top .x-circ, #g-mode .x-circ { width: 22px; height: 22px; margin-left: 4px; }
+
+@media (max-height: 520px) and (orientation: landscape) {
+  /* chuẩn bị: góc trên phải cùng cột mua sắm; chiến đấu: trượt ra giữa mép trên, một hàng */
+  html body .hud-top { left: calc(100vw - var(--rc) - 3px) !important; right: auto !important; transform: none; transition: left .45s cubic-bezier(.3, .8, .3, 1), width .45s cubic-bezier(.3, .8, .3, 1), height .3s ease, transform .32s cubic-bezier(.3, .8, .3, 1), opacity .25s ease; }
+  html body.in-battle .hud-top { left: calc(50vw - 125px) !important; width: 250px !important; height: 34px !important; padding: 3px 7px !important; flex-direction: row !important; align-items: center !important; justify-content: center; }
+  html body.in-battle .hud-top .top-ctrl { flex-direction: row !important; align-items: center !important; gap: 5px !important; width: 100%; flex: 1; }
+  html body.in-battle .hud-top .top-ctrl .timer { flex: 1; width: auto !important; min-width: 0; height: 20px !important; }
+  html body.in-battle .hud-top .battle-ctrl { width: auto; flex: none; gap: 4px; }
+  html body.in-battle .hud-top .speed { flex: none; padding: 1px; }
+  html body.in-battle .hud-top .speed button { flex: none; min-width: 38px; padding: 3px 8px; font-size: 12px; }
+  html body.in-battle .hud-top .battle-ctrl .btn.round { width: 26px; height: 26px; }
+  /* nút camera: luôn căn giữa mép dưới màn hình */
+  html body .cam-bar { left: 50% !important; }
+}
+@media (max-height: 520px) and (orientation: landscape) { html body.in-battle .hud-top .day-banner { display: none !important; } }
+
+/* ===== gọn cho điện thoại: chữ vừa đủ đọc, ít chiếm chỗ ===== */
+.mn-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+.mn-head h2 { margin: 0; }
+@media (max-height: 520px), (max-width: 760px) {
+  .menu-box { padding: 10px 12px !important; width: min(300px, 86vw) !important; gap: 5px; }
+  .menu-box h2 { font-size: 15px; }
+  .menu-box .btn.wide { padding: 6px 10px; font-size: 12.5px; min-height: 0; margin: 0 0 5px; }
+  .modal-box { padding: 12px 14px !important; border-width: 2px; border-radius: 16px; }
+  .modal-box h2 { font-size: 15px !important; margin-bottom: 6px !important; }
+  .modal-box p, .modal-box td, .modal-box th, .modal-box li { font-size: 12px; }
+  .modal-box .btns { margin-top: 8px; gap: 6px; }
+  .modal-box .btns .btn { padding: 6px 14px; font-size: 12.5px; min-height: 0; }
+  .modal-x { top: 6px; right: 6px; width: 22px; height: 22px; }
+  .skin-pop { gap: 10px; flex-wrap: nowrap; }
+  .skin-prev { width: 130px; height: 150px; }
+  .skin-side { gap: 6px; min-width: 0; max-width: 220px; }
+  .skin-side h2 { font-size: 14px !important; margin: 0 !important; }
+  .skin-nm { font-size: 12.5px; min-height: 0; }
+  .skin-grid { gap: 5px; }
+  .skin-opt { border-width: 2px; }
+  .skin-auto { padding: 5px 8px; font-size: 12px; }
+}
+@media (max-height: 520px), (max-width: 760px) {
+  .skin-grid { grid-template-columns: repeat(6, 26px); justify-content: start; gap: 6px; }
+  .skin-side { max-width: 200px; }
+  .skin-prev { width: 120px; height: 140px; }
+}
+.x-circ.tc-x { padding: 0 !important; width: 26px !important; height: 26px !important; border-radius: 50% !important; background: #fff !important; color: #4d6788 !important; border: 2px solid #b9d3f2 !important; box-shadow: 0 1px 3px rgba(36,76,140,.2) !important; gap: 0; }
+
+/* ===== icon luôn nằm chính giữa nền tròn: co theo khung, không tràn ===== */
+.bc-ic, .it-ic, .core-ic, .gi-ic, .su-role, .gb-ctx > svg { box-sizing: border-box; }
+.bc-ic, .it-ic, .core-ic { display: inline-grid; place-items: center; }
+.bc-ic > svg, .it-ic > svg, .core-ic > svg { width: 76% !important; height: 76% !important; display: block; margin: 0; }
+.gi-ic { display: grid; place-items: center; }
+.gi-ic > svg { width: 70% !important; height: 70% !important; display: block; }
+.su-role { display: inline-grid; place-items: center; } .su-role > svg { width: 75% !important; height: 75% !important; display: block; }

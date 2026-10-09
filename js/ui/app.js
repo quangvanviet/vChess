@@ -63,10 +63,13 @@
   App.modal = function (html, buttons) {
     return new Promise(function (res) {
       var box = $('#modal-box');
-      box.innerHTML = html + '<div class="btns">' + (buttons || [['OK', 'gold', true]]).map(function (b, i) { return '<button class="btn ' + (b[1] || '') + '" data-i="' + i + '">' + b[0] + '</button>'; }).join('') + '</div>';
+      var onlyClose = buttons && buttons.length === 1 && buttons[0][2] === false;   // chỉ có nút Đóng → thay bằng dấu X tròn ở góc
+      if (onlyClose) buttons = [];
+      box.innerHTML = '<button class="x-circ modal-x" type="button" title="Đóng" aria-label="Đóng">' + I.ui('close', 12) + '</button>' + html + (buttons && !buttons.length ? '' : '<div class="btns">') + (buttons || [['OK', 'gold', true]]).map(function (b, i) { return '<button class="btn ' + (b[1] || '') + '" data-i="' + i + '">' + b[0] + '</button>'; }).join('') + (buttons && !buttons.length ? '' : '</div>');
       $('#modal').classList.remove('hidden');
       var bs = buttons || [['OK', 'gold', true]], cancel = bs.map(function (b) { return b[2]; }).indexOf(false);
-      $('#modal').onclick = function (e) { if (e.target === $('#modal')) { $('#modal').classList.add('hidden'); res(cancel >= 0 ? false : bs[0][2]); } };
+      var mx = box.querySelector('.modal-x'); if (mx) mx.onclick = function () { $('#modal').classList.add('hidden'); res(onlyClose ? false : cancel >= 0 ? false : (bs[0] ? bs[0][2] : false)); };
+      $('#modal').onclick = function (e) { if (e.target === $('#modal')) { $('#modal').classList.add('hidden'); res(cancel >= 0 || onlyClose ? false : bs[0][2]); } };
       $$('.btns button', box).forEach(function (b) {
         b.onclick = function () { $('#modal').classList.add('hidden'); res((buttons || [['OK', 'gold', true]])[+b.dataset.i][2]); };
       });
@@ -564,7 +567,8 @@
     $('#room-opts').innerHTML = chip('users', rmd.n, rmd.k) + chip('clock', fmtTurn(meta.turnLimitMs), 'turn') + (opt.lockMap ? chip('lock', 'Khóa bản đồ', 'lockmap') : '') + (info.private ? chip('eye', 'Phòng riêng', 'priv') : '');
     $('#btn-room-settings').classList.toggle('host', host);
     $('#btn-room-settings').title = host ? 'Cài đặt phòng (chủ phòng)' : 'Xem thiết lập phòng';
-    var html = '';
+    var sl0 = []; for (var q0 = 1; q0 <= 4; q0++) { var oq = occ[String(q0)]; if (oq.kind === 'human') sl0.push({ seat: String(q0), race: Net.RACE_INV[oq.p.race] || 'dragon', skin: oq.p.skin }); else if (oq.kind === 'bot') sl0.push({ seat: String(q0), race: oq.b.faction }); }
+    var skinMap = TT.assignSkins(sl0), html = '';
     for (var n = 1; n <= 4; n++) {
       var s = String(n), o = occ[s], side = meta.mode === 2 ? [0, 2][n - 1] : n - 1;
       var sideName = meta.mode === 2 && n > 2 ? '' : TT.SIDE_NAMES[side != null ? side : 0];
@@ -590,7 +594,7 @@
       if (o.kind === 'bot') foot = host && !fin ? '<select class="bot-sel" data-s="' + s + '" title="Độ khó của Bot">' + App.LV.map(function (l) { return '<option value="' + l[0] + '"' + (l[0] === lv ? ' selected' : '') + '>Bot · ' + l[1] + '</option>'; }).join('') + '</select>' : '<span class="rchip lv-' + lv + '">Bot · ' + TT.Bot.levelName(lv) + '</span>';
       var kick = host && !isMe && !fin ? '<button class="kick" data-act="free" data-s="' + s + '" title="' + (o.kind === 'bot' ? 'Gỡ Bot' : 'Mời ra') + '">' + I.ui('close', 12) + '</button>' : '';
       html += '<div class="sc filled' + (isMe ? ' me' : '') + (ready ? ' rdy' : '') + '" style="--fc:' + fd.color + ';--sc:' + TT.SEAT_COLORS[s] + '">' +
-        '<div class="sc-art">' + I.crest(f, 84) + '<div class="ready ' + (ready ? 'yes' : 'no') + '">' + (o.kind === 'bot' ? 'Bot' : isHost ? 'Chủ phòng' : ready ? 'Sẵn sàng' : 'Chưa sẵn') + '</div></div>' +
+        '<div class="sc-art">' + I.crest(f, 84) + '<span class="sk-dot" style="--sk:' + (TT.SKINS[skinMap[s]] || {}).c + '" title="Màu quân: ' + ((TT.SKINS[skinMap[s]] || {}).name || '') + '"></span>' + (isMe && !fin && !(me && me.ready && !host) ? '<button type="button" class="skin-btn" data-act="skin" title="Đổi skin màu quân">' + I.ui('palette', 16) + '<span>Skin</span></button>' : '') + '<div class="ready ' + (ready ? 'yes' : 'no') + '">' + (o.kind === 'bot' ? 'Bot' : isHost ? 'Chủ phòng' : ready ? 'Sẵn sàng' : 'Chưa sẵn') + '</div></div>' +
         '<div class="sc-body"><div class="pname">' + (isHost ? '<span class="crown" title="Chủ phòng">' + I.ui('crown', 15) + '</span>' : '') + '<span class="pn">' + esc(name) + '</span>' + (stale ? ' <small title="Mất kết nối">' + I.ui('warn', 14, '#e0a000') + '</small>' : '') + '</div>' +
         '<div class="fac">' + fd.name + ' · ' + (opt.teamMode ? (n % 2 ? 'Đội A' : 'Đội B') : sideName) + '</div>' +
         '<div class="chips"><span class="rchip" title="Thiên phú: ' + esc(pd ? pd.desc : '') + '">' + I.ui('diamond', 10) + (pd ? pd.name : '') + '</span><span class="rchip" title="' + esc(sit.desc) + '">' + I.item(TT.START_ITEMS[hk] || 'kiem', 12) + sit.name + '</span></div>' +
@@ -603,6 +607,7 @@
     $$('#seats [data-act]').forEach(function (b) {
       b.onclick = function () {
         var s = b.dataset.s, a = b.dataset.act;
+        if (a === 'skin') { App.skinPopup(me, skinMap); return; }
         var p = a === 'sit' ? Net.changeSeat(App.code, me.seat, s) : a === 'bot' ? Net.addBot(App.code, s).then(function () { return Net.setBotLevel(App.code, s, App.botLv(s)); }) : Net.freeSeat(App.code, s);
         p.catch(function (e) { App.toast(e.message || String(e), 'err'); });
       };
@@ -669,6 +674,32 @@
     $$('.rune', el).forEach(function (d) { d.onclick = function () { save({ passive: d.dataset.p }); }; });
     $$('.home-opt', el).forEach(function (d) { d.onclick = function () { save({ homeTileType: d.dataset.h }); }; });
   }
+
+
+  /* ---- popup chọn skin màu quân: bảng màu + xem trước Nguyên soái đổi màu ---- */
+  App.skinPopup = function (me, skinMap) {
+    if (!me) return;
+    var f = Net.RACE_INV[me.race] || 'dragon', cur = me.skin && TT.SKINS[me.skin] ? me.skin : null, seat = me.seat;
+    var taken = {}; Object.keys(skinMap).forEach(function (k) { if (k !== seat) taken[skinMap[k]] = k; });
+    var shown = cur || skinMap[seat];
+    var grid = TT.SKIN_ORDER.map(function (k) { var sk = TT.SKINS[k], tk = taken[k]; return '<button type="button" class="skin-opt' + (k === cur ? ' active' : '') + (tk ? ' taken' : '') + '" data-k="' + k + '" style="--sk:' + sk.c + '" title="' + esc(sk.name) + (tk ? ' — người khác đang dùng' : '') + '" aria-label="' + esc(sk.name) + '"><i></i></button>'; }).join('');
+    var html = '<div class="skin-pop"><div class="skin-prev"><canvas id="skin-cv" width="360" height="440"></canvas></div>' +
+      '<div class="skin-side"><h2>' + I.ui('palette', 20) + ' Skin màu quân</h2><div class="skin-nm" id="skin-nm"></div><div class="skin-grid">' + grid + '</div>' +
+      '<button type="button" class="skin-auto' + (cur ? '' : ' active') + '" id="skin-auto">' + I.ui('bolt', 14) + ' Tự động</button></div></div>';
+    var pv = null, pick = cur;
+    var done = App.modal(html, [['Hủy', 'ghost', false], ['Xác nhận', 'gold', true]]).then(function (ok) { if (pv) pv.dispose(); pv = null; if (!ok) return; var patch = { skin: pick || null }; try { var sv = JSON.parse(localStorage.getItem('ttkc.loadout2') || '{}'); sv.skin = pick || null; localStorage.setItem('ttkc.loadout2', JSON.stringify(sv)); } catch (e) { } Net.setMe(App.code, patch).catch(function (e) { App.toast(e.message || String(e), 'err'); }); });
+    function paint() {
+      var k = pick || skinMap[seat], sk = TT.SKINS[k];
+      if (pv) pv.setSkin(sk.c);
+      $('#skin-nm').innerHTML = '<i style="background:' + sk.c + '"></i><b>' + esc(sk.name) + '</b>' + (pick ? '' : '<small>Tự động</small>');
+      $$('.skin-opt').forEach(function (b) { b.classList.toggle('active', b.dataset.k === pick); });
+      $('#skin-auto').classList.toggle('active', !pick);
+    }
+    setTimeout(function () { var cv = $('#skin-cv'); if (!cv) return; pv = TT.marshalPreview ? TT.marshalPreview(cv, f) : null; paint(); }, 30);
+    $$('.skin-opt').forEach(function (b) { b.onclick = function () { pick = b.dataset.k; paint(); }; });
+    $('#skin-auto').onclick = function () { pick = null; paint(); };
+    return done;
+  };
 
   /* ---- Cài đặt phòng: chủ phòng chỉnh được, người khác xem ---- */
   App.roomSettings = function () {

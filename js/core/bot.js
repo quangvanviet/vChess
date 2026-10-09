@@ -36,7 +36,8 @@
     function econ(c) { var r = P.apply(p, c, ctx); if (r.ok && r.log) log = log.concat(r.log); return r; }
     // 0) bán (ảo) toàn bộ quân: Vàng = Vàng còn + giá trị quân; gom trang bị của tướng vào kho tạm
     p.gold += P.armyValue(p);
-    var pool = []; p.squads.forEach(function (q) { pool = pool.concat(q.it); }); p.squads = [];
+    var pool = []; p.squads.forEach(function (q) { pool = pool.concat(q.it); });
+    var mar = P.marshal(p); if (mar) mar.it = []; p.squads = mar ? [mar] : [];   // Nguyên soái luôn ở lại (không bán được)
     var last = M.day >= CFG.days, reserve = last ? 0 : Math.min(L.save[M.day] || 0, Math.floor(p.gold * .25));
     // 1) lên Đời theo lịch
     var want = 1; for (var a = 1; a <= 4; a++) if (M.day >= L.ageDay[a]) want = a;
@@ -72,6 +73,7 @@
     // áp phương án: mua trang bị mới (ghi log), gắn cho tướng, phần thừa vào tủ, quá tủ thì bán
     pick.buy.forEach(function (it) { var sl = p.ishop.indexOf(it); if (sl >= 0) econ({ c: 'buyItem', slot: sl }); });
     p.squads = pick.squads; p.nid = pick.nid;
+    var msh = P.marshal(p); if (msh) { var sl2 = P.summonList(p), pref = ['cung', 'linh', 'thuan'].filter(function (r) { return sl2.indexOf(r) >= 0; }); msh.sm = pref[(+p.seat + M.day) % pref.length] || 'linh'; msh.st = 'giu'; }
     p.gold -= P.armyValue(p);
     var all = pool.concat(p.inv); p.inv = [];
     var order = p.squads.slice().sort(function (x, y) { return squadVal(y) - squadVal(x) || x.id - y.id; });
@@ -117,7 +119,7 @@
   }
   /* Dựng đạo quân từ ngân sách Vàng: chọn binh chủng theo tỉ lệ, mỗi đạo = 1 tướng + lính */
   function buildArmy(p0, pool, ctx, L, rng, variant, reserve) {
-    var p = P.clone(p0); p.squads = [];
+    var p = P.clone(p0); p.squads = p0.squads.filter(function (q) { return TT.ROLES[q.t].marshal; }).map(function (q) { return P.clone(q); });
     var mx = {}; for (var r in MIX[p.race]) mx[r] = MIX[p.race][r];
     if (variant === 1) { mx.cung *= 1.6; mx.phapsu *= 1.6; mx.linh *= .7; }
     if (variant === 2) { mx.linh *= 1.4; mx.thuan *= 1.4; mx.ky *= 1.5; mx.cung *= .7; }

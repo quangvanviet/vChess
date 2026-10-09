@@ -18,10 +18,10 @@ var q=new URLSearchParams(location.search), sel=q.get('race'), roles=q.get('role
 var gap=+(q.get('gap')||1.5), items=[];
 races.forEach(function(race,ri){ roles.forEach(function(role,ci){
   var m=TT.Models.get(race,role,q.get('gen')==='1'||(q.get('gen')==='mix'&&ci%2===0)), g=new THREE.Group(); g.position.set((ci-(roles.length-1)/2)*gap,0,(ri-(races.length-1)/2)*gap*1.4); g.scale.setScalar(m.scale); g.rotation.y=+(q.get('rot')||0.5);
-  for(var k in m.parts){ var p=m.parts[k], piv=new THREE.Group(); piv.position.set(p.pivot[0],p.pivot[1],p.pivot[2]); var mesh=new THREE.Mesh(p.geo,mat); piv.add(mesh); piv.add(new THREE.Mesh(p.geo,ol)); g.add(piv); items.push({k:k,piv:piv,p:p}); }
+  for(var k in m.parts){ var p=m.parts[k], piv=new THREE.Group(); piv.position.set(p.pivot[0],p.pivot[1],p.pivot[2]); var mesh=new THREE.Mesh(p.geo,mat); piv.add(mesh); if(!q.get('noline'))piv.add(new THREE.Mesh(p.geo,ol)); g.add(piv); items.push({k:k,piv:piv,p:p}); }
   sc.add(g);
 });});
-if(q.get('mon')) ['wolf','ox','treant'].forEach(function(k,i){ var m=TT.Models.monster(k), g=new THREE.Group(); g.position.set((i-1)*2.5,0,4); g.scale.setScalar(m.scale); for(var kk in m.parts){var p=m.parts[kk], piv=new THREE.Group(); piv.position.set(p.pivot[0],p.pivot[1],p.pivot[2]); var mesh=new THREE.Mesh(p.geo,mat); piv.add(mesh); piv.add(new THREE.Mesh(p.geo,ol)); g.add(piv);} sc.add(g); });
+if(q.get('mon')) ['wolf','ox','treant'].forEach(function(k,i){ var m=TT.Models.monster(k), g=new THREE.Group(); g.position.set((i-1)*2.5,0,4); g.scale.setScalar(m.scale); for(var kk in m.parts){var p=m.parts[kk], piv=new THREE.Group(); piv.position.set(p.pivot[0],p.pivot[1],p.pivot[2]); var mesh=new THREE.Mesh(p.geo,mat); piv.add(mesh); if(!q.get('noline'))piv.add(new THREE.Mesh(p.geo,ol)); g.add(piv);} sc.add(g); });
 var ground=new THREE.Mesh(new THREE.PlaneGeometry(40,40),new THREE.MeshStandardMaterial({color:'#9bd77f',roughness:1})); ground.rotation.x=-Math.PI/2; sc.add(ground);
 var dist=+(q.get('d')||(sel?9:16)); cam.position.set(0,dist*.55,dist); cam.lookAt(0,.4,0);
 var t=+(q.get('t')||0.3);

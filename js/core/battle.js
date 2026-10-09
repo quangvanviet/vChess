@@ -127,6 +127,12 @@
     };
     if (!gen && !mon) u.mmp = 0; // chỉ tướng có năng lượng và kỹ năng
     if (mon) { u.as = 80; u.spd = floor(2.2 * M / T); u.rng = mil(mon.role === 'thanthu' ? 2 : 1.2); u.mmp = 0; u.regen = 0; u.rad = mil(mon.role === 'linh' ? .4 : mon.role === 'tuong' ? .8 : 1.3); }
+    if (R.marshal && gen) { // Nguyên soái: kỹ năng Triệu hồi theo loại lính đã chọn; MP cần đầy tùy loại lính, hồi MP đều mỗi giây
+      var MC = CFG.marshal, smk = (sqd && sqd.sm) || 'linh', S0 = MC.summon[smk] || MC.summon.linh;
+      u.mmp = Math.max(10, floor(S0.mp * (100 - Math.min(60, fx.summonMp || 0)) / 100));
+      u.sk = { name: 'Triệu Hồi', fx: [{ t: 'summon', marshal: 1, role: MC.summon[smk] ? smk : 'linh', n: S0.n + (fx.summonN || 0), pct: S0.pct + (fx.summonPct || 0) }] };
+      u.mpRegen = MC.mpRegen + (fx.mpRegen || 0); u.marshal = true;
+    }
     var mp0 = a.mp0 + (fx.mpStartPct ? floor(u.mmp * fx.mpStartPct / 100) : 0); u.mp = Math.min(u.mmp, mp0);
     if (fx.revive) u.revive = fx.revive;
     if (opts.cap && !mon && pl && (pl.talent === 'batdiet' && race === 'demon')) u.revive = Math.max(u.revive, 30);
@@ -145,7 +151,7 @@
   }
   function spawnSquad(B, pl, q) {
     var R = TT.ROLES[q.t]; if (!R) return;
-    var sqd = { idx: B.squads.length, id: q.id, pl: pl.idx, seat: pl.seat, team: pl.team, role: q.t, n0: q.n, items: q.it.slice(), up: (q.up || [0, 0, 0, 0]).slice(), st: q.st || 'tc', fm: q.fm || 'khoi', lp: q.lp == null ? 4 : q.lp, fl: (q.fl || []).slice(), step: 0, phase: 0, waitT: 0, blockT: 0, lastD: 1e12, breakT: 0,
+    var sqd = { idx: B.squads.length, id: q.id, pl: pl.idx, seat: pl.seat, team: pl.team, role: q.t, n0: q.n, items: q.it.slice(), up: (q.up || [0, 0, 0, 0]).slice(), st: q.st || 'tc', fm: q.fm || 'khoi', lp: q.lp == null ? 4 : q.lp, fl: (q.fl || []).slice(), sm: q.sm || null, step: 0, phase: 0, waitT: 0, blockT: 0, lastD: 1e12, breakT: 0,
       ax: q.x * M + 500, ay: q.y * M + 500, cx: 0, cy: 0, alive: 0, hp: 0, mhp: 0, units: [], dmg: 0, taken: 0, healed: 0, kills: 0, name: TT.unitName(pl.race, q.t), done: false };
     B.squads.push(sqd);
     var pos = formation(B, pl.side, q.t, q.n, sqd.ax, sqd.ay, q.fm, q.lp, q.sp, q.cu), fwd = TT.sideFwd[pl.side];
@@ -456,6 +462,11 @@
       if (src.ps.killSouls && sp) addSouls(sp, src.ps.killSouls);
       if (t.ps.deathRetaliate) hit(B, null, src, { flat: floor(t.mhp * t.ps.deathRetaliate.pct / 100), dt: 2, noMp: 1 });
     }
+    if (t.marshal && !t.temp) { // Nguyên soái chết = người chơi thua ngày: toàn bộ quân của họ gục theo
+      if (src && src.alive) { var spm = pl(B, src); if (spm) spm.kills += 4; }
+      B.units.forEach(function (o) { if (o.alive && o.pl === t.pl && o !== t) { o.alive = false; o.hp = 0; ev(B, { e: 'die', a: o.id, k: -1 }); } });
+      ev(B, { e: 'fx', k: 'rebirth', a: t.id });
+    }
     if (!t.temp) B.pls.forEach(function (q) { if (q.race === 'demon' && !q.out) addSouls(q, 1); });
     if (tp) {
       tp.deaths++;
@@ -488,7 +499,7 @@
     if (!u.sk || u.mp < u.mmp || u.mmp <= 0) return false;
     var f = u.sk.fx[0], t = u.tgt >= 0 ? byId(B, u.tgt) : null;
     if (f.t === 'heal' || f.t === 'shield' || f.t === 'buff' || f.t === 'block') { var near = nearestEnemy(B, u, rngE(B, u) + mil(4)); return !!near; }
-    if (f.t === 'summon') return u.tgt >= 0;
+    if (f.t === 'summon') return f.marshal ? (B.tick > 2 * T && !!nearestEnemy(B, u, null)) : u.tgt >= 0;
     if (f.area === 'self' || f.t === 'taunt') return enemiesIn(B, u, u.x, u.y, mil(f.r || 3)).length > 0;
     if (f.t === 'dash' && f.to !== 'target') return !!nearestEnemy(B, u, mil(f.r || 9));
     if (f.t === 'blink' && f.to === 'captain') return !!t;
@@ -971,6 +982,7 @@
       if ((perSec + u.id) % T === 0) {
         // mỗi giây: đốt, hồi máu, đầm lầy
         if (u.burnT > 0) { u.burnT -= T; var src = B.byId[u.burnS]; hit(B, src && src.alive ? src : null, u, { flat: u.burnD, dt: 2, noMp: 1 }); if (!u.alive) continue; }
+        if (u.mpRegen && u.mmp > 0 && u.mp < u.mmp) u.mp = Math.min(u.mmp, u.mp + u.mpRegen);
         var reg = u.regen + floor(u.mhp * ((u.au ? u.au.regenPct : 0) + (u.bs ? u.bs.regenPct : 0) + (u.ifx.regenPct || 0)) / 100);
         if (u.ps.regenLow && u.hp * 100 < u.mhp * u.ps.regenLow.below) reg += floor(u.mhp * u.ps.regenLow.pct / 100);
         if (reg > 0 && u.hp < u.mhp) heal(B, u.race === 'demon' ? u : null, u, reg);
@@ -1028,7 +1040,7 @@
     var items = 0; (p.squads || []).forEach(function (s) { items += s.it.length; });
     var pl = { idx: 0, seat: p.seat, team: 0, race: p.race, talent: p.talent, cores: cf, itemsTotal: items };
     var B = { inp: { day: ctx.day || 1, event: ctx.event, weather: ctx.weather }, nid: 1 };
-    var sqd = { idx: 0, items: q.it || [], n0: q.n, up: q.up || [0, 0, 0, 0] };
+    var sqd = { idx: 0, items: q.it || [], n0: q.n, up: q.up || [0, 0, 0, 0], sm: q.sm };
     var u = makeUnit(B, pl, sqd, q.t, { cap: !!cap });
     var bs = null, au = null; u.bs = bs; u.au = au;
     return { hp: u.mhp, atk: u.atk, def: u.def, as: u.as / 100, rng: u.rng / 1000, spd: Math.round(u.spd * T / 10) / 100, mp: u.mmp, mp0: u.mp, crit: u.crit, dodge: u.dodge, ls: u.ls, dt: u.dt };

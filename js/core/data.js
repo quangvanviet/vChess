@@ -5,7 +5,7 @@
   'use strict';
   var TT = G.TT = G.TT || {};
 
-  TT.RULE_VERSION = 'tt-3.1.0';
+  TT.RULE_VERSION = 'tt-3.5.0';
 
   /* ================= BalanceConfig ================= */
   TT.CONFIG = {
@@ -25,6 +25,12 @@
     popBuy: { amount: 2, base: 3, step: 1, every: 2, max: 10 },
     // Tướng: quân đầu tiên của đội, duy nhất dùng kỹ năng và đeo trang bị
     gen: { hp: 220, atk: 150, def: 120, rad: 120 }, genItems: 3,
+    // Nguyên soái: triệu hồi lính tốn MP (mp = MP cần đầy, n = số lính mỗi lần, pct = % sức mạnh lính triệu hồi). Lính mở theo Đời.
+    marshal: { mpRegen: 2, summon: {
+      linh: { mp: 50, n: 2, pct: 70 }, thuan: { mp: 55, n: 2, pct: 70 }, cung: { mp: 55, n: 2, pct: 70 },
+      y: { mp: 75, n: 1, pct: 80 }, ky: { mp: 75, n: 1, pct: 80 }, chihuy: { mp: 80, n: 1, pct: 80 },
+      thichkhach: { mp: 90, n: 1, pct: 80 }, phapsu: { mp: 90, n: 1, pct: 80 }, congthanh: { mp: 110, n: 1, pct: 80 }, tuong: { mp: 140, n: 1, pct: 80 }
+    } },
     // Nâng cấp lính (bằng Vàng, theo từng đạo quân): chỉ áp cho lính, không áp cho tướng. Bán tướng hoàn lại cả tiền nâng cấp.
     solUp: { max: 10, cost: [1, 1, 1, 2, 2, 2, 3, 3, 3, 4], stats: [{ k: 'hp', name: 'Máu', ic: 'heart', pct: 4 }, { k: 'atk', name: 'Tấn công', ic: 'swords', pct: 3 }, { k: 'def', name: 'Giáp', ic: 'shield', pct: 4 }, { k: 'as', name: 'Tốc đánh', ic: 'bolt', pct: 2 }] },
     spaceMin: 60, spaceMax: 200,     // giãn cách lính (% so với mặc định)
@@ -66,7 +72,9 @@
     phapsu:     { name: 'Pháp sư',     age: 3, hp: 95,  atk: 23, def: 5,  as: .80, rng: 4,   spd: 2.0, mp: 50,  mp0: 0,  crit: 0,  dodge: 0,  regen: 0, pop: 2, cost: 2, gcost: 6, rad: .32, dt: 'magic', cls: 'xa' },
     congthanh:  { name: 'Công thành',  age: 3, hp: 150, atk: 46, def: 10, as: .40, rng: 7,   spd: 1.5, mp: 90,  mp0: 0,  crit: 0,  dodge: 0,  regen: 0, pop: 3, cost: 3, gcost: 7, rad: .5,  dt: 'phys', cls: 'xa', splash: 1 },
     tuong:      { name: 'Tượng binh',  age: 4, hp: 560, atk: 40, def: 35, as: .60, rng: 1.2, spd: 2.2, mp: 100, mp0: 50, crit: 0,  dodge: 0,  regen: 3, pop: 5, cost: 4, gcost: 9, rad: .72, dt: 'phys', cls: 'can' },
-    thanthu:    { name: 'Thần thú',    age: 4, hp: 1150, atk: 62, def: 40, as: .70, rng: 1.5, spd: 2.5, mp: 100, mp0: 50, crit: 5,  dodge: 5,  regen: 4, pop: 8, cost: 0, gcost: 14, rad: .95, dt: 'phys', cls: 'can', unique: 1 }
+    thanthu:    { name: 'Thần thú',    age: 4, hp: 1150, atk: 62, def: 40, as: .70, rng: 1.5, spd: 2.5, mp: 100, mp0: 50, crit: 5,  dodge: 5,  regen: 4, pop: 8, cost: 0, gcost: 14, rad: .95, dt: 'phys', cls: 'can', unique: 1 },
+    // Nguyên soái: tướng đặc biệt — mỗi người đúng 1, không mua lính, chết là thua ngày đó; kỹ năng là Triệu hồi lính
+    nguyensoai: { name: 'Nguyên soái', age: 1, hp: 520, atk: 26, def: 24, as: .70, rng: 1.8, spd: 2.0, mp: 100, mp0: 0, crit: 0, dodge: 0, regen: 3, pop: 0, cost: 0, gcost: 0, rad: .5, dt: 'phys', cls: 'trung', unique: 1, marshal: 1 }
   };
   TT.ROLE_ORDER = ['linh', 'thuan', 'cung', 'y', 'ky', 'chihuy', 'thichkhach', 'phapsu', 'congthanh', 'tuong', 'thanthu'];
   TT.CLS_NAME = { can: 'Cận chiến', trung: 'Tầm trung', xa: 'Tầm xa' };
@@ -233,6 +241,13 @@
   def('demon', 'thanthu', { name: 'Ma Vương', ps: { deathSummon: { role: 'linh', n: 2, pct: 50 } }, psd: 'Khi chết để lại 2 Tiểu Quỷ (50% chỉ số).',
     sk: { name: 'Hấp Hồn', desc: 'Tiêu toàn bộ Hồn: gây 100% sức tấn công cộng thêm 25% cho mỗi Hồn lên địch trong 3 ô.', fx: [{ t: 'dmg', area: 'self', r: 3, pct: 100, perSoul: 25, souls: 'all' }] } });
 
+  /* ---------- NGUYÊN SOÁI (mỗi tộc một mẫu, kỹ năng Triệu hồi do trận đấu dựng theo lựa chọn của người chơi) ---------- */
+  var MSK = { name: 'Triệu Hồi', desc: 'Khi đủ MP, triệu hồi lính đã chọn (số lượng và MP cần tùy loại lính) đứng cạnh Nguyên soái. Lính triệu hồi chỉ tồn tại trong ngày.', fx: [{ t: 'summon', marshal: 1, role: 'linh', n: 2, pct: 70 }] };
+  def('dragon', 'nguyensoai', { name: 'Long Soái', ps: { regenLow: { below: 50, pct: 2 } }, psd: 'Khi máu dưới 50% thì hồi 2% máu mỗi giây.', sk: MSK });
+  def('human', 'nguyensoai', { name: 'Đại Nguyên Soái', ps: { aura: { r: 4, def: 8 } }, psd: 'Hào quang 4 ô: đồng minh xung quanh +8% giáp.', sk: MSK });
+  def('fairy', 'nguyensoai', { name: 'Tiên Soái', ps: { aura: { r: 5, regenPct: 1 } }, psd: 'Phước lành 5 ô: đồng minh xung quanh tự hồi 1% máu mỗi giây.', sk: MSK });
+  def('demon', 'nguyensoai', { name: 'Ma Soái', ps: { killSouls: 1 }, psd: 'Mỗi lần hạ gục thêm 1 Hồn.', sk: MSK });
+
   /* ================= Lệnh Soái (tự động trong giao tranh) =================
      Mở ở Đời I / III / IV. Mỗi lệnh dùng tối đa 1 lần mỗi giao tranh, tự kích hoạt khi đủ điều kiện. */
   TT.ORDERS = {
@@ -342,6 +357,14 @@
     ['nhatientri', 2, 'econ', 'Nhà Tiên Tri', { freeReroll: 1 }, 'Thêm 1 lần đổi Lõi miễn phí mỗi ngày.'],
     ['nganhkho', 2, 'econ', 'Ngân Khố', { interestAdd: 2 }, 'Lãi Vàng tối đa +2.'],
     ['hiepuoc', 4, 'econ', 'Hiệp Ước Hoàng Kim', { goldNow: 4, goldDaily: 1 }, 'Nhận ngay 4 Vàng và +1 Vàng mỗi ngày.'],
+    // E2. Nguyên soái: hướng build riêng (hồi MP, triệu hồi nhiều và mạnh hơn, bền hơn)
+    ['hoimana', 1, 'role:nguyensoai', 'Huyết Mạch Mana', { mpRegen: 2 }, 'Nguyên soái hồi thêm 2 MP mỗi giây.'],
+    ['thienmenh', 2, 'role:nguyensoai', 'Thiên Mệnh', { hpPct: 30, defPct: 15 }, 'Nguyên soái +30% máu, +15% giáp.'],
+    ['quanlenhsoai', 2, 'role:nguyensoai', 'Quân Lệnh Triệu Tập', { summonN: 1 }, 'Mỗi lần triệu hồi thêm 1 lính.'],
+    ['khaichien', 3, 'role:nguyensoai', 'Khai Chiến', { mpStartPct: 60 }, 'Nguyên soái vào trận với 60% MP.'],
+    ['tietkiem', 3, 'role:nguyensoai', 'Tiết Kiệm Linh Lực', { summonMp: 20 }, 'Triệu hồi cần ít hơn 20% MP.'],
+    ['tinhnhuehoa', 3, 'role:nguyensoai', 'Tinh Nhuệ Hóa', { summonPct: 30 }, 'Lính triệu hồi mạnh thêm 30%.'],
+    ['vuongquyen', 4, 'role:nguyensoai', 'Vương Quyền', { summonN: 1, summonPct: 25, mpRegen: 2, hpPct: 20 }, 'Triệu hồi thêm 1 lính, lính mạnh thêm 25%, Nguyên soái hồi thêm 2 MP/giây và +20% máu.'],
     // F. Riêng tộc
     ['huyetmach', 3, 'race:dragon', 'Huyết Mạch Long', { longhuyetX2: 1 }, 'Long Huyết mạnh gấp đôi (mỗi 1% máu mất +1% tốc đánh).'],
     ['vaycodai', 3, 'race:dragon', 'Giáp Vảy Cổ', { def: 15, reflect: 10 }, 'Quân Rồng +15 DEF và phản 10% sát thương cận chiến.'],
@@ -443,6 +466,33 @@
 
   /* ================= Màu ghế ================= */
   TT.SEAT_COLORS = { 1: '#ff5d5d', 2: '#3d9cf0', 3: '#27c46b', 4: '#f2b02c' };
+  /* ================= Skin màu phe (chỉ đổi màu giáp, áo, áo choàng; không ảnh hưởng sức mạnh) ================= */
+  TT.SKINS = {
+    do:   { name: 'Đỏ Thắm',     c: '#e0443a' }, cam:  { name: 'Cam Hổ Phách', c: '#f28a2a' }, vang: { name: 'Vàng Kim',  c: '#e8c52e' },
+    luc:  { name: 'Lục Bảo',     c: '#3fae56' }, lam:  { name: 'Ngọc Lam',     c: '#27c4b0' }, troi: { name: 'Xanh Trời', c: '#4aa8f0' },
+    xanh: { name: 'Xanh Hải',    c: '#2f5fd0' }, tim:  { name: 'Tím Huyền',    c: '#8a4ad8' }, hong: { name: 'Hồng Anh',  c: '#ec5fa6' },
+    bach: { name: 'Bạch Ngân',   c: '#e6edf5' }, hac:  { name: 'Hắc Thiết',    c: '#4a4a5e' }, nau:  { name: 'Nâu Đất',   c: '#9a6238' }
+  };
+  TT.SKIN_ORDER = ['do', 'cam', 'vang', 'luc', 'lam', 'troi', 'xanh', 'tim', 'hong', 'bach', 'hac', 'nau'];
+  // màu mặc định hợp với từng tộc (thứ tự ưu tiên khi hệ thống tự chọn)
+  TT.SKIN_PREF = {
+    dragon: ['do', 'cam', 'vang', 'nau', 'hong', 'hac'],
+    human: ['xanh', 'bach', 'troi', 'vang', 'luc', 'do'],
+    fairy: ['luc', 'lam', 'hong', 'troi', 'bach', 'vang'],
+    demon: ['tim', 'hac', 'hong', 'do', 'xanh', 'lam']
+  };
+  /* Gán skin cho mọi người chơi (xác định, giống nhau trên mọi máy): người đã chọn giữ nguyên; người chưa chọn (hoặc chọn trùng người ngồi trước)
+     được hệ thống chọn màu hợp tộc nhưng khác tất cả người còn lại. players: [{seat, race, skin}] → { seat: skinId } */
+  TT.assignSkins = function (players) {
+    var out = {}, used = {}, list = players.slice().sort(function (a, b) { return +a.seat - +b.seat; });
+    list.forEach(function (p) { if (p.skin && TT.SKINS[p.skin] && !used[p.skin]) { out[p.seat] = p.skin; used[p.skin] = 1; } });
+    list.forEach(function (p) {
+      if (out[p.seat]) return;
+      var pref = (TT.SKIN_PREF[p.race] || []).concat(TT.SKIN_ORDER), pick = pref.filter(function (k) { return !used[k]; })[0] || TT.SKIN_ORDER[0];
+      out[p.seat] = pick; used[pick] = 1;
+    });
+    return out;
+  };
   TT.SEAT_NAMES = { 1: 'Nam', 2: 'Tây', 3: 'Bắc', 4: 'Đông' };
   TT.SIDE_NAMES = ['Nam', 'Tây', 'Bắc', 'Đông'];
   TT.hexA = function (hex, a) { var h = hex.replace('#', ''); if (h.length === 3) h = h.split('').map(function (c) { return c + c; }).join(''); var n = parseInt(h, 16); return 'rgba(' + (n >> 16 & 255) + ',' + (n >> 8 & 255) + ',' + (n & 255) + ',' + a + ')'; };
@@ -451,7 +501,7 @@
   TT.unitDef = function (race, role) { return U[race + '.' + role]; };
   /* Giá lính / giá tướng (Vàng) */
   TT.unitCost = function (race, role) { return TT.ROLES[role].cost; };
-  TT.genCost = function (race, role) { var f = TT.FACTIONS[race]; return TT.ROLES[role].gcost + ((f.costAdd && f.costAdd.gen) || 0); };
+  TT.genCost = function (race, role) { if (TT.ROLES[role].marshal) return 0; var f = TT.FACTIONS[race]; return TT.ROLES[role].gcost + ((f.costAdd && f.costAdd.gen) || 0); };
   TT.unitName = function (race, role) { var u = U[race + '.' + role]; return u ? u.name : TT.ROLES[role].name; };
 
   /* RNG xác định */
