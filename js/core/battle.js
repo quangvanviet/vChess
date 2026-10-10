@@ -703,9 +703,11 @@
   /* tránh bị đồng đội đang đứng đánh chặn đường: đi vòng sang bên ít vướng hơn rồi tiếp tục tiến tới mục tiêu / cờ */
   function steerAround(B, u, tx, ty) {
     var dx = tx - u.x, dy = ty - u.y, l = TT.isqrt(dx * dx + dy * dy);
-    if (l < 700) return null;
-    if (u.flT > B.tick && u.flS) { var sd0 = u.flS, nx0 = -dy / l, ny0 = dx / l; return [u.x + floor(dx * 700 / l) + floor(nx0 * 1300 * sd0), u.y + floor(dy * 700 / l) + floor(ny0 * 1300 * sd0)]; }
-    if ((B.tick + u.id) % 3 !== 0) return null;
+    if (l < 1600) return null;
+    var nx = -dy / l, ny = dx / l;
+    // đang đi vòng: giữ nguyên hướng vòng một lúc cho khỏi dao động qua lại
+    if (u.flT > B.tick && u.flS) return [u.x + floor(dx * 1500 / l) + floor(nx * 1500 * u.flS), u.y + floor(dy * 1500 / l) + floor(ny * 1500 * u.flS)];
+    if ((u.stall | 0) < 6) return null;   // chỉ khi thật sự bị kẹt (bước đi bị đồng đội đẩy lùi) mới tìm đường vòng
     var ux = dx / l, uy = dy / l, gx = floor(u.x / M), gy = floor(u.y / M), left = 0, right = 0, blocked = 0, ug = B.ug; if (!ug) return null;
     for (var oy = -2; oy <= 2; oy++) for (var ox = -2; ox <= 2; ox++) {
       var lst = ug[(gx + ox) + (gy + oy) * B.W]; if (!lst) continue;
@@ -713,15 +715,12 @@
         var a = lst[k]; if (a === u || !a.alive || a.team !== u.team || a.pass && !u.pass) continue;
         var ax = a.x - u.x, ay = a.y - u.y, fwd = ax * ux + ay * uy, lat = -ax * uy + ay * ux, reach = u.rad + a.rad + 700;
         if (fwd < 0 || fwd > reach + 900 || Math.abs(lat) > reach) continue;
-        if (!(a.standT > 0 || a.stun > 0 || a.rootT > 0)) continue;   // chỉ coi là vật cản nếu đồng đội đang đứng yên đánh
         blocked++; if (lat > 0) left++; else right++;
       }
     }
-    if (blocked < 1) return null;
-    var side = left === right ? ((u.id % 2) ? 1 : -1) : (left > right ? -1 : 1);
-    u.flS = side; u.flT = B.tick + 18;
-    var nx = -dy / l, ny = dx / l;
-    return [u.x + floor(dx * 700 / l) + floor(nx * 1300 * side), u.y + floor(dy * 700 / l) + floor(ny * 1300 * side)];
+    var side = !blocked || left === right ? ((u.id % 2) ? 1 : -1) : (left > right ? -1 : 1);
+    u.flS = side; u.flT = B.tick + 30; u.stall = 0;
+    return [u.x + floor(dx * 1500 / l) + floor(nx * 1500 * side), u.y + floor(dy * 1500 / l) + floor(ny * 1500 * side)];
   }
   function inRange(B, u, t) { var r = rngE(B, u) + t.rad + u.rad; return d2(u, t) <= r * r; }
   function attack(B, u, t) {
@@ -780,6 +779,9 @@
   }
 
   function unitAct(B, u) {
+    // đo tiến độ bước đi của tick trước: bị đồng đội chặn/đẩy lùi thì tăng bộ đếm kẹt
+    if (u.mvI) { var nt = TT.isqrt(sq(u.x - u.sx) + sq(u.y - u.sy)); u.stall = nt * 100 < spdE(B, u) * 35 ? (u.stall | 0) + 1 : Math.max(0, (u.stall | 0) - 2); } else u.stall = 0;
+    u.sx = u.x; u.sy = u.y; u.mvI = 0;
     if (u.stun > 0) return;
     if (u.castT > 0) return;
     var sqd = u.sq >= 0 ? B.squads[u.sq] : null;
@@ -816,6 +818,7 @@
     if (u.rootT > 0) return;
     // hành quân đồng bộ: trước khi hai bên chạm trán, quân nhanh (kỵ, thích khách, bay…) không bỏ xa đại quân để khỏi bị đánh lẻ
     if (u.spd > PACE && (B.tick + u.id) % 10 === 0) u.pace = (!B.fightT || B.tick - B.fightT > sec(3)) && !u.monster && !nearestEnemy(B, u, mil(7)) ? PACE : 0;
+    u.mvI = 1;
     var sv = (!u.fly && u.rootT <= 0) ? steerAround(B, u, tx, ty) : null, s = sv ? moveToward(B, u, sv[0], sv[1], 0) : pathStep(B, u, gx, gy, tx, ty);
     if (sv && s <= 0) s = pathStep(B, u, gx, gy, tx, ty);
     u.moved += s;
@@ -842,7 +845,9 @@
     if (o.goal && !o.abs) { var gx = o.goal[0] + ox, gy = o.goal[1] + oy, cx = floor(gx / M), cy = floor(gy / M); if (passable(B, cx, cy)) o.goal = [gx, gy]; }
     else if (!o.noFight) {
       var dg = d2(u, g);
-      if (dg > sq(mil(5)) && !nearestEnemy(B, u, rngE(B, u) + mil(1.5))) { var tx = g.x + ox, ty = g.y + oy; o.goal = passable(B, floor(tx / M), floor(ty / M)) ? [tx, ty] : [g.x, g.y]; if (dg > sq(mil(7))) o.hurry = true; }
+      // dây xích với tướng: chỉ khi chưa giao chiến (hành quân) hoặc lạc quá xa. Đang giao chiến thì lính tự do đi tìm và đánh địch, không bị kéo ngược về tướng
+      var fighting = B.fightT && B.tick - B.fightT < sec(3), leash = fighting ? sq(mil(14)) : sq(mil(5));
+      if (dg > leash && !nearestEnemy(B, u, rngE(B, u) + mil(fighting ? 4 : 1.5))) { var tx = g.x + ox, ty = g.y + oy; o.goal = passable(B, floor(tx / M), floor(ty / M)) ? [tx, ty] : [g.x, g.y]; if (dg > sq(mil(fighting ? 16 : 7))) o.hurry = true; }
     }
     return o;
   }

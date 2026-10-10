@@ -1,10 +1,19 @@
 {
-  "name": "vChess",
+  "name": "vChess — Cờ chiến thuật",
   "short_name": "vChess",
+  "description": "Cờ tự động đánh 5 tộc, 2–4 người chơi online.",
   "start_url": "./index.html",
+  "scope": "./",
   "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone"],
   "orientation": "landscape",
-  "background_color": "#3f95f0",
+  "background_color": "#2a63d6",
   "theme_color": "#3f95f0",
-  "icons": [{ "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+  "lang": "vi",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
 }

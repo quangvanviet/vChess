@@ -25,6 +25,34 @@
     document.addEventListener('dragstart', function (e) { e.preventDefault(); });
     document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
   })();
+  /* ---------- giữ màn hình luôn sáng (điện thoại không tự tối màn / khóa màn hình khi đang mở game) ---------- */
+  (function () {
+    var touch = ('ontouchstart' in G) || (navigator.maxTouchPoints > 0), coarse = G.matchMedia && G.matchMedia('(pointer: coarse)').matches;
+    if (!(touch && coarse)) return;
+    var sentinel = null, vid = null, busy = false;
+    function fallback() {   // trình duyệt cũ không có Wake Lock (iOS < 16.4…): phát một video đen rất nhỏ, lặp vô tận, không tiếng
+      if (vid) { try { if (vid.paused) vid.play().catch(function () { }); } catch (e) { } return; }
+      try {
+        vid = document.createElement('video'); vid.setAttribute('playsinline', ''); vid.setAttribute('muted', ''); vid.muted = true; vid.loop = true; vid.setAttribute('title', 'vChess');
+        vid.style.cssText = 'position:fixed;left:-2px;top:-2px;width:1px;height:1px;opacity:.01;pointer-events:none';
+        var m = vid.canPlayType('video/mp4') ? 'video/mp4;base64,AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAAN2bW9vdgAAAGxtdmhkAAAAAAAAAAAAAAAAAAAD6AAAA+gAAQAAAQAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAqB0cmFrAAAAXHRraGQAAAADAAAAAAAAAAAAAAABAAAAAAAAA+gAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAAEAAAABAAAAAAAAkZWR0cwAAABxlbHN0AAAAAAAAAAEAAAPoAAAQAAABAAAAAAIYbWRpYQAAACBtZGhkAAAAAAAAAAAAAAAAAAAoAAAAKABVxAAAAAAALWhkbHIAAAAAAAAAAHZpZGUAAAAAAAAAAAAAAABWaWRlb0hhbmRsZXIAAAABw21pbmYAAAAUdm1oZAAAAAEAAAAAAAAAAAAAACRkaW5mAAAAHGRyZWYAAAAAAAAAAQAAAAx1cmwgAAAAAQAAAYNzdGJsAAAAv3N0c2QAAAAAAAAAAQAAAK9hdmMxAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAEAAQABIAAAASAAAAAAAAAABFUxhdmM2MC4zMS4xMDIgbGlieDI2NAAAAAAAAAAAAAAAGP//AAAANWF2Y0MBZAAK/+EAGGdkAAqs2UQmwEQAAAMABAAAAwAoPEiWWAEABmjr48siwP34+AAAAAAQcGFzcAAAAAEAAAABAAAAFGJ0cnQAAAAAAAAYQAAAGEAAAAAYc3R0cwAAAAAAAAABAAAABQAACAAAAAAUc3RzcwAAAAAAAAABAAAAAQAAADhjdHRzAAAAAAAAAAUAAAABAAAQAAAAAAEAACgAAAAAAQAAEAAAAAABAAAAAAAAAAEAAAgAAAAAHHN0c2MAAAAAAAAAAQAAAAEAAAAFAAAAAQAAAChzdHN6AAAAAAAAAAAAAAAFAAAC1gAAAA4AAAAMAAAADAAAAAwAAAAUc3RjbwAAAAAAAAABAAADpgAAAGJ1ZHRhAAAAWm1ldGEAAAAAAAAAIWhkbHIAAAAAAAAAAG1kaXJhcHBsAAAAAAAAAAAAAAAALWlsc3QAAAAlqXRvbwAAAB1kYXRhAAAAAQAAAABMYXZmNjAuMTYuMTAwAAAACGZyZWUAAAMQbWRhdAAAAq0GBf//qdxF6b3m2Ui3lizYINkj7u94MjY0IC0gY29yZSAxNjQgcjMxMDggMzFlMTlmOSAtIEguMjY0L01QRUctNCBBVkMgY29kZWMgLSBDb3B5bGVmdCAyMDAzLTIwMjMgLSBodHRwOi8vd3d3LnZpZGVvbGFuLm9yZy94MjY0Lmh0bWwgLSBvcHRpb25zOiBjYWJhYz0xIHJlZj0zIGRlYmxvY2s9MTowOjAgYW5hbHlzZT0weDM6MHgxMTMgbWU9aGV4IHN1Ym1lPTcgcHN5PTEgcHN5X3JkPTEuMDA6MC4wMCBtaXhlZF9yZWY9MSBtZV9yYW5nZT0xNiBjaHJvbWFfbWU9MSB0cmVsbGlzPTEgOHg4ZGN0PTEgY3FtPTAgZGVhZHpvbmU9MjEsMTEgZmFzdF9wc2tpcD0xIGNocm9tYV9xcF9vZmZzZXQ9LTIgdGhyZWFkcz0yIGxvb2thaGVhZF90aHJlYWRzPTEgc2xpY2VkX3RocmVhZHM9MCBucj0wIGRlY2ltYXRlPTEgaW50ZXJsYWNlZD0wIGJsdXJheV9jb21wYXQ9MCBjb25zdHJhaW5lZF9pbnRyYT0wIGJmcmFtZXM9MyBiX3B5cmFtaWQ9MiBiX2FkYXB0PTEgYl9iaWFzPTAgZGlyZWN0PTEgd2VpZ2h0Yj0xIG9wZW5fZ29wPTAgd2VpZ2h0cD0yIGtleWludD0yNTAga2V5aW50X21pbj01IHNjZW5lY3V0PTQwIGludHJhX3JlZnJlc2g9MCByY19sb29rYWhlYWQ9NDAgcmM9Y3JmIG1idHJlZT0xIGNyZj0yMy4wIHFjb21wPTAuNjAgcXBtaW49MCBxcG1heD02OSBxcHN0ZXA9NCBpcF9yYXRpbz0xLjQwIGFxPTE6MS4wMACAAAAAIWWIhAAS//73rd+BTcMrNWu6Vzi0la3kA5MtsETUVp4u9wAAAApBmiRsQ//+qZ00AAAACEGeQniCHwLHAAAACAGeYXRD/wTEAAAACAGeY2pD/wTF' : 'video/webm;base64,GkXfo59ChoEBQveBAULygQRC84EIQoKEd2VibUKHgQJChYECGFOAZwEAAAAAAAJKEU2bdLpNu4tTq4QVSalmU6yBoU27i1OrhBZUrmtTrIHYTbuMU6uEElTDZ1OsggEeTbuMU6uEHFO7a1OsggI07AEAAAAAAABZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAVSalmsirXsYMPQkBNgI1MYXZmNjAuMTYuMTAwV0GNTGF2ZjYwLjE2LjEwMESJiECPQAAAAAAAFlSua8GuAQAAAAAAADjXgQFzxYiyk3HY0C8DNJyBACK1nIN1bmSIgQCGhVZfVlA4g4EBI+ODhAvrwgDgibCBQLqBQJqBAhJUw2f8c3OgY8CAZ8iaRaOHRU5DT0RFUkSHjUxhdmY2MC4xNi4xMDBzc9ZjwItjxYiyk3HY0C8DNGfIoUWjh0VOQ09ERVJEh5RMYXZjNjAuMzEuMTAyIGxpYnZweGfIoUWjiERVUkFUSU9ORIeTMDA6MDA6MDEuMDAwMDAwMDAwAB9DtnVAj+eBAKOqgQAAgPACAJ0BKkAAQAAARwiFhYiFhIgCAgAGcDxCYAqyIPcwAP7/q1CAo5aBAMgA0QEABRCsABgAGFgv9AAIjoAAo5aBAZAA0QEABRCsABgAGFgv9AAIjoAAo5aBAlgA0QEABRCsABgAGFgv9AAIjoAAo5aBAyAA0QEABRCsABgAGFgv9AAIjoAAHFO7a5G7j7OBALeK94EB8YIBn/CBAw==';
+        vid.src = 'data:' + m; document.body.appendChild(vid); vid.play().catch(function () { });
+      } catch (e) { }
+    }
+    function acquire() {
+      if (document.hidden || busy) return;
+      if (navigator.wakeLock && navigator.wakeLock.request) {
+        if (sentinel && !sentinel.released) return;
+        busy = true;
+        navigator.wakeLock.request('screen').then(function (s) { sentinel = s; busy = false; s.addEventListener('release', function () { sentinel = null; }); }, function () { busy = false; fallback(); });
+      } else fallback();
+    }
+    ['pointerdown', 'touchend', 'click', 'keydown'].forEach(function (ev) { document.addEventListener(ev, acquire, { passive: true }); });
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) acquire(); else if (vid) { try { vid.pause(); } catch (e) { } } });
+    G.addEventListener('focus', acquire); G.addEventListener('pageshow', acquire); G.addEventListener('orientationchange', function () { setTimeout(acquire, 300); });
+    setInterval(function () { if (!document.hidden) acquire(); }, 15000);   // nếu hệ thống tự thu hồi khóa (tiết kiệm pin…) thì xin lại
+    acquire();
+  })();
   var esc = App.esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
 
   /* ---------- biểu tượng bổ sung (SVG cùng phong cách với TT.Icons.ui) ---------- */
@@ -91,7 +119,8 @@
     }
     (function loop() {
       requestAnimationFrame(loop);
-      if (App.screen === 'game') return;
+      if (App.screen === 'game' || document.hidden) return;
+      var tn = performance.now(); if (tn - (loop.t || 0) < 30) return; loop.t = tn;   // 30 khung/giây là đủ cho nền
       g.clearRect(0, 0, c.width, c.height);
       clouds.forEach(function (k) { k.x += k.v; if (k.x - 120 * k.s > c.width) k.x = -120 * k.s; cloud(k.x, k.y, k.s); });
       sparks.forEach(function (p) {
@@ -361,7 +390,7 @@
   };
   /* Chất lượng đồ họa: 0 rất thấp · 1 thấp · 2 trung bình · 3 cao · 'auto' tự nhận theo máy */
   App.GFX_NAMES = ['Rất thấp', 'Thấp', 'Trung bình', 'Cao'];
-  App.gfxPref = function () { var v = null; try { v = localStorage.getItem('ttkc.gfx'); } catch (e) { } if (v === 'low') return '1'; if (v === 'high') return '3'; return v === '0' || v === '1' || v === '2' || v === '3' ? v : 'auto'; };
+  App.gfxPref = function () { var v = null; try { v = localStorage.getItem('ttkc.gfx'); } catch (e) { } if (v === 'low') return '1'; if (v === 'high') return '3'; return v === '0' || v === '1' || v === '2' || v === '3' || v === 'auto' ? v : '3'; };   // mặc định: Cao
   App.gfxLevel = function () {
     var pf = App.gfxPref(); if (pf !== 'auto') return +pf;
     var touch = window.matchMedia && matchMedia('(pointer: coarse)').matches, cores = navigator.hardwareConcurrency || 8, mem = navigator.deviceMemory || 8;
@@ -369,13 +398,17 @@
     if (touch || cores <= 4 || mem <= 4) return 1;
     return cores <= 6 ? 2 : 3;
   };
+  /* khung hình: 30 (mát máy, tiết kiệm pin — mặc định trên điện thoại) hoặc 60 (mượt) */
+  App.fpsLevel = function () { var v = null; try { v = localStorage.getItem('ttkc.fps'); } catch (e) { } if (v === '30' || v === '60') return +v; return window.matchMedia && matchMedia('(pointer: coarse)').matches ? 30 : 60; };
   App.gfxPickerHtml = function () {
     var pf = App.gfxPref(), lv = App.gfxLevel();
     return '<div class="gfx-pick"><div class="gfx-h">' + I.ui('gear', 14) + ' Đồ họa' + (pf === 'auto' ? ' <em>(tự chọn: ' + App.GFX_NAMES[lv] + ')</em>' : '') + '</div><div class="gfx-seg">' +
-      ['auto', '0', '1', '2', '3'].map(function (k) { return '<button type="button" data-g="' + k + '" class="' + (pf === k ? 'on' : '') + '">' + (k === 'auto' ? 'Tự động' : App.GFX_NAMES[+k]) + '</button>'; }).join('') + '</div></div>';
+      ['auto', '0', '1', '2', '3'].map(function (k) { return '<button type="button" data-g="' + k + '" class="' + (pf === k ? 'on' : '') + '">' + (k === 'auto' ? 'Tự động' : App.GFX_NAMES[+k]) + '</button>'; }).join('') + '</div>' +
+      '<div class="gfx-h" style="margin-top:6px">' + I.ui('gear', 14) + ' Khung hình <em>(30 giúp mát máy, tiết kiệm pin)</em></div><div class="gfx-seg fps-seg">' +
+      [30, 60].map(function (k) { return '<button type="button" data-f="' + k + '" class="' + (App.fpsLevel() === k ? 'on' : '') + '">' + (k === 30 ? '30 · Mát máy' : '60 · Mượt') + '</button>'; }).join('') + '</div></div>';
   };
   App.gfxPickerBind = function (root, again) {
-    Array.prototype.forEach.call(root.querySelectorAll('.gfx-seg button'), function (b) { b.onclick = function () { try { localStorage.setItem('ttkc.gfx', b.dataset.g); } catch (e) { } App.toast('Đồ họa: áp dụng từ lần vào trận sau', 'ok'); if (again) again(); }; });
+    Array.prototype.forEach.call(root.querySelectorAll('.gfx-seg button'), function (b) { b.onclick = function () { try { if (b.dataset.f) localStorage.setItem('ttkc.fps', b.dataset.f); else localStorage.setItem('ttkc.gfx', b.dataset.g); } catch (e) { } App.toast('Đồ họa: áp dụng từ lần vào trận sau', 'ok'); if (again) again(); }; });
   };
   App.lobbySettings = function () {
     var draw = function () {
@@ -621,7 +654,7 @@
           if (me && !me.ready && me.seat !== s && !fin) tools += '<button class="btn small" data-act="sit" data-s="' + s + '">Ngồi đây</button>';
           if (host && !fin) tools += '<button class="btn small teal" data-act="bot" data-s="' + s + '">' + I.ui('plus', 11) + ' Bot</button>';
         } else if (host) tools += '<button class="btn small red" data-act="free" data-s="' + s + '" title="Mời ra">' + I.ui('close', 12) + '</button>';
-        html += '<div class="sc vacant" style="--sc:' + TT.SEAT_COLORS[s] + '"><div class="sc-num">' + n + '</div><div class="sc-vt"><b>' + (o.kind === 'joining' ? 'Đang vào…' : 'Ghế trống') + '</b><small>' + sideName + '</small></div><div class="sc-tools">' + tools + '</div></div>';
+        html += '<div class="sc vacant' + (opt.teamMode ? ' tm-' + (n % 2 ? 'A' : 'B') : '') + '" style="--sc:' + TT.SEAT_COLORS[s] + '">' + (opt.teamMode ? '<i class="tflag t' + (n % 2 ? 'A' : 'B') + '" title="' + (n % 2 ? 'Đội A' : 'Đội B') + ' — cùng đội thì không đánh nhau">' + I.ui('flag', 12, '#fff') + '</i>' : '') + '<div class="sc-num">' + n + '</div><div class="sc-vt"><b>' + (o.kind === 'joining' ? 'Đang vào…' : 'Ghế trống') + '</b><small>' + sideName + '</small></div><div class="sc-tools">' + tools + '</div></div>';
         continue;
       }
       var f, name, pas, home, ready, isMe = o.uid === uid && o.kind === 'human', isHost = o.uid === meta.hostUid && o.kind === 'human';
@@ -637,7 +670,7 @@
       var foot = '';
       if (o.kind === 'bot') foot = host && !fin ? '<select class="bot-sel" data-s="' + s + '" title="Độ khó của Bot">' + App.LV.map(function (l) { return '<option value="' + l[0] + '"' + (l[0] === lv ? ' selected' : '') + '>Bot · ' + l[1] + '</option>'; }).join('') + '</select>' : '<span class="rchip lv-' + lv + '">Bot · ' + TT.Bot.levelName(lv) + '</span>';
       var kick = host && !isMe && !fin ? '<button class="kick" data-act="free" data-s="' + s + '" title="' + (o.kind === 'bot' ? 'Gỡ Bot' : 'Mời ra') + '">' + I.ui('close', 12) + '</button>' : '';
-      html += '<div class="sc filled' + (isMe ? ' me' : '') + (ready ? ' rdy' : '') + '" style="--fc:' + fd.color + ';--sc:' + TT.SEAT_COLORS[s] + '">' +
+      html += '<div class="sc filled' + (opt.teamMode ? ' tm-' + (n % 2 ? 'A' : 'B') : '') + (isMe ? ' me' : '') + (ready ? ' rdy' : '') + '" style="--fc:' + fd.color + ';--sc:' + TT.SEAT_COLORS[s] + '">' + (opt.teamMode ? '<i class="tflag t' + (n % 2 ? 'A' : 'B') + '" title="' + (n % 2 ? 'Đội A' : 'Đội B') + ' — cùng đội thì không đánh nhau">' + I.ui('flag', 12, '#fff') + '</i>' : '') +
         '<div class="sc-art pv" data-act="pv" data-s="' + s + '" role="button" tabindex="0" title="Xem thiết lập' + (isMe ? ' của bạn' : ' của ' + esc(name)) + '"' + '>' + (snap ? '<img class="sc-mar" alt="" src="' + snap + '">' : I.crest(f, 60)) + (isMe && !fin && !(me && me.ready && !host) ? '<button type="button" class="mar-btn" data-act="skin" title="Đổi nguyên soái và skin">' + I.ui('rotl', 14) + '</button>' : '') + '<div class="ready ' + (ready ? 'yes' : 'no') + '">' + (o.kind === 'bot' ? 'Bot' : isHost ? 'Chủ phòng' : ready ? 'Sẵn sàng' : 'Chưa sẵn') + '</div></div>' +
         '<div class="sc-body"><div class="pname">' + (isHost ? '<span class="crown" title="Chủ phòng">' + I.ui('crown', 15) + '</span>' : '') + '<span class="pn">' + esc(name) + '</span>' + (stale ? ' <small title="Mất kết nối">' + I.ui('warn', 14, '#e0a000') + '</small>' : '') + '</div>' +
         '<div class="fac">' + fd.name + ' · ' + (opt.teamMode ? (n % 2 ? 'Đội A' : 'Đội B') : sideName) + '</div>' +

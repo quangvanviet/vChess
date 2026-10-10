@@ -5,7 +5,7 @@
   'use strict';
   var TT = G.TT = G.TT || {};
 
-  TT.RULE_VERSION = 'tt-4.2.0';
+  TT.RULE_VERSION = 'tt-4.2.1';
 
   /* ================= BalanceConfig ================= */
   TT.CONFIG = {

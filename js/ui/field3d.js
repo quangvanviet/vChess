@@ -116,9 +116,10 @@
     this.az = 0; this.azT = 0; this.el = .95; this.R = 40; this.RT = 40; this.userAz = 0; this.pan = { x: 0, z: 0 }; this.panT = { x: 0, z: 0 };
     this.speed = 1; this.acc = 0; this.B = null; this.paused = false;
     // chất lượng cao: hậu kỳ (SSAO + Bloom + Vignette + ToneMapping ACES + SMAA) qua pmndrs postprocessing
-    this.hq = this.gfx >= 3 && !!(THREE.PP && THREE.N8AOPostPass) && !this.showcase;
+    this.touch = !!(G.matchMedia && G.matchMedia('(pointer: coarse)').matches); this.fps = opts.fps || (this.touch ? 30 : 60);
+    this.hq = this.gfx >= 3 && !!(THREE.PP && THREE.N8AOPostPass) && !this.showcase && !this.touch;   // AO nặng GPU: tắt trên điện thoại cho đỡ nóng máy
     var r = this.renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: !this.hq && this.gfx >= 2, alpha: !!this.showcase, powerPreference: 'high-performance', stencil: false });
-    r.setPixelRatio(Math.min([.8, 1, 1.25, 1.5][this.gfx], G.devicePixelRatio || 1));
+    r.setPixelRatio(Math.min([.8, 1, 1.25, 1.5][this.gfx] * (this.touch ? .85 : 1), G.devicePixelRatio || 1));
     r.outputColorSpace = THREE.SRGBColorSpace;
     r.shadowMap.enabled = false; /* không dùng bóng đổ (gây giật lag) */ r.shadowMap.type = this.gfx >= 3 ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
     r.toneMapping = this.hq ? THREE.NoToneMapping : THREE.ACESFilmicToneMapping; r.toneMappingExposure = 1.0;
@@ -493,7 +494,8 @@
         self._tap = { x: e.clientX, y: e.clientY, t: performance.now(), ok: np === 1 && e.button === 0 };
         if (self.mode === 'battle') self.holdCam(5000);
         var cell = e.button === 0 ? self.cellAt(e) : null;
-        drag = { x: e.clientX, y: e.clientY, lx: e.clientX, ly: e.clientY, btn: e.button, az: self.azT, el: self.el, moved: false, id: e.pointerId, cell: cell, obj: false, canObj: !!(cell && self.onDragStart) };
+        drag = { x: e.clientX, y: e.clientY, lx: e.clientX, ly: e.clientY, btn: e.button, az: self.azT, el: self.el, moved: false, id: e.pointerId, cell: cell, obj: false, canObj: !!(cell && self.onDragStart), t0: performance.now() };
+        if (drag.canObj && e.button === 0) { var dg = drag; clearTimeout(self._holdT); self._holdT = setTimeout(function () { if (drag === dg && !dg.moved && dg.cell && self.unitAt(e, 30)) { c.style.cursor = 'grab'; try { if (e.pointerType === 'touch' && navigator.vibrate) navigator.vibrate(12); } catch (x) { } } }, 400); }
         try { c.setPointerCapture(e.pointerId); } catch (x) { }
       });
       this._onMove = function (e) {
@@ -502,7 +504,7 @@
         var dx = e.clientX - drag.x, dy = e.clientY - drag.y;
         if (!drag.moved && Math.abs(dx) + Math.abs(dy) > 7) {
           drag.moved = true;
-          if (drag.btn === 0 && drag.canObj && self.onDragStart(drag.cell, e)) { drag.obj = true; c.style.cursor = 'grabbing'; }
+          if (drag.btn === 0 && drag.canObj && performance.now() - drag.t0 >= 400 && self.onDragStart(drag.cell, e)) { drag.obj = true; c.style.cursor = 'grabbing'; }
           else if (drag.btn === 0) c.style.cursor = 'grabbing';
         }
         if (!drag.moved) return;
@@ -1093,16 +1095,26 @@
       var B = this.B; if (!B || this.ended || !this.map) return;
       if (now < this._acHold) { if (this._dir) this._dir.c = null; return; }
       dt = Math.min(dt, .1);
-      var D = this._dir || (this._dir = { shot: -1, t0: now, c: null });
+      var D = this._dir || (this._dir = { shot: -1, t0: now, c: null, t00: now }); var fast = now - D.t00 < 3000 ? 1 : 0;   // 3 giây đầu: lia nhanh hơn để vào khung ngay
       // cảnh quay dài và ít đổi: bám theo diễn biến → toàn cảnh → bám theo → tướng ta (không quá cận) → ...
       var SEQ = ['follow', 'wide', 'follow', 'hero', 'follow'], LEN = { follow: 11, wide: 5, hero: 6 };
       if (D.shot < 0 || (now - D.t0) / 1000 > LEN[SEQ[D.shot]]) { D.shot = (D.shot + 1) % SEQ.length; D.t0 = now; }
-      var kind = SEQ[D.shot], mine = [], foes = [], all = [], i, j, u, gens = [];
+      var kind = SEQ[D.shot], mine = [], foes = [], all = [], i, j, u, gens = [], self2 = this;
       for (i = 0; i < B.units.length; i++) {
         u = B.units[i]; if (!u.alive || u.monster) continue; all.push(u);
         if (this._mine(u)) { mine.push(u); if (u.cap) gens.push(u); } else foes.push(u);
       }
       if (!all.length) return;
+      // ưu tiên quân của chính người chơi; đồng đội (2 đấu 2) chỉ tính khi đang ở gần quân mình
+      if (this.mySeat != null) {
+        var own = mine.filter(function (q) { return q.seat === self2.mySeat; });
+        if (own.length && own.length < mine.length) {
+          var oc = [0, 0]; own.forEach(function (q) { oc[0] += q.x; oc[1] += q.y; }); oc[0] /= own.length * 1000; oc[1] /= own.length * 1000;
+          var keepA = mine.filter(function (q) { return q.seat === self2.mySeat || Math.hypot(q.x / 1000 - oc[0], q.y / 1000 - oc[1]) < 14; });
+          mine.filter(function (q) { return keepA.indexOf(q) < 0; }).forEach(function (q) { foes.push(q); });
+          mine = keepA; gens = mine.filter(function (q) { return q.cap; });
+        }
+      }
       var asp = this.cam.aspect || 1, cx, cy, rad, azOff = 0, elT = .86;
       var center = function (arr) { var a = 0, b = 0, n = arr.length; arr.forEach(function (q) { a += q.x; b += q.y; }); return n ? [a / n / 1000, b / n / 1000] : null; };
       var radius = function (arr, c, pct) { var d = arr.map(function (q) { return Math.hypot(q.x / 1000 - c[0], q.y / 1000 - c[1]); }).sort(function (a, b) { return a - b; }); return d.length ? d[Math.min(d.length - 1, Math.floor(d.length * pct))] : 0; };
@@ -1112,29 +1124,40 @@
         // khu vực giao tranh: quân ta + quân địch đang ở gần quân ta; chưa chạm trán thì lấy quân ta và cụm địch gần nhất
         var near = foes.filter(function (f) { for (var k = 0; k < mine.length; k += 3) { var m = mine[k]; if (Math.abs(f.x - m.x) < 11000 && Math.abs(f.y - m.y) < 11000) return true; } return false; });
         var grp = mine.concat(near);
-        if (!near.length && foes.length) { var fc = center(foes), dd = Math.hypot(fc[0] - mc[0], fc[1] - mc[1]); if (dd < 30) grp = mine.concat(foes.filter(function (f) { return Math.hypot(f.x / 1000 - fc[0], f.y / 1000 - fc[1]) < 9; })); }
+        if (!near.length && foes.length) { var fc = center(foes), dd = Math.hypot(fc[0] - mc[0], fc[1] - mc[1]); if (dd < 20) grp = mine.concat(foes.filter(function (f) { return Math.hypot(f.x / 1000 - fc[0], f.y / 1000 - fc[1]) < 8; })); }
         var gc = center(grp), r1 = radius(grp, gc, .86);
         cx = gc[0]; cy = gc[1]; rad = r1 + 4; elT = .86; azOff = 0;
       } else if (kind === 'hero') {
         var hg = null, ba = -1; gens.forEach(function (q) { var sc = (q.hp / q.mhp) + (q.role === 'nguyensoai' ? 0 : .3); if (sc > ba) { ba = sc; hg = q; } });
         if (hg) { cx = hg.x / 1000; cy = hg.y / 1000; rad = 8; elT = .82; azOff = 0; } else { cx = mc[0]; cy = mc[1]; rad = radius(mine, mc, .86) + 4; }
-      } else { var c0 = center(all), rr = radius(all, c0, .96); cx = c0[0]; cy = c0[1]; rad = rr + 5; elT = .98; azOff = 0; }
+      } else if (!mine.length) { var c0 = center(all), rr = radius(all, c0, .96); cx = c0[0]; cy = c0[1]; rad = rr + 5; elT = .98; azOff = 0; }   // quân mình hết: xem toàn cảnh
+      else {   // "quanh quân mình": quân mình + địch trong vùng lân cận; các phe khác ở xa thì bỏ qua, không kéo máy quay ra toàn cảnh
+        var nb = foes.filter(function (f) { return Math.hypot(f.x / 1000 - mc[0], f.y / 1000 - mc[1]) < 15; }), gw = mine.concat(nb), c1 = center(gw);
+        cx = c1[0]; cy = c1[1]; rad = radius(gw, c1, .9) + 4; elT = .94; azOff = 0;
+      }
+      // luôn giữ quân của người chơi trong khung hình, ở gần trung tâm và cách mép màn hình một đoạn: tâm máy quay không được lệch xa khỏi quân ta
+      if (mine.length) {
+        var mR = radius(mine, mc, .96), ox = cx - mc[0], oy = cy - mc[1], od = Math.hypot(ox, oy), lim0 = Math.max(1.2, rad * .2);
+        if (od > lim0) { cx = mc[0] + ox * lim0 / od; cy = mc[1] + oy * lim0 / od; od = lim0; }
+        rad = Math.max(rad, mR + od + 3);
+      }
+      rad = Math.max(rad, 7);   // không zoom cận quá
       // lia máy chậm rãi như đạo diễn: từ sau lưng quân ta lướt sang trái rồi sang phải để thấy mặt trước hai bên, độ cao nhấp nhẹ nhưng luôn nhìn từ trên cao
       var ts = now / 1000, sweepA = kind === 'wide' ? .55 : 1.0;
       azOff = Math.sin(ts * 6.2832 / 26) * sweepA + Math.sin(ts * 6.2832 / 9.5) * .12;
       elT = Math.max(.8, Math.min(1.05, elT + Math.sin(ts * 6.2832 / 17) * .07));
       // khung hình: giới hạn zoom cận bằng khoảng cách của màn chuẩn bị (cận hơn một chút), không xa quá toàn cảnh
       var tv = Math.tan((this.cam.fov || 36) * PI / 360);
-      var Rn = Math.max(rad * 1.25 / (tv * Math.min(asp, 1.8)), rad * 1.15 * Math.sin(elT) / tv);
-      var Rmin = this._prepR() * .8, Rmax = this.Rbase * 1.1;
+      var Rn = Math.max(rad * 1.45 / (tv * Math.min(asp, 1.8)), rad * 1.3 * Math.sin(elT) / tv);
+      var Rmin = this._prepR() * .85, Rmax = this.Rbase * 1.12;
       Rn = Math.max(Rmin, Math.min(Rmax, Rn));
       // lò xo giảm chấn tới hạn: quay êm như máy quay trận bóng đá, không giật khi đổi cảnh
       var C = D.c || (D.c = { x: this.pan.x, z: this.pan.z, vx: 0, vz: 0, R: this.R, vR: 0, el: this.el, az: 0, tx: this.wx(cx), tz: this.wz(cy), tR: Rn });
-      var kt = 1 - Math.exp(-dt * 1.6); C.tx += (this.wx(cx) - C.tx) * kt; C.tz += (this.wz(cy) - C.tz) * kt; C.tR += (Rn - C.tR) * kt;
-      var w = .95, ax = w * w * (C.tx - C.x) - 2 * w * C.vx, az = w * w * (C.tz - C.z) - 2 * w * C.vz;
-      C.vx += ax * dt; C.vz += az * dt; var sp = Math.hypot(C.vx, C.vz), lim = 7; if (sp > lim) { C.vx *= lim / sp; C.vz *= lim / sp; }
+      var kt = 1 - Math.exp(-dt * (fast ? 3.2 : 1.6)); C.tx += (this.wx(cx) - C.tx) * kt; C.tz += (this.wz(cy) - C.tz) * kt; C.tR += (Rn - C.tR) * kt;
+      var w = fast ? 1.9 : .95, ax = w * w * (C.tx - C.x) - 2 * w * C.vx, az = w * w * (C.tz - C.z) - 2 * w * C.vz;
+      C.vx += ax * dt; C.vz += az * dt; var sp = Math.hypot(C.vx, C.vz), lim = fast ? 16 : 7; if (sp > lim) { C.vx *= lim / sp; C.vz *= lim / sp; }
       C.x += C.vx * dt; C.z += C.vz * dt;
-      var w2 = .75, aR = w2 * w2 * (C.tR - C.R) - 2 * w2 * C.vR; C.vR += aR * dt; C.vR = Math.max(-C.R * .22, Math.min(C.R * .22, C.vR)); C.R += C.vR * dt;
+      var w2 = fast ? 1.5 : .75, aR = w2 * w2 * (C.tR - C.R) - 2 * w2 * C.vR; C.vR += aR * dt; C.vR = Math.max(-C.R * (fast ? .5 : .22), Math.min(C.R * (fast ? .5 : .22), C.vR)); C.R += C.vR * dt;
       C.R = Math.max(Rmin * .98, C.R);
       C.el += (elT - C.el) * (1 - Math.exp(-dt * .7)); C.az += (azOff - C.az) * (1 - Math.exp(-dt * .9));
       this.panT = { x: C.x, z: C.z }; this.pan.x = C.x; this.pan.z = C.z; this.RT = C.R; this.R = C.R; this.el = C.el; this.azT = this._baseAz() + C.az;
@@ -1251,7 +1274,7 @@
       requestAnimationFrame(this.loop);
       if (!this.map || (this.showcase && this.pausedShow)) return;
       if (document.hidden) return;
-      var now = performance.now(), minDt = this.showcase ? 22 : this.gfx === 0 ? 30 : (this.lowGfx && this.mode !== 'battle') ? 22 : 14.5; if (now - this.clock < minDt) return;   // tối đa ~60 khung hình/giây (màn 120Hz không làm GPU gấp đôi)
+      var now = performance.now(), minDt = this.showcase ? 22 : this.gfx === 0 ? 30 : (this.lowGfx && this.mode !== 'battle') ? 22 : 14.5; if (!this.showcase && this.fps <= 30) minDt = Math.max(minDt, 28); if (now - this.clock < minDt) return;   // tối đa ~60 khung hình/giây (màn 120Hz không làm GPU gấp đôi)
       var dt = Math.min(.1, (now - this.clock) / 1000); this.clock = now; this._dt = dt;
       this._govern(dt * 1000);
       var tsec = now / 1000, self = this;

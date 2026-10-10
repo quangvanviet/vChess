@@ -636,3 +636,23 @@
 .mp-pg { display: flex !important; }
 
 .mp-list { padding: 4px 2px 2px; }
+
+/* 2 đấu 2: cờ đội ở góc ghế + viền màu đội */
+.sc .tflag { position: absolute; top: -2px; right: 26px; z-index: 3; display: inline-flex; align-items: center; gap: 3px; padding: 3px 9px 3px 7px; border-radius: 0 0 10px 10px; color: #fff; font: 800 12px/1 var(--head, system-ui); box-shadow: 0 2px 6px rgba(0,0,0,.25); }
+.sc .tflag.tA { background: linear-gradient(#ff7a4a, #e0451f); } .sc .tflag.tB { background: linear-gradient(#4aa3ff, #2368d8); }
+.sc.tm-A { border-color: #ffb199; } .sc.tm-B { border-color: #a9cffc; }
+.sc.tm-A:not(.me) { box-shadow: 0 3px 0 #ffb199, 0 8px 18px rgba(255, 120, 70, .16); } .sc.tm-B:not(.me) { box-shadow: 0 3px 0 #a9cffc, 0 8px 18px rgba(60, 130, 240, .16); }
+
+/* vùng an toàn: nút chat / bong bóng chat không nằm dưới tai thỏ */
+.chat-bubble, #screen-room .chat-bubble { right: calc(14px + var(--sar, 0px)) !important; bottom: calc(14px + var(--sab, 0px)) !important; }
+.chat-pop, #screen-room .chat-pop { right: calc(8px + var(--sar, 0px)) !important; }
+#screen-room .room-actions { padding-bottom: calc(8px + var(--sab, 0px)); }
+
+/* cờ đội 2 đấu 2: chỉ một panel màu + icon cờ, căn giữa mép trên của ghế */
+.sc .tflag { left: 50% !important; right: auto !important; top: -3px !important; transform: translateX(-50%); padding: 4px 14px 5px !important; gap: 0 !important; border-radius: 0 0 12px 12px !important; }
+.sc .tflag b { display: none; } .sc .tflag svg { width: 15px; height: 15px; }
+.sc .tflag { padding: 2px 12px 4px !important; top: -4px !important; } .sc .tflag svg { width: 13px; height: 13px; }
+/* cờ đội nhô lên trên mép ghế và đẩy ảnh nhân vật xuống một chút để không che nhãn Chủ phòng / Bot / Sẵn sàng */
+.sc.tm-A .tflag, .sc.tm-B .tflag { top: -15px !important; z-index: 2; }
+.sc.tm-A .sc-art, .sc.tm-B .sc-art { margin-top: 12px; }
+.sc.tm-A .sc-art .ready, .sc.tm-B .sc-art .ready { z-index: 3; }

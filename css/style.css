@@ -1930,3 +1930,32 @@ input, textarea, [contenteditable="true"], .allow-select, .allow-select * { -web
 .tip-box .tt-s.ar b { color: var(--ink); } .tip-box .tt-s.ar em { grid-column: 2 / 4; font-style: normal; font-size: 10px; opacity: .7; margin-top: -2px; }
 .tip-box .ar-h { display: grid; grid-template-columns: 38px 1fr 1fr; gap: 0 8px; font-size: 10px; font-weight: 800; opacity: .65; } .tip-box .ar-h span:first-child { grid-column: 2; } .tip-box .ar-h span { display: inline-flex; align-items: center; gap: 3px; }
 #result-overlay .over-table td, #result-overlay .over-table th { padding-left: 6px; padding-right: 6px; }
+
+/* ================= tai thỏ / vùng an toàn (iPhone, Android có khuyết màn hình) ================= */
+:root { --sat: env(safe-area-inset-top, 0px); --sar: env(safe-area-inset-right, 0px); --sab: env(safe-area-inset-bottom, 0px); --sal: env(safe-area-inset-left, 0px); }
+.screen:not(#screen-game) { padding: var(--sat) var(--sar) var(--sab) var(--sal); box-sizing: border-box; }
+#screen-game { inset: var(--sat) var(--sar) var(--sab) var(--sal); }
+#screen-game .board-wrap { position: fixed; inset: 0; }
+.modal { padding: var(--sat) var(--sar) var(--sab) var(--sal); box-sizing: border-box; }
+.toasts { top: calc(70px + var(--sat)); }
+.room-actions { padding-left: calc(10px + var(--sal)) !important; padding-right: calc(10px + var(--sar)) !important; }
+.hud-chat .chat-body, .dock-body, .hud-unit { left: calc(6px + var(--sal)); right: calc(6px + var(--sar)); }
+.hud-chat .chat-body, .dock-body { max-width: calc(100vw - 12px - var(--sal) - var(--sar)); }
+.tac-pop { max-width: calc(100vw - 16px - var(--sal) - var(--sar)); }
+.hud-btn { top: calc(10px + var(--sat)); left: calc(10px + var(--sal)); }
+
+/* ================= màn tải vào trận: luôn 1 hàng gọn, vừa mọi màn hình ================= */
+.loading-cards { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: clamp(6px, 1.6vw, 18px); padding: clamp(8px, 2vh, 20px) clamp(10px, 3vw, 24px); width: min(100%, 980px); margin: 0 auto; box-sizing: border-box; flex-wrap: nowrap; }
+.lcard { width: auto !important; min-width: 0; height: clamp(150px, 54vh, 370px) !important; padding-bottom: clamp(8px, 2vh, 18px); }
+.lcard .crest { width: clamp(56px, 20vh, 170px) !important; height: clamp(56px, 20vh, 170px) !important; top: clamp(10px, 4vh, 36px) !important; max-width: 80%; }
+.lcard .ln { font-size: clamp(12px, 2.6vh, 22px) !important; max-width: 94%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lcard .lf { font-size: clamp(10px, 1.9vh, 13px); } .lcard .lp { display: block !important; font-size: clamp(9px, 1.7vh, 12px); max-width: 92%; text-align: center; margin-top: 2px; }
+@media (max-height: 460px) { .lcard .lp { display: none !important; } .loading-foot { padding: 6px 12px calc(6px + 0px); } .tip { font-size: 13px; margin-bottom: 6px; min-height: 18px; } .bar { height: 10px; } }
+.bcard.sm .sm-mp { display: none; }
+.bcard.sm .bc-has.sm-cd { top: auto; bottom: -4px; right: -4px; left: auto; min-width: 18px; height: 16px; padding: 0 3px; border-radius: 5px; background: #2a6fdb; font-size: 10px; box-sizing: border-box; }
+/* điện thoại: bỏ làm mờ hậu cảnh (tốn GPU, gây nóng máy) */
+@media (pointer: coarse) { .overlay, .modal, .chat-dim, .tip-box, .win, .hud { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; } .overlay { background: rgba(40, 90, 160, .5); } .modal { background: rgba(40, 90, 160, .5); } }
+.lcard .tflag { position: absolute; top: 0; left: 50%; transform: translateX(-50%); z-index: 3; display: inline-flex; align-items: center; gap: 3px; padding: 3px 9px; border-radius: 0 0 10px 10px; color: #fff; font: 800 clamp(10px, 2vh, 12px)/1 var(--head, system-ui); }
+.lcard .tflag.tA { background: linear-gradient(#ff7a4a, #e0451f); } .lcard .tflag.tB { background: linear-gradient(#4aa3ff, #2368d8); }
+.pchip .pc-tf { display: inline-grid; place-items: center; width: 16px; height: 16px; border-radius: 5px; flex: none; } .pc-tf.tA { background: #e8532a; } .pc-tf.tB { background: #2a78e0; }
+.lcard .tflag { padding: 4px 14px 5px; gap: 0; border-radius: 0 0 12px 12px; } .lcard .tflag b { display: none; } .lcard .tflag svg { width: 15px; height: 15px; }

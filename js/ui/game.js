@@ -52,10 +52,10 @@
   function ctxOf(p) { var c = MT.ctx(S.M, p); c.weather = S.M.weather; return c; }
 
   function renderLoading() {
-    var M = S.M;
+    var M = S.M, tms = {}; M.players.forEach(function (p) { tms[p.team] = 1; }); var isTeam = Object.keys(tms).length < M.players.length, tkeys = Object.keys(tms).sort();
     $('#loading-cards').innerHTML = M.players.map(function (p) {
       var f = F[p.race], tal = TT.TALENTS[p.race].filter(function (t) { return t.id === p.talent; })[0];
-      return '<div class="lcard" style="--fc:' + f.color + ';--pc:' + TT.SEAT_COLORS[p.seat] + '">' + I.crest(p.race, 120) + '<div class="ln">' + esc(p.name) + '</div><div class="lf">' + f.name + '</div><div class="lp">' + (tal ? tal.name : '') + '</div></div>';
+      return '<div class="lcard" style="--fc:' + f.color + ';--pc:' + TT.SEAT_COLORS[p.seat] + '">' + (isTeam ? '<i class="tflag t' + (tkeys.indexOf(String(p.team)) ? 'B' : 'A') + '">' + I.ui('flag', 12, '#fff') + '<b>' + (tkeys.indexOf(String(p.team)) ? 'Đội B' : 'Đội A') + '</b></i>' : '') + I.crest(p.race, 120) + '<div class="ln">' + esc(p.name) + '</div><div class="lf">' + f.name + '</div><div class="lp">' + (tal ? tal.name : '') + '</div></div>';
     }).join('');
     $('#loading-tip').textContent = '';
     var fill = $('#loading-fill'); fill.style.transition = 'none'; fill.style.width = '0%'; setTimeout(function () { fill.style.transition = 'width 1.4s ease'; fill.style.width = '100%'; }, 30);
@@ -232,7 +232,7 @@
   /* ================= sân 3D ================= */
   function initField() {
     if (!TT.webglOK || !TT.Field3D) { App.toast('Trình duyệt không hỗ trợ WebGL — không hiển thị được chiến trường 3D', 'err', 8000); return; }
-    var f = S.field = new TT.Field3D($('#board'), $('#board-wrap'), { gfx: App.gfxLevel() });
+    var f = S.field = new TT.Field3D($('#board'), $('#board-wrap'), { gfx: App.gfxLevel(), fps: App.fpsLevel() });
     f.seatColor = TT.SEAT_COLORS;
     f.onClick = onFieldClick; f.onRight = function () { clearModes(); S.sel = null; renderAll(); };
     f.onDragStart = onDragStart; f.onDragMove = onDragMove; f.onDragEnd = onDragEnd;
@@ -754,15 +754,15 @@
   /* ---------- người chơi: thẻ nhỏ ở góc, chạm để xem đầy đủ ---------- */
   function renderPlayers() {
     var M = S.M, B = S.phase === 'battle' ? S.battle : null, dd = S.days[M.day] || {}, c = dd.c || {};
-    var st = MT.standings(M);
+    var st = MT.standings(M), tmk = {}; M.players.forEach(function (q) { tmk[q.team] = 1; }); var isTm = Object.keys(tmk).length < M.players.length, tmKeys = Object.keys(tmk).sort();
     var html = st.map(function (s, i) {
       var p = MT.player(M, s.seat), extra = '';
       if (B) { var hp = 0, mh = 0; B.units.forEach(function (u) { if (u.seat === p.seat && !u.monster) { mh += u.mhp; if (u.alive) hp += u.hp; } }); extra = '<i class="pc-hp"><i style="width:' + (mh ? hp / mh * 100 : 0) + '%"></i></i>'; }
       else if (M.phase === 'prep' && !p.out) extra = c[p.seat] ? '<span class="pc-rd">' + I.ui('check', 10) + '</span>' : '';
       return '<button class="pchip' + (S.spec === p.seat || (!S.spec && p.seat === S.seat) ? ' active' : '') + (p.out ? ' dead' : '') + (p.seat === S.seat ? ' me' : '') + '" data-seat="' + p.seat + '" style="--pc:' + TT.SEAT_COLORS[p.seat] + '" title="' + esc(p.name) + '">' +
-        '<span class="pc-rank">' + (i + 1) + '</span>' + I.crest(p.race, 22) + '<span class="pc-name">' + esc(p.name) + '</span><b class="pc-pts">' + s.pts + '</b>' + extra + '</button>';
+        '<span class="pc-rank">' + (i + 1) + '</span>' + (isTm ? '<i class="pc-tf t' + (tmKeys.indexOf(String(p.team)) ? 'B' : 'A') + '" title="' + (tmKeys.indexOf(String(p.team)) ? 'Đội B' : 'Đội A') + '">' + I.ui('flag', 10, '#fff') + '</i>' : '') + I.crest(p.race, 22) + '<span class="pc-name">' + esc(p.name) + '</span><b class="pc-pts">' + s.pts + '</b>' + extra + '</button>';
     }).join('');
-    var key = (S.spec || '') + '#' + st.map(function (s) { var p = MT.player(M, s.seat); return s.seat + ':' + s.pts + ':' + (p.out ? 1 : 0) + ':' + (c[p.seat] ? 1 : 0); }).join('|') + (B ? 'B' : '');
+    var key = (isTm ? 'T' : '') + (S.spec || '') + '#' + st.map(function (s) { var p = MT.player(M, s.seat); return s.seat + ':' + s.pts + ':' + (p.out ? 1 : 0) + ':' + (c[p.seat] ? 1 : 0); }).join('|') + (B ? 'B' : '');
     var box = $('#g-players');
     if (box._k === key && !B) return; box._k = key;
     if (B && box._k2 === key) { // giữa trận: chỉ cập nhật thanh máu
@@ -876,7 +876,7 @@
       return TT.ROLE_ORDER.filter(function (r) { return MS[r]; }).map(function (r) {
         var lock = ROLES[r].age > p.lv, si = P.summonInfo(p, r), mp = si.cd;
         return '<div class="bcard sm' + (lock ? ' lock' : '') + (cur === r && !lock ? ' on' : '') + '" data-sm="' + r + '" style="--fc:' + F[p.race].color + '"><div class="bc-ic">' + I.role(r, '#fff', 28) + '</div>' +
-          (lock ? '<i class="bc-lk">' + I.ui('lock', 12) + '<b>' + TT.AGE_ROMAN[ROLES[r].age] + '</b></i>' : '<span class="sm-mp">' + I.ui('clock', 10) + mp + 's</span><i class="bc-has">x' + si.n + '</i>') + '</div>';
+          (lock ? '<i class="bc-lk">' + I.ui('lock', 12) + '<b>' + TT.AGE_ROMAN[ROLES[r].age] + '</b></i>' : '<i class="bc-has sm-cd" title="Hồi chiêu ' + mp + ' giây · triệu hồi ' + si.n + ' lính">' + mp + '</i>') + '</div>';
       }).join('');
     }
     if (R.unique) return '<div class="gb-note">' + I.ui('info', 14) + ' Thần thú chiến đấu một mình, không có lính. Mua trang bị cho thần thú ở tab Trang bị.</div>';

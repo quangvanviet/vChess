@@ -106,7 +106,7 @@ fs.writeFileSync(path.join(OUT, 'index.html'), html);
 // thư viện (đã thu gọn sẵn) + tài nguyên
 const copy = (rel) => { const s = path.join(ROOT, rel), d = path.join(OUT, rel); if (!fs.existsSync(s)) return; fs.cpSync(s, d, { recursive: true }); };
 tags.filter(t => /^js\/vendor\//.test(t[1])).forEach(t => copy(t[1]));
-['assets', '.nojekyll', 'favicon.ico', 'favicon.svg', 'manifest.webmanifest'].forEach(copy);
+['assets', 'icons', '.nojekyll', 'favicon.ico', 'favicon.svg', 'manifest.webmanifest'].forEach(copy);
 
 const kb = f => (fs.statSync(path.join(OUT, f)).size / 1024).toFixed(0) + ' KB';
 console.log('Đã dựng dist/');
