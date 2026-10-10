@@ -8,8 +8,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#3f95f0">
 <link rel="manifest" href="manifest.webmanifest">
-<title>Tứ Tộc Kỳ Chiến</title>
-<meta name="description" content="Tứ Tộc Kỳ Chiến 2.0 — cờ tự động đánh (auto-battler) 4 tộc, 10 ngày, 2–4 người chơi online, đồ họa 3D khối bo góc.">
+<title>vChess</title>
+<meta name="description" content="vChess 2.0 — cờ tự động đánh (auto-battler) 5 tộc, 10 ngày, 2–4 người chơi online, đồ họa 3D khối bo góc.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap">
 <link rel="stylesheet" href="css/style.css">
@@ -25,7 +25,7 @@
   <div class="auth-wrap">
     <div class="logo-block">
       <div class="logo-crests" id="logo-crests"></div>
-      <h1 class="logo">TỨ TỘC<span>KỲ CHIẾN</span></h1>
+      <h1 class="logo">vCHESS<span>CỜ CHIẾN THUẬT</span></h1>
     </div>
     <div class="panel auth-panel">
       <div class="tabs" id="auth-tabs">
@@ -59,7 +59,7 @@
 <!-- ============ SẢNH ============ -->
 <section id="screen-lobby" class="screen">
   <header class="topbar lb-top">
-    <div class="brand"><span class="brand-mark"><i data-ic="crown" data-s="22"></i></span> <span class="brand-name">Tứ Tộc Kỳ Chiến</span></div>
+    <div class="brand"><span class="brand-mark"><i data-ic="crown" data-s="22"></i></span> <span class="brand-name">vChess</span></div>
     <div class="lb-spacer"></div>
     <span class="online-pill" id="online-pill" title="Số người đang trực tuyến"><i class="dot"></i><span id="online-count"></span></span>
     <nav class="lb-icons" id="lobby-nav">
@@ -76,6 +76,7 @@
       <div class="lb-actions">
         <button class="act-card gold" id="btn-practice"><span class="ac-ic"><i data-ic="swords" data-s="30"></i></span><span class="ac-tx"><b>Đấu với Bot</b><small>Luyện tập ngay, không cần chờ</small></span></button>
         <button class="act-card" id="btn-create"><span class="ac-ic"><i data-ic="plus" data-s="30"></i></span><span class="ac-tx"><b>Tạo phòng</b><small>Mở phòng cho bạn bè</small></span></button>
+        <button class="act-card act-tut" id="btn-tutorial"><span class="ac-ic"><i data-ic="star" data-s="28"></i></span><span class="ac-tx"><b>Hướng dẫn</b><small>Học chơi từ A đến Z</small></span></button>
         <button class="act-card" id="btn-join-code"><span class="ac-ic"><i data-ic="lock" data-s="28"></i></span><span class="ac-tx"><b>Vào bằng mã</b><small>Nhập mã 6 ký tự</small></span></button>
       </div>
       <div class="panel rooms-panel">
@@ -118,16 +119,15 @@
     <button class="btn ghost" id="btn-leave-room" title="Rời phòng"><i data-ic="back" data-s="16"></i> <span class="lbl">Rời phòng</span></button>
     <div class="room-title"><span id="room-name">Phòng</span><button class="code-chip" id="room-code" title="Sao chép mã phòng"></button></div>
     <div class="room-opts" id="room-opts"></div>
+    <div class="room-actions rt-act">
+      <div class="room-status" id="room-status"></div>
+      <button class="btn" id="btn-ready">Sẵn sàng</button>
+      <button class="btn gold" id="btn-start">Bắt đầu trận</button>
+    </div>
     <button class="ibtn" id="btn-room-settings" title="Cài đặt phòng" aria-label="Cài đặt phòng"><i data-ic="gear" data-s="20"></i></button>
   </header>
   <main class="room-main">
     <div class="seats" id="seats"></div>
-    <div class="panel loadout" id="loadout"></div>
-    <div class="room-actions">
-      <div class="room-status" id="room-status"></div>
-      <button class="btn big" id="btn-ready">Sẵn sàng</button>
-      <button class="btn gold big" id="btn-start">Bắt đầu trận</button>
-    </div>
   </main>
   <button class="chat-bubble" id="room-chat-btn" title="Trò chuyện" aria-label="Trò chuyện"><i data-ic="chat" data-s="24"></i><span class="badge hidden" id="room-chat-badge"></span></button>
   <div class="chat-pop hidden" id="room-chat-pop">
@@ -168,6 +168,7 @@
         <button class="btn round" id="btn-skip" title="Tua tới kết quả"><i data-ic="skip" data-s="18"></i></button>
       </div>
     </div>
+    <div class="res-wait hidden" id="res-wait"></div>
   </div>
   <!-- người chơi: thẻ nhỏ góc phải, chạm để xem đầy đủ -->
   <aside class="hud hud-players" id="g-players"></aside>
@@ -233,7 +234,10 @@
 <script src="js/ui/models.js"></script>
 <script src="js/ui/field3d.js"></script>
 <script src="js/ui/content.js"></script>
+<script src="js/ui/tips.js"></script>
+<script src="js/ui/scroll.js"></script>
 <script src="js/ui/app.js"></script>
 <script src="js/ui/game.js"></script>
+<script src="js/ui/tutor.js"></script>
 </body>
 </html>

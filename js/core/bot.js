@@ -1,10 +1,10 @@
-/* Tứ Tộc Kỳ Chiến 2.0 — Bot chuẩn bị đội hình (Dễ / Trung bình / Khó). Xác định theo seed. */
+/* vChess 2.0 — Bot chuẩn bị đội hình (Dễ / Trung bình / Khó). Xác định theo seed. */
 (function (G) {
   'use strict';
   var TT = G.TT, CFG = TT.CONFIG, P = TT.Prep;
   var Bot = TT.Bot = {};
   Bot.LEVELS = {
-    easy: { name: 'Dễ', ageDay: [0, 1, 4, 8, 99], items: .3, coreTier: 2, coreMax: 2, noise: 60, sim: 0, flags: 0, save: [], spend: .8, sloppy: 1, popRate: .25 },
+    easy: { name: 'Dễ', ageDay: [0, 1, 5, 9, 99], items: .2, coreTier: 2, coreMax: 1, noise: 60, sim: 0, flags: 0, save: [], spend: .8, sloppy: 1, popRate: .25 },
     medium: { name: 'Trung bình', ageDay: [0, 1, 4, 6, 9], items: .7, coreTier: 3, coreMax: 3, noise: 15, sim: 0, flags: 1, save: [0, 0, 10, 10, 10, 10, 10, 10, 0, 0], popRate: .5 },
     hard: { name: 'Khó', ageDay: [0, 1, 4, 6, 9], items: .75, coreTier: 4, coreMax: 3, noise: 0, sim: 5, flags: 1, save: [0, 0, 0, 10, 10, 10, 10, 0, 0, 0], aura: 1, popRate: .7 }
   };
@@ -14,7 +14,7 @@
   Bot.loadout = function (seed, seat) {
     var h = TT.hash32(seed, 'bot', seat), race = TT.FACTION_ORDER[h % TT.FACTION_ORDER.length];
     var tal = TT.TALENTS[race][(h >>> 3) % 3].id, start = ['gold', 'food', 'wood'][(h >>> 6) % 3];
-    var ml = TT.MARSHAL_ORDER[race];
+    var ml = TT.MARSHAL_LIST;
     return { race: race, talent: tal, start: start, mar: ml[(h >>> 9) % ml.length] };
   };
 

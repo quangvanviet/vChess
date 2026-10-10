@@ -314,6 +314,8 @@
   Net.reveal = function (code, day, seat, payload, nonce) { return Net.B.set('rooms/' + code + '/days/' + day + '/r/' + seat, { p: payload, n: nonce }); };
   Net.lockDay = function (code, day, seats) { return Net.B.txn('rooms/' + code + '/days/' + day + '/lock', function (c) { return c ? undefined : { at: Net.B.TS, seats: seats.join(',') }; }); };
   Net.finDay = function (code, day, seats) { return Net.B.txn('rooms/' + code + '/days/' + day + '/fin', function (c) { return c ? undefined : { at: Net.B.TS, seats: seats.join(',') }; }); };
+  /* xác nhận đã xem kết quả ngày: tất cả người chơi xác nhận thì sang ngày mới sớm */
+  Net.ack = function (code, day, seat) { return Net.B.set('rooms/' + code + '/days/' + day + '/a/' + seat, Net.B.TS); };
   Net.quit = function (code, seat, day) { return Net.B.set('rooms/' + code + '/quit/' + seat, day); };
   Net.finish = function (code, winnerSeat) {
     var base = 'rooms/' + code;

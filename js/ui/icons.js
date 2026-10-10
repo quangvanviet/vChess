@@ -178,6 +178,7 @@
     coin: '<circle cx="32" cy="32" r="22" fill="currentColor"/><path d="M32 18v28M24 24h12a6 6 0 0 1 0 12H28a6 6 0 0 0 0 12h12" fill="none" stroke="rgba(0,0,0,.35)" stroke-width="4"/>',
     split: '<circle cx="18" cy="46" r="8" fill="none" stroke="currentColor" stroke-width="5"/><circle cx="46" cy="46" r="8" fill="none" stroke="currentColor" stroke-width="5"/><path d="M22 40 44 8M42 40 20 8" stroke="currentColor" stroke-width="5" stroke-linecap="round"/>',
     wand: '<path d="M10 54 40 24" stroke="currentColor" stroke-width="7" stroke-linecap="round"/><path d="M46 6 48 14 56 16 48 18 46 26 44 18 36 16 44 14Z" fill="currentColor"/><circle cx="54" cy="34" r="3" fill="currentColor"/><circle cx="30" cy="8" r="3" fill="currentColor"/>',
+    cine: '<rect x="5" y="18" width="36" height="28" rx="7" fill="none" stroke="currentColor" stroke-width="6"/><path d="M43 29 59 19v26L43 35Z" fill="currentColor" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/>',
     eye: '<path d="M4 32 Q32 6 60 32 Q32 58 4 32Z" fill="none" stroke="currentColor" stroke-width="5"/><circle cx="32" cy="32" r="9" fill="currentColor"/>',
     sun: '<circle cx="32" cy="32" r="12" fill="currentColor"/><path d="M32 4v10M32 50v10M4 32h10M50 32h10M12 12l7 7M45 45l7 7M12 52l7-7M45 19l7-7" stroke="currentColor" stroke-width="5" stroke-linecap="round"/>',
     moon: '<path d="M40 6A26 26 0 1 0 58 40 20 20 0 1 1 40 6Z" fill="currentColor"/>',

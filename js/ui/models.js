@@ -1,4 +1,4 @@
-/* Tứ Tộc Kỳ Chiến — mô hình 3D nhân vật phong cách LOW-POLY STYLIZED (kiểu Ragnarok Online 3):
+/* vChess — mô hình 3D nhân vật phong cách LOW-POLY STYLIZED (kiểu Ragnarok Online 3):
    - KHÔNG dùng hộp/cầu trơn: mọi bộ phận được "điêu khắc" từ khối tiện (lathe), khối ép đùn có vát cạnh (extrude + bevel),
      khối đa diện bo tròn (icosa/dodeca ép tỉ lệ) và ống thon (capsule tiện) → cạnh bo tròn, mặt phẳng low-poly.
    - Màu theo đỉnh (vertex color) + độ nhám/kim loại theo đỉnh (thuộc tính "mr") để vật liệu PBR hiển thị kim loại, vải, da khác nhau.
@@ -81,7 +81,7 @@
   Part.prototype.a = function (geo, color, p, r, s, ol) { this.items.push([geo, color, p || [0, 0, 0], r || [0, 0, 0], s == null ? 1 : s, ol == null ? 1 : ol, FLAT || !!FLATC[color], KEEP]); return this; };
   var KEEP = false;   // true khi dựng khuôn mặt: mắt, mày, miệng luôn giữ
   function keep(f) { var o = KEEP; KEEP = true; try { f(); } finally { KEEP = o; } }
-  var MIN_BIT = .1; // phong cách Minecraft: bỏ mọi chi tiết nhỏ hơn ngưỡng này (trừ khuôn mặt)
+  var MIN_BIT = .1, DETAIL = 3; // phong cách Minecraft: bỏ mọi chi tiết nhỏ hơn ngưỡng này (trừ khuôn mặt)
   function flat(f) { var o = FLAT; FLAT = true; try { f(); } finally { FLAT = o; } }
   // các "nét bút" điêu khắc
   Part.prototype.e = function (rx, ry, rz, color, x, y, z, r, det) { return this.a(ICO(det == null ? 1 : Math.min(det, 1)), color, [x || 0, y || 0, z || 0], r, [rx, ry, rz], Math.min(rx, ry, rz) > .018 ? 1 : 0); };   // khối trứng low-poly
@@ -728,8 +728,8 @@
       }
     }
     if (GEN) {
-      // tướng to gấp 2.5 lính để dễ nhận ra; voi / máy công thành vốn đã to nên ×1.8; Thần thú không có lính nên giữ nguyên
-      scale *= role === 'thanthu' ? (info.big ? 1.12 : 1.3) : (role === 'tuong' || role === 'congthanh') ? 1.8 : 2.5; info.gen = 1;
+      // tướng to khoảng gấp đôi lính (đã giảm ~1.4 lần so với trước); voi / máy công thành vốn đã to nên chỉ ×1.3; Thần thú không có lính nên nhỏ nhẹ
+      scale *= role === 'thanthu' ? (info.big ? .92 : 1.02) : (role === 'tuong' || role === 'congthanh') ? 1.3 : 1.85; info.gen = 1;
       if (!parts.cape && parts.body) { // cỗ máy / thú lớn: cắm cờ hiệu sau lưng
         var bb = parts.body, top = info.kind === 'siege' ? .75 : info.kind === 'bird' ? .85 : 1.0, bz = info.kind === 'siege' ? -.25 : -.3;
         bb.c(.016, .016, .8, c.trim, 0, top + .3, bz, 0, 5);
@@ -769,6 +769,7 @@
   }
 
   var CACHE = {};
+  Models.setDetail = function (lv) { lv = Math.max(0, Math.min(3, lv | 0)); if (lv === DETAIL) return; DETAIL = lv; MIN_BIT = [.26, .17, .13, .1][lv]; for (var k in CACHE) delete CACHE[k]; };
   Models.get = function (race, role, gen, mid) { mid = role === 'nguyensoai' && mid && MLOOK[mid] ? mid : ''; var k = race + '.' + role + (gen ? '.g' : '') + (mid ? '.' + mid : ''); if (CACHE[k]) return CACHE[k]; GEN = !!gen; MID = mid; try { CACHE[k] = build(race, role); } finally { GEN = false; MID = ''; } return CACHE[k]; };
   Models.monster = function (kind) { var k = 'm.' + kind; return CACHE[k] || (CACHE[k] = buildMonster(kind)); };
 })(typeof window !== 'undefined' ? window : global);

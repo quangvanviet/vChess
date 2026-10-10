@@ -182,7 +182,13 @@
                 ".validate": "newData.hasChildren(['p','n']) && newData.child('p').isString() && newData.child('p').val().length <= 24000 && newData.child('n').isString() && newData.child('n').val().length <= 64"
               }
             },
-            "lock": {
+            "a": {
+          "$seat": {
+            ".write": "auth != null && root.child('rooms').child($roomId).child('seats').child($seat).val() === auth.uid",
+            ".validate": "newData.isNumber()"
+          }
+        },
+        "lock": {
               ".write": "auth != null && root.child('rooms').child($roomId).child('players').child(auth.uid).exists() && !data.exists()",
               ".validate": "newData.hasChildren(['at','seats']) && newData.child('at').isNumber() && newData.child('seats').isString()"
             },

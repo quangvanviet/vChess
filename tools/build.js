@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* Tứ Tộc Kỳ Chiến — BẢN PHÁT HÀNH (bảo vệ mã nguồn)
+/* vChess — BẢN PHÁT HÀNH (bảo vệ mã nguồn)
    Gộp toàn bộ mã game (js/core, js/net, js/ui) thành MỘT file → thu gọn (esbuild) → làm rối (javascript-obfuscator):
      - đổi tên biến/hàm thành mã hex, mã hoá chuỗi (base64 + xoay mảng chuỗi), làm phẳng luồng điều khiển nhẹ,
      - tự vệ (self-defending): file bị định dạng lại / sửa sẽ ngừng chạy,

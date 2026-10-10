@@ -1,4 +1,4 @@
-/* Tứ Tộc Kỳ Chiến 3.0 — nội dung tĩnh: hướng dẫn, bách khoa. Mọi số liệu đọc thẳng từ data.js. */
+/* vChess 3.0 — nội dung tĩnh: hướng dẫn, bách khoa. Mọi số liệu đọc thẳng từ data.js. */
 (function (G) {
   'use strict';
   var TT = G.TT, I = TT.Icons, F = TT.FACTIONS, CFG = TT.CONFIG;
@@ -45,7 +45,7 @@
   C.guideSections = [
     ['Mục tiêu', function () {
       return '<h2>Mục tiêu</h2><p>Chơi <b>' + CFG.days + ' ngày</b>. Mỗi ngày: <b>chuẩn bị</b> đạo quân rồi xem quân <b>tự giao tranh</b>. Hạng cao và hạ nhiều địch thì được điểm; hết ngày cuối ai nhiều điểm nhất thắng.</p>' +
-        '<ul><li><b>Đạo quân</b> = 1 tướng + lính cùng binh chủng.</li><li><b>Vàng</b> mua mọi thứ; để dư Vàng sẽ có lãi.</li><li>Món đã mua được giữ qua các ngày và bán lại đủ giá.</li></ul>';
+        '<ul><li><b>Đạo quân</b> = 1 tướng + lính cùng binh chủng.</li><li><b>Vàng</b> mua mọi thứ; để dư Vàng sẽ có lãi.</li><li>Món đã mua được giữ qua các ngày và bán lại đủ giá (trừ EXP; Lõi kinh tế chỉ hoàn nửa giá).</li></ul>';
     }],
     ['Chuẩn bị', function () {
       return '<h2>Chuẩn bị</h2><ul><li><b>Mua tướng</b>: thẻ Tướng ở thanh dưới, chạm thẻ rồi chạm vùng xuất quân.</li>' +
@@ -72,7 +72,8 @@
 
   C.renderGuide = function (el) {
     var toc = C.guideSections.map(function (s, i) { return '<button data-i="' + i + '"' + (i ? '' : ' class="active"') + '>' + s[0] + '</button>'; }).join('');
-    el.innerHTML = '<div class="guide-grid"><div class="guide-toc panel tight">' + toc + '</div><div class="panel doc" id="guide-body">' + C.guideSections[0][1]() + '</div></div>';
+    el.innerHTML = '<div class="guide-cta"><div><b>Mới chơi?</b><span>Hướng dẫn tân thủ dẫn bạn từng bước qua một ván thật với Bot (khoảng 5 phút).</span></div><button class="btn gold" id="guide-tut">' + TT.Icons.ui('star', 14) + ' Bắt đầu hướng dẫn</button></div><div class="guide-grid"><div class="guide-toc panel tight">' + toc + '</div><div class="panel doc" id="guide-body">' + C.guideSections[0][1]() + '</div></div>';
+    var gt = el.querySelector('#guide-tut'); if (gt) gt.onclick = function () { TT.App.lobbyView('play'); TT.App.tutorial(); };
     el.querySelectorAll('.guide-toc button').forEach(function (b) {
       b.onclick = function () {
         el.querySelectorAll('.guide-toc button').forEach(function (x) { x.classList.remove('active'); });
@@ -85,10 +86,13 @@
   C.renderCodex = function (el, tab) {
     tab = tab || 'dragon';
     var tabs = TT.FACTION_ORDER.map(function (k) { return '<div class="codex-tab' + (k === tab ? ' active' : '') + '" data-f="' + k + '">' + I.crest(k, 40) + '<b>' + F[k].name + '</b></div>'; }).join('') +
+      '<div class="codex-tab' + (tab === 'mars' ? ' active' : '') + '" data-f="mars">' + tabIc(I.ui('crown', 20, '#fff')) + '<b>Nguyên soái</b></div>' +
       '<div class="codex-tab' + (tab === 'items' ? ' active' : '') + '" data-f="items">' + tabIc(I.ui('shield', 20, '#fff')) + '<b>Trang bị</b></div>' +
       '<div class="codex-tab' + (tab === 'cores' ? ' active' : '') + '" data-f="cores">' + tabIc(I.ui('bolt', 20, '#fff')) + '<b>Lõi</b></div>';
     var body;
-    if (tab === 'items') {
+    if (tab === 'mars') {
+      body = '<h2>Nguyên soái</h2><p class="muted">Chọn ở phòng chờ, kết hợp tự do với mọi tộc.</p><table>' + TT.MARSHAL_LIST.map(function (id) { var m = TT.MARSHALS[id]; return '<tr><td style="width:150px"><b>' + m.name + '</b><br><small class="muted">' + m.tag + '</small></td><td>' + m.psd + (m.act ? '<br><b>' + m.act.name + '</b> (hồi ' + m.act.cd + ' giây): ' + m.act.desc : '') + '</td></tr>'; }).join('') + '</table>';
+    } else if (tab === 'items') {
       body = '<h2>Trang bị</h2>' + [1, 2, 3, 4].map(function (t) {
         return '<h3>Bậc ' + TT.AGE_ROMAN[t] + ' · mở ở Đời ' + TT.AGE_ROMAN[t] + '</h3><table>' + TT.ITEM_ORDER.filter(function (k) { return TT.ITEMS[k].tier === t; }).map(function (k) { var it = TT.ITEMS[k]; return '<tr><td style="width:44px">' + I.item(k, 20) + '</td><td><b>' + it.name + '</b></td><td>' + C.costHtml(it.price) + '</td><td>' + it.desc + '</td></tr>'; }).join('') + '</table>';
       }).join('');
@@ -104,7 +108,7 @@
       body = '<div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap">' + I.crest(tab, 110) +
         '<div style="flex:1;min-width:220px"><h2 style="margin:0">' + f.name + '</h2><p style="margin:.3em 0" class="muted"><i>' + f.style + '</i></p>' +
         '<p style="margin:.3em 0"><b>' + f.base.name + '</b>: ' + f.base.desc + '</p><p class="weak" style="display:inline-block;margin:.3em 0">Điểm yếu — <b>' + f.weak.name + '</b>: ' + f.weak.desc + '</p></div></div>' +
-        '<h3>Thiên phú (chọn 1 ở phòng chờ)</h3><table>' + tal + '</table><h3>Lệnh Soái (tự kích hoạt trong giao tranh)</h3><table>' + ord + '</table><h3>Nguyên soái (chọn ở phòng chờ)</h3><table>' + TT.MARSHAL_ORDER[tab].map(function (id) { var m = TT.MARSHALS[id]; return '<tr><td><b>' + m.name + '</b><br><small class="muted">' + m.tag + '</small></td><td>' + m.psd + (m.act ? '<br><b>' + m.act.name + '</b> (hồi ' + m.act.cd + ' giây): ' + m.act.desc : '') + '</td></tr>'; }).join('') + '</table><h3>Quân đội</h3><div class="unit-grid">' + units + '</div>';
+        '<h3>Thiên phú (chọn 1 ở phòng chờ)</h3><table>' + tal + '</table><h3>Lệnh Soái (tự kích hoạt trong giao tranh)</h3><table>' + ord + '</table><h3>Quân đội</h3><div class="unit-grid">' + units + '</div>';
     }
     el.innerHTML = '<div class="codex-tabs">' + tabs + '</div><div class="panel doc">' + body + '</div>';
     el.querySelectorAll('.codex-tab').forEach(function (t) { t.onclick = function () { C.renderCodex(el, t.dataset.f); }; });

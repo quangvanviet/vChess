@@ -1,13 +1,14 @@
-/* Tứ Tộc Kỳ Chiến 2.0 — MÔ PHỎNG GIAO TRANH XÁC ĐỊNH.
+/* vChess 2.0 — MÔ PHỎNG GIAO TRANH XÁC ĐỊNH.
    20 tick/giây, toạ độ mili-ô, chỉ số nguyên, RNG có seed, duyệt theo id tăng dần.
    create(input) → B; B.step() mỗi tick (trả false khi xong); B.result(). */
 (function (G) {
   'use strict';
   var TT = G.TT, CFG = TT.CONFIG;
   var T = 20, M = 1000;
-  var TER = { '.': 0, 'F': 1, 'H': 2, '~': 3, 'S': 4, '=': 5, '#': 6, 'T': 7 };
-  var TSPD = [100, 90, 85, 65, 70, 115, 0, 100];
-  var TCOST = [10, 12, 12, 16, 15, 8, 0, 10];
+  var TER = { '.': 0, 'F': 1, 'H': 2, '~': 3, 'S': 4, '=': 5, '#': 6, 'T': 7, 'W': 8 };   // W = tường thấp: chặn đường nhưng không chặn đạn
+  var TSPD = [100, 90, 85, 65, 70, 115, 0, 100, 0];
+  var TCOST = [10, 12, 12, 16, 15, 8, 0, 10, 0];
+  function BLK(t) { return t === 6 || t === 8; }
   var ROLEPRI = { thichkhach: 'back', ky: 'back' };
   var floor = Math.floor;
   function sec(s) { return Math.round(s * T); }
@@ -31,7 +32,7 @@
       var cf = {}; (p.cores || []).forEach(function (c) { var C = TT.CORES[c]; if (C) cf[c] = C; });
       var pl = {
         idx: idx, seat: String(p.seat), side: p.side, team: p.team, race: p.race, talent: p.talent, lv: p.lv, cores: cf, name: p.name, mar: R_MAR(p),
-        souls: 0, soulMax: 25 + (cf.honchu2 ? 10 : 0), deaths: 0, engaged: false, used: [false, false, false], totalMax: 0,
+        souls: 0, soulMax: 25 + (cf.honchu2 ? 10 : 0), deaths: 0, engaged: false, lastCmb: 0, used: [false, false, false], totalMax: 0,
         kills: 0, mkills: 0, dmg: 0, taken: 0, healed: 0, towerAtk: 0, itemsTotal: 0, out: false
       };
       (p.squads || []).forEach(function (q) { pl.itemsTotal += q.it.length; });
@@ -41,13 +42,6 @@
     // quái trung lập
     if (inp.monster) spawnMonsters(B, inp.monster);
     B.pls.forEach(function (pl) { pl.totalMax = 0; B.units.forEach(function (u) { if (u.pl === pl.idx) pl.totalMax += u.mhp; }); });
-    // Long Uy (Lõi): choáng sợ đầu trận
-    B.pls.forEach(function (pl) {
-      if (!pl.cores.longuy) return;
-      var src = B.units.filter(function (u) { return u.pl === pl.idx; });
-      B.units.forEach(function (e) { if (!isEnemy(B, src[0] || {}, e) || e.pl === pl.idx) return; for (var k = 0; k < src.length; k++) if (d2(src[k], e) <= sq(mil(4))) { e.stun = Math.max(e.stun, sec(1.5)); break; } });
-      B.events.push({ e: 'order', seat: pl.seat, n: 'Long Uy Tuyệt Đối' });
-    });
     B.step = function () { return step(B); };
     B.run = function (lim) { lim = lim || 99999; while (!B.ended && lim-- > 0) step(B); return B.result(); };
     B.result = function () { return result(B); };
@@ -61,10 +55,10 @@
   function isEnemy(B, a, b) { if (a.team === b.team) return false; return true; }
   function cellOf(B, x, y) { var cx = clamp(floor(x / M), 0, B.W - 1), cy = clamp(floor(y / M), 0, B.H - 1); return cy * B.W + cx; }
   function terAt(B, x, y) { return B.grid[cellOf(B, x, y)]; }
-  function passable(B, cx, cy) { return cx >= 0 && cy >= 0 && cx < B.W && cy < B.H && B.grid[cy * B.W + cx] !== 6; }
+  function passable(B, cx, cy) { return cx >= 0 && cy >= 0 && cx < B.W && cy < B.H && !BLK(B.grid[cy * B.W + cx]); }
 
   /* ---------------- dựng quân ---------------- */
-  function sumFx(target, fx, scale) { for (var k in fx) { var v = fx[k]; if (typeof v === 'number') target[k] = (target[k] || 0) + floor(v * (scale || 100) / 100); else target[k] = v; } }
+  function sumFx(target, fx, scale) { for (var k in fx) { var v = fx[k]; if (typeof v === 'number') target[k] = (target[k] || 0) + floor(v * (scale || 100) / 100); else { if (k === 'ccChance' || k === 'ccHit' || k === 'skillCc') (target[k + 'L'] = target[k + 'L'] || []).push(v); target[k] = v; } } }   // hiệu ứng khống chế từ nhiều nguồn (Lõi + trang bị) cộng dồn, không đè nhau
   function coreApplies(C, role, race) {
     var s = C.scope, R = TT.ROLES[role];
     if (s === 'all') return true;
@@ -82,17 +76,17 @@
     var fx = {}, ps = ud.ps || {};
     if (!opts.monster) {
       var tal = pl.talent;
-      if (tal === 'vaythep') a.def += 8; if (tal === 'kyluat') a.hpPct += 10; if (tal === 'tinhlinh') a.mpGain += 20; if (tal === 'huyetam') a.ls += 6;
+      if (tal === 'vaythep') a.def += 6; if (tal === 'kyluat') a.hpPct += 10; if (tal === 'tinhlinh') a.mpGain += 15; if (tal === 'huyetam') a.ls += 8;
       if (tal === 'longdiem' && R.cls === 'xa') fx.burnOnHit = { pct: 15, dur: 2 };
-      if (race === 'beast') { fx.ccAdd = (fx.ccAdd || 0) + (tal === 'kimkep' ? 30 : 15); fx.huntP = (fx.huntP || 0) + (tal === 'sanmoi' ? 20 : 12); if (tal === 'longday') { a.hpPct += 10; fx.tenacity = (fx.tenacity || 0) + 20; } }
+      if (race === 'beast') { fx.ccAdd = (fx.ccAdd || 0) + (tal === 'kimkep' ? 30 : 15); fx.huntP = (fx.huntP || 0) + (tal === 'sanmoi' ? 25 : 12); if (tal === 'longday') { a.hpPct += 10; fx.tenacity = (fx.tenacity || 0) + 20; } }
       var night = B.inp.day % 2 === 0;
-      if ((!night && (race === 'dragon' || race === 'human')) || (night && (race === 'fairy' || race === 'demon'))) a.atkPct += 4;
+      if ((!night && (race === 'dragon' || race === 'human')) || (night && (race === 'fairy' || race === 'demon' || race === 'beast'))) a.atkPct += 4;
       if (B.inp.event === 'cuongphong') { a.asPct += 15; a.hpPct -= 10; }
       if (B.inp.weather === 'gio') a.dodge += 4;
       if (B.inp.weather === 'mua' && R.cls === 'xa') a.asPct -= 10;
       for (var cid in pl.cores) { var C = pl.cores[cid]; if (coreApplies(C, role, race)) sumFx(a, C.fx), sumFx(fx, C.fx); }
       if (pl.cores.thuonghoi) { var pi = Math.min(20, pl.itemsTotal * 2); a.atkPct += pi; a.hpPct += pi; }
-      if (pl.cores.doanket && sqd && sqd.n0 >= 8) { a.atkPct += 15; a.defPct += 15; a.hpPct += 15; }
+      if (pl.cores.doanket && sqd && sqd.n0 >= 6) { a.atkPct += 15; a.defPct += 15; a.hpPct += 15; }
       // trang bị
       var imul = 100 + (race === 'human' ? (tal === 'renkhi' ? 30 : 15) : 0) + (pl.cores.thankhi ? 25 : 0);
       if (sqd) {
@@ -119,7 +113,7 @@
       cls: R.cls, cap: !!opts.cap, temp: !!opts.temp, monster: !!mon, mkind: mon ? mon.model : null, name: mon ? mon.name : (ud.name || R.name),
       x: 0, y: 0, px: 0, py: 0, fx: 0, fy: -M, rad: mil(R.rad * (gen ? GC.rad / 100 : 1)), fly: !!ps.flying, pass: !!(ps.flying || ps.passThrough),
       hp: hp, mhp: hp, atk: atk, def: def, as: Math.max(20, floor(R.as * 100 * (100 + a.asPct) / 100)),
-      spd: Math.max(10, floor(R.spd * M * (100 + a.spdPct) / 100 / T)), rng: mil(R.rng + a.rngAdd + (ps.rangeAdd || 0)),
+      spd: Math.max(10, floor(R.spd * M * (100 + a.spdPct) / 100 / T)), rng: mil(R.rng + a.rngAdd + (ps.rangeAdd || 0)), melee: !!R.melee,
       mp: 0, mmp: R.mp, crit: a.crit, critDmg: a.critDmg, dodge: a.dodge, ls: a.ls, pen: fx.armorPen || 0, regen: race === 'demon' ? 0 : a.regen,
       mpGain: 100 + a.mpGain, skillDmg: fx.skillDmg || 0, healPct: fx.healPct || 0, reflect: fx.reflect || 0, idr: fx.dr || 0, dt: R.dt === 'magic' ? 1 : 0,
       splash: R.splash ? mil(R.splash + (a.splashAdd || 0)) : 0, pop: R.pop,
@@ -130,20 +124,24 @@
       dmgDone: 0, dmgTaken: 0, healDone: 0, kills: 0, spawnX: 0, spawnY: 0
     };
     if (!gen && !mon) u.mmp = 0; // chỉ tướng có năng lượng và kỹ năng
-    if (mon) { u.as = 80; u.spd = floor(2.2 * M / T); u.rng = mil(mon.role === 'thanthu' ? 2 : 1.2); u.mmp = 0; u.regen = 0; u.rad = mil(mon.role === 'linh' ? .4 : mon.role === 'tuong' ? .8 : 1.3); }
+    if (mon) { u.as = 80; u.spd = floor(2.2 * M / T); u.rng = mil(mon.role === 'thanthu' ? 2.6 : 2.2); u.melee = true; u.mmp = 0; u.regen = 0; u.rad = mil(mon.role === 'linh' ? .4 : mon.role === 'tuong' ? .8 : 1.3); }
     if (R.marshal && gen) { // Nguyên soái: kỹ năng Triệu hồi theo loại lính đã chọn; MP cần đầy tùy loại lính, hồi MP đều mỗi giây
       var MC = CFG.marshal, smk = (sqd && sqd.sm) || 'linh', S0 = MC.summon[smk] || MC.summon.linh;
-      u.mmp = Math.max(10, floor(S0.mp * (100 - Math.min(60, fx.summonMp || 0)) / 100));
-      u.sk = { name: 'Triệu Hồi', fx: [{ t: 'summon', marshal: 1, role: MC.summon[smk] ? smk : 'linh', n: S0.n + (fx.summonN || 0), pct: S0.pct + (fx.summonPct || 0) }] };
-      u.mpRegen = MC.mpRegen + (fx.mpRegen || 0); u.marshal = true;
+      var MS = (pl.mar && pl.mar.sum) || {};
+      u.mmp = Math.max(30, floor(S0.cd * 10 * (100 - Math.min(60, (fx.summonMp || 0) + (MS.cd || 0))) / 100));   // 10 MP/giây cố định → mmp/10 = giây hồi
+      u.sk = { name: 'Triệu Hồi', fx: [{ t: 'summon', marshal: 1, role: MC.summon[smk] ? smk : 'linh', n: S0.n + (fx.summonN || 0), pct: S0.pct + (fx.summonPct || 0) + (MS.pct || 0) }] };
+      u.sumFx = u.sk.fx[0];
+      u.mpRegen = 10 + 1 * (fx.mpRegen || 0) * 1; u.marshal = true;
       if (pl.mar && pl.mar.act) { u.act = pl.mar.act; u.actCd = sec(3); }
+      if (pl.mar && pl.mar.rng) { u.rng = mil(pl.mar.rng + a.rngAdd + (ps.rangeAdd || 0)); u.melee = !!pl.mar.melee; if (pl.mar.magic) u.dt = 1; }
     }
     var mp0 = a.mp0 + (fx.mpStartPct ? floor(u.mmp * fx.mpStartPct / 100) : 0); u.mp = Math.min(u.mmp, mp0);
+    if (u.marshal) u.mp = Math.max(u.mp, u.mmp - u.mpRegen * (CFG.marshal.firstAt || 3));   // đợt triệu hồi đầu tiên luôn đến sớm
     if (fx.revive) u.revive = fx.revive;
-    if (opts.cap && !mon && pl && (pl.talent === 'batdiet' && race === 'demon')) u.revive = Math.max(u.revive, 30);
-    if (opts.cap && pl && pl.cores.thiengioi) u.revive = Math.max(u.revive, 30);
+    if (opts.cap && !mon && pl && (pl.talent === 'batdiet' && race === 'demon')) u.revive = Math.max(u.revive, 25);
+    if (opts.cap && pl && pl.cores.thiengioi) u.revive = Math.max(u.revive, 25);
     // Linh Khí của Tiên
-    if (race === 'fairy' && !mon && !opts.temp) u.stealthT = sec(1.5 + (pl.talent === 'linhan' ? 2 : 0) + (ps.stealthStart || 0));
+    if (race === 'fairy' && !mon && !opts.temp) u.stealthT = sec(1.5 + (pl.talent === 'linhan' ? 3.5 : 0) + (ps.stealthStart || 0));
     if (race === 'fairy' && pl && pl.talent === 'phongthan') u.buffs.push({ as: 20, spd: 20, t: sec(6) });
     if (ps.healAtk || ps.drainHeal) u.healer = 1;
     if (fx.startShield) { u.shield = floor(u.mhp * fx.startShield / 100); u.shieldT = sec(6); }
@@ -297,8 +295,8 @@
       for (var n = 0; n < 8; n++) {
         var dx = DX[n], dy = DY[n], nx = x + dx, ny = y + dy;
         if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
-        var nk = ny * W + nx, t = B.grid[nk]; if (t === 6) continue;
-        if (dx && dy && (B.grid[y * W + nx] === 6 || B.grid[ny * W + x] === 6)) continue;
+        var nk = ny * W + nx, t = B.grid[nk]; if (BLK(t)) continue;
+        if (dx && dy && (BLK(B.grid[y * W + nx]) || BLK(B.grid[ny * W + x]))) continue;
         var c = TCOST[t]; if (free) c = t === 5 ? 8 : 10; else if (prof === 1 && t === 3) c = 10; else if (prof === 2 && t === 4) c = 10;
         var nd = cur + (dx && dy ? floor(c * 14 / 10) : c);
         if (nd < d[nk]) { d[nk] = nd; (buckets[nd] || (buckets[nd] = [])).push(nk); if (nd > maxB) maxB = nd; }
@@ -330,7 +328,7 @@
   }
   function asE(B, u) {
     var b = bsum(u), a = aura(u), m = 100 + b.as + a.as - u.slowAsP;
-    if (u.race === 'dragon' && !u.monster) { var lost = 100 - floor(u.hp * 100 / u.mhp), p = pl(B, u); var cap = p && p.talent === 'longhuyet' ? 45 : 30; m += Math.min(cap, p && p.cores.huyetmach ? lost : floor(lost / 2)); }
+    if (u.race === 'dragon' && !u.monster) { var lost = 100 - floor(u.hp * 100 / u.mhp), p = pl(B, u); var cap = p && p.talent === 'longhuyet' ? 55 : 30; m += Math.min(cap, p && p.cores.huyetmach ? lost : floor(lost / 2)); }
     if (u.ifx.standAs && u.standT >= sec(2)) m += u.ifx.standAs;
     if (u.ifx.killStack) m += u.stackK * u.ifx.killStack.as;
     if (terAt(B, u.x, u.y) === 4 && u.race !== 'demon' && !u.fly) m -= 15;
@@ -338,10 +336,12 @@
   }
   function defE(B, u) { var b = bsum(u), a = aura(u); return Math.max(0, floor(u.def * (100 + b.def + a.def + a.cdef - u.shredP) / 100) + a.fdef); }
   function rngE(B, u) { var r = u.rng + bsum(u).rng * M; if (u.cls === 'xa') { r += aura(u).rng * M; if (terAt(B, u.x, u.y) === 2) r += M; } return r; }
+  var PACE = floor(2.1 * M / T);
   function spdE(B, u) {
     var b = bsum(u), m = 100 + b.spd - u.slowP; if (m < 25) m = 25;
     var s = floor(u.spd * m / 100);
     if (u.hurry) s = floor(s * 130 / 100);
+    if (u.pace && s > u.pace) s = u.pace;
     if (u.fly) return s;
     var t = terAt(B, u.x, u.y), tf = TSPD[t];
     if (u.ifx.terrainFree && t !== 5) tf = 100;
@@ -366,10 +366,11 @@
   // o: {pct, dt(0/1/2 true), skill, aoe, noCrit, noMp, ranged, flat, from}
   function hit(B, src, t, o) {
     if (!t.alive) return 0;
+    if (src && src.team !== t.team && !src.monster && !t.monster) B.fightT = B.tick;
     if (src && t.sq >= 0 && src.team !== t.team) { var hs = B.squads[t.sq]; if (hs) { hs.hurtT = B.tick + sec(6); hs.hurtBy = src.id; } }   // cả đạo quân biết mình đang bị đánh
     var isSkill = !!o.skill;
     if (isSkill && src && t.ifx.spellShield && !t.ssUsed) { t.ssUsed = 1; ev(B, { e: 'fx', k: 'shield', a: t.id }); return 0; }
-    var ranged = o.ranged != null ? o.ranged : (src && src.rng > 1500);
+    var ranged = o.ranged != null ? o.ranged : (src && !src.melee && src.rng > 1500);
     var dmg;
     if (o.flat != null) dmg = o.flat;
     else {
@@ -424,7 +425,7 @@
       src.dmgDone += dmg; t.dmgTaken += dmg;
       var sp = pl(B, src), tp = pl(B, t); if (sp) sp.dmg += dmg; if (tp) tp.taken += dmg;
       if (src.sq >= 0) B.squads[src.sq].dmg += dmg; if (t.sq >= 0) B.squads[t.sq].taken += dmg;
-      if (!o.storm) { if (sp) sp.engaged = true; if (tp) tp.engaged = true; }
+      if (!o.storm) { if (sp) sp.engaged = true; if (tp) tp.engaged = true; if (sp && tp && sp !== tp) { sp.lastCmb = B.tick; tp.lastCmb = B.tick; } else if (sp && t.monster) sp.lastCmb = B.tick; }
       // hút máu
       var ls = src.ls + bsum(src).ls + aura(src).ls;
       if (ls > 0 && o.dt !== 2) heal(B, src, src, floor(dmg * ls / 100));
@@ -441,7 +442,7 @@
     else if (t.ifx.lowHeal && !t.lowHealUsed && t.hp * 100 < t.mhp * t.ifx.lowHeal.below) { t.lowHealUsed = true; heal(B, t, t, floor(t.mhp * t.ifx.lowHeal.pct / 100)); ev(B, { e: 'fx', k: 'heal', a: t.id }); }
     return dmg;
   }
-  function gainMp(B, u, v) { if (!u.alive || !u.mmp) return; var g = floor(v * (u.mpGain + aura(u).mpGain) / 100); if (u.race === 'dragon') g = Math.max(1, g); u.mp = Math.min(u.mmp, u.mp + g); }
+  function gainMp(B, u, v) { if (!u.alive || !u.mmp || u.marshal) return; var g = floor(v * (u.mpGain + aura(u).mpGain) / 100); if (u.race === 'dragon') g = Math.max(1, g); u.mp = Math.min(u.mmp, u.mp + g); }
   function applySt(B, src, t, st) {
     if (!st || !t.alive) return;
     var p = pl(B, t), cc = bsum(t).cc;
@@ -479,7 +480,7 @@
     // tướng chết: lính vẫn đánh tiếp theo chiến thuật của đạo quân, trang bị mất tác dụng
     if (src && src.alive) {
       src.kills++; if (src.sq >= 0) B.squads[src.sq].kills++;
-      if (sp && !t.temp) { if (t.monster) sp.mkills += t.pop; else if (tp) sp.kills += t.pop; }
+      if (sp && !t.temp) { if (t.monster) sp.mkills += t.pop; else if (tp) sp.kills += t.pop + (t.cap && !t.marshal ? 2 : 0); }
       if (src.ifx.killMp) gainMp(B, src, src.ifx.killMp);
       if (src.ifx.killStack) { if (src.stackK < src.ifx.killStack.max) src.stackK++; heal(B, src, src, floor(src.mhp * src.ifx.killStack.heal / 100)); }
       if (src.ps.killStealth) { heal(B, src, src, floor(src.mhp * src.ps.killStealth.heal / 100)); src.stealthT = sec(src.ps.killStealth.dur); }
@@ -556,7 +557,7 @@
           else if (area === 'multi') { targets = multiTargets(B, u, t, f); targets.forEach(function (x) { ev(B, { e: 'shot', a: u.id, b: x.id }); }); }
           else if (area === 'chain' && t) { var hitL = [t], cur = t, mul = 100; hit(B, u, t, o); ev(B, { e: 'shot', a: u.id, b: t.id, k: 'bolt' }); for (var cN = 0; cN < f.n; cN++) { var nx = null, bd = sq(mil(3.5)); B.units.forEach(function (e) { if (e.alive && isEnemy(B, u, e) && hitL.indexOf(e) < 0) { var dd = d2(cur, e); if (dd < bd) { bd = dd; nx = e; } } }); if (!nx) break; mul = floor(mul * (100 - f.fall) / 100); hitL.push(nx); ev(B, { e: 'shot', a: cur.id, b: nx.id, k: 'bolt' }); hit(B, u, nx, { pct: floor(f.pct * mul / 100), skill: 1, dt: o.dt }); cur = nx; } targets = []; }
           else if (area === 'rain') { var cc = t || u; for (var rn = 0; rn < f.n; rn++) { var ang = B.R(6283), rad = B.R(mil(f.r)); var px = cc.x + floor(rad * icos(ang) / M), py = cc.y + floor(rad * isin(ang) / M); ev(B, { e: 'area', x: px, y: py, r: mil(f.rr), a: u.id, k: 'star' }); enemiesIn(B, u, px, py, mil(f.rr)).forEach(function (e) { hit(B, u, e, { pct: f.pct, skill: 1, dt: o.dt, aoe: 1 }); applySt(B, u, e, f.st); }); } }
-          targets.forEach(function (e) { hit(B, u, e, o); applySt(B, u, e, f.st); if (u.ifx.skillCc) applySt(B, u, e, u.ifx.skillCc); });
+          targets.forEach(function (e) { hit(B, u, e, o); applySt(B, u, e, f.st); (u.ifx.skillCcL || []).forEach(function (sc) { applySt(B, u, e, sc); }); });
           break;
         }
         case 'heal': {
@@ -589,6 +590,7 @@
           u.x = pp[0]; u.y = pp[1]; u.tgt = dt2.id;
           ev(B, { e: 'dash', a: u.id, x0: x0, y0: y0, x1: u.x, y1: u.y });
           if (f.pct) { hit(B, u, dt2, o); applySt(B, u, dt2, f.st); }
+          if (u.marshal && u.alive) { var rb = placeFree(B, x0, y0); ev(B, { e: 'dash', a: u.id, x0: u.x, y0: u.y, x1: rb[0], y1: rb[1], k: 'blink' }); u.x = rb[0]; u.y = rb[1]; }   // Nguyên soái đánh xong lướt về chỗ cũ (không tự lao vào giữa quân địch)
           break;
         }
         case 'blink': {
@@ -600,10 +602,13 @@
           hit(B, u, bt, o);
           if (f.stealth) u.stealthT = sec(f.stealth);
           if (f.killShield && !bt.alive) { u.shield = Math.max(u.shield, floor(u.mhp * f.killShield / 100)); u.shieldT = sec(3); }
+          if (u.marshal && u.alive) { var rb2 = placeFree(B, ox, oy); ev(B, { e: 'dash', a: u.id, x0: u.x, y0: u.y, x1: rb2[0], y1: rb2[1], k: 'blink' }); u.x = rb2[0]; u.y = rb2[1]; }
           break;
         }
         case 'summon': {
+          if (f.useSm) { if (!u.sumFx) break; f = u.sumFx; }
           var n = f.n; if (f.souls && p) { if (p.souls >= f.souls) p.souls -= f.souls; else n = 1; }
+          if (f.marshal && u.marshal) { u.waves = (u.waves || 0) + 1; if (u.waves === 1 && u.ifx.firstWave) n = floor(n * (100 + u.ifx.firstWave) / 100); }
           B.spawnQ.push({ pl: p, role: f.role, n: n, pct: f.pct, x: u.x, y: u.y, sq: u.sq });
           break;
         }
@@ -646,7 +651,7 @@
     for (var i = 0; i < B.units.length; i++) {
       var e = B.units[i]; if (!e.alive || !isEnemy(B, u, e)) continue;
       var dd = d2(u, e);
-      if (e.stealthT > 0 && dd > sq(mil(2) + e.rad)) continue;
+      if (e.stealthT > 0 && dd > sq(mil(2) + e.rad) && !(mode && mode.seek)) continue;
       if (alert && dd > sq(alert)) continue;
       if (u.monster && dd > sq(mil(7))) continue;
       var dm = TT.isqrt(dd), s = -floor(dm / 10);
@@ -689,14 +694,38 @@
     var cx = floor(u.x / M), cy = floor(u.y / M), ck = cy * B.W + cx, best = f[ck], bk = -1;
     for (var n = 0; n < 8; n++) {
       var nx = cx + DX[n], ny = cy + DY[n]; if (nx < 0 || ny < 0 || nx >= B.W || ny >= B.H) continue;
-      var nk = ny * B.W + nx; if (f[nk] < best) { if (DX[n] && DY[n] && (B.grid[cy * B.W + nx] === 6 || B.grid[ny * B.W + cx] === 6)) continue; best = f[nk]; bk = nk; }
+      var nk = ny * B.W + nx; if (f[nk] < best) { if (DX[n] && DY[n] && (BLK(B.grid[cy * B.W + nx]) || BLK(B.grid[ny * B.W + cx]))) continue; best = f[nk]; bk = nk; }
     }
     if (bk < 0) return moveToward(B, u, tx, ty, 0);
     return moveToward(B, u, (bk % B.W) * M + 500, ((bk / B.W) | 0) * M + 500, 0);
   }
+
+  /* tránh bị đồng đội đang đứng đánh chặn đường: đi vòng sang bên ít vướng hơn rồi tiếp tục tiến tới mục tiêu / cờ */
+  function steerAround(B, u, tx, ty) {
+    var dx = tx - u.x, dy = ty - u.y, l = TT.isqrt(dx * dx + dy * dy);
+    if (l < 700) return null;
+    if (u.flT > B.tick && u.flS) { var sd0 = u.flS, nx0 = -dy / l, ny0 = dx / l; return [u.x + floor(dx * 700 / l) + floor(nx0 * 1300 * sd0), u.y + floor(dy * 700 / l) + floor(ny0 * 1300 * sd0)]; }
+    if ((B.tick + u.id) % 3 !== 0) return null;
+    var ux = dx / l, uy = dy / l, gx = floor(u.x / M), gy = floor(u.y / M), left = 0, right = 0, blocked = 0, ug = B.ug; if (!ug) return null;
+    for (var oy = -2; oy <= 2; oy++) for (var ox = -2; ox <= 2; ox++) {
+      var lst = ug[(gx + ox) + (gy + oy) * B.W]; if (!lst) continue;
+      for (var k = 0; k < lst.length; k++) {
+        var a = lst[k]; if (a === u || !a.alive || a.team !== u.team || a.pass && !u.pass) continue;
+        var ax = a.x - u.x, ay = a.y - u.y, fwd = ax * ux + ay * uy, lat = -ax * uy + ay * ux, reach = u.rad + a.rad + 700;
+        if (fwd < 0 || fwd > reach + 900 || Math.abs(lat) > reach) continue;
+        if (!(a.standT > 0 || a.stun > 0 || a.rootT > 0)) continue;   // chỉ coi là vật cản nếu đồng đội đang đứng yên đánh
+        blocked++; if (lat > 0) left++; else right++;
+      }
+    }
+    if (blocked < 1) return null;
+    var side = left === right ? ((u.id % 2) ? 1 : -1) : (left > right ? -1 : 1);
+    u.flS = side; u.flT = B.tick + 18;
+    var nx = -dy / l, ny = dx / l;
+    return [u.x + floor(dx * 700 / l) + floor(nx * 1300 * side), u.y + floor(dy * 700 / l) + floor(ny * 1300 * side)];
+  }
   function inRange(B, u, t) { var r = rngE(B, u) + t.rad + u.rad; return d2(u, t) <= r * r; }
   function attack(B, u, t) {
-    var ranged = u.rng > 1500 || u.healer;
+    var ranged = (!u.melee && u.rng > 1500) || u.healer;
     u.cd = Math.max(1, floor(T * 10000 / asE(B, u) / 100));
     var fx = t.x - u.x, fy = t.y - u.y, l = TT.isqrt(fx * fx + fy * fy) || 1; u.fx = floor(fx * M / l); u.fy = floor(fy * M / l);
     // Thuật sĩ: hồi máu thay vì đánh khi có đồng minh bị thương
@@ -738,8 +767,10 @@
     if (ps.pierce || ps.lineShot) { var lst = lineTargets(B, u, t, rngE(B, u) + mil(2), mil(.6)).filter(function (e) { return e !== t; }).sort(function (a, b) { return d2(u, a) - d2(u, b) || a.id - b.id; }); var cnt = ps.lineShot ? ps.lineShot.n - 1 : 1, pc = ps.pierce ? ps.pierce.pct : 100 - ps.lineShot.fall; lst.slice(0, cnt).forEach(function (e, i) { hit(B, u, e, { pct: ps.lineShot ? 100 - ps.lineShot.fall * (i + 1) : pc, noMp: 1 }); }); }
     if (u.splash) { enemiesIn(B, u, t.x, t.y, u.splash).forEach(function (e) { if (e !== t) hit(B, u, e, { pct: 50, noMp: 1, aoe: 1 }); }); ev(B, { e: 'area', x: t.x, y: t.y, r: u.splash, a: u.id, k: 'boom' }); }
     if (ps.bounce) { var e3 = nearestOther(B, t, null, mil(3)); if (e3 && isEnemy(B, u, e3) && e3 !== t) { ev(B, { e: 'shot', a: t.id, b: e3.id, k: 'bolt' }); hit(B, u, e3, { pct: ps.bounce.pct, noMp: 1 }); } }
-    var cch = ps.ccChance || fx.ccChance; if (cch && t.alive && B.R(100) < cch.pct) applySt(B, u, t, cch.st);
-    var cn = ps.ccHit || fx.ccHit; if (cn && t.alive && u.hits % cn.n === cn.n - 1) applySt(B, u, t, cn.st);
+    if (ps.ccChance && t.alive && B.R(100) < ps.ccChance.pct) applySt(B, u, t, ps.ccChance.st);
+    var ccl = fx.ccChanceL; if (ccl) for (var ci = 0; ci < ccl.length && t.alive; ci++) if (ccl[ci].pct >= 100 || B.R(100) < ccl[ci].pct) applySt(B, u, t, ccl[ci].st);
+    if (ps.ccHit && t.alive && u.hits % ps.ccHit.n === ps.ccHit.n - 1) applySt(B, u, t, ps.ccHit.st);
+    var chl = fx.ccHitL; if (chl) for (var hi = 0; hi < chl.length && t.alive; hi++) if (u.hits % chl[hi].n === chl[hi].n - 1) applySt(B, u, t, chl[hi].st);
     if (fx.hpDmg && t.alive) hit(B, u, t, { flat: Math.max(1, floor(t.hp * fx.hpDmg / 100)), dt: 2, noMp: 1 });
     if (fx.thunder && B.R(100) < fx.thunder.chance) { var th = nearestOther(B, u, t, mil(3)) || t; if (th.alive) { hit(B, u, th, { pct: fx.thunder.pct, dt: 1, skill: 0, noMp: 1, noCrit: 1, ranged: true }); ev(B, { e: 'shot', a: u.id, b: th.id, k: 'bolt' }); } }
     var burn = ps.burnOnHit || fx.burnOnHit; if (burn && t.alive) applySt(B, u, t, { burn: burn.pct, dur: burn.dur });
@@ -768,21 +799,38 @@
     if (!mode.noFight && u.act && tryAct(B, u)) return;
     if (!mode.noFight && canCast(B, u)) { cast(B, u); return; }
     if (t && inRange(B, u, t) && (u.cls !== 'xa' || u.role === 'congthanh' || losClear(B, u, t))) {
-      u.standT++;
+      u.standT++; u.idleT = 0;
       if (u.cd <= 0) attack(B, u, t);
       if (u.ps.moveShoot) return;
       return;
     }
     u.standT = 0;
     if (u.ps.moveShoot && t && inRange(B, u, t) && u.cd <= 0) attack(B, u, t);
+    // Nguyên soái đi sau quân mình: còn quân ta phía trước thì không tự lao lên trước họ (chỉ đánh địch tới gần)
+    if (u.marshal && !u.temp && t && !mode.goal && !B.storm && marshalHold(B, u, t)) { u.idleT = 0; return; }
     // di chuyển
     var gx, gy, tx, ty;
     if (t && !mode.goal) { tx = t.x; ty = t.y; var ts = t.sq >= 0 ? B.squads[t.sq] : null; gx = floor(t.x / M); gy = floor(t.y / M); }
     else if (mode.goal) { tx = mode.goal[0]; ty = mode.goal[1]; gx = floor(tx / M); gy = floor(ty / M); }
-    else return;
+    else { u.idleT = (u.idleT || 0) + 1; return; }
     if (u.rootT > 0) return;
-    var s = pathStep(B, u, gx, gy, tx, ty);
+    // hành quân đồng bộ: trước khi hai bên chạm trán, quân nhanh (kỵ, thích khách, bay…) không bỏ xa đại quân để khỏi bị đánh lẻ
+    if (u.spd > PACE && (B.tick + u.id) % 10 === 0) u.pace = (!B.fightT || B.tick - B.fightT > sec(3)) && !u.monster && !nearestEnemy(B, u, mil(7)) ? PACE : 0;
+    var sv = (!u.fly && u.rootT <= 0) ? steerAround(B, u, tx, ty) : null, s = sv ? moveToward(B, u, sv[0], sv[1], 0) : pathStep(B, u, gx, gy, tx, ty);
+    if (sv && s <= 0) s = pathStep(B, u, gx, gy, tx, ty);
     u.moved += s;
+    u.idleT = s > 0 ? 0 : (u.idleT || 0) + 1;
+  }
+  function armyCenters(B) {
+    if (B.cenT === B.tick) return B.cen;
+    var c = {}; B.units.forEach(function (e) { if (!e.alive || e.monster || e.marshal) return; var k = c[e.pl] || (c[e.pl] = { x: 0, y: 0, n: 0 }); k.x += e.x; k.y += e.y; k.n++; });
+    for (var k in c) { c[k].x = floor(c[k].x / c[k].n); c[k].y = floor(c[k].y / c[k].n); }
+    B.cen = c; B.cenT = B.tick; return c;
+  }
+  function marshalHold(B, u, t) {
+    var c = armyCenters(B)[u.pl]; if (!c || c.n < 3) return false;
+    if (B.tick - (B.fightT || 0) > sec(6)) return false;   // chưa ai giao chiến: cứ đi cùng đoàn
+    return d2(u, t) < d2(c, t) + sq(mil(1.5));            // Nguyên soái đã ngang hoặc vượt lên trước quân ta → đứng lại
   }
   // Lính đi theo tướng: giữ vị trí tương đối với tướng như lúc xếp đội
   function squadMode(B, u, sqd) {
@@ -804,6 +852,9 @@
     if (!sqd) return o;
     if (u.monster) { o.alert = mil(7); if (d2(u, { x: u.spawnX, y: u.spawnY }) > sq(mil(8))) { o.goal = [u.spawnX, u.spawnY]; o.noFight = true; } return o; }
     if (B.storm) return o;
+    // Không có giao tranh nào quá lâu (ví dụ cả hai phe đều đang "giữ", hoặc chỉ còn địch ở xa) → cả đội chủ động tiến đánh địch gần nhất
+    if (u.idleT > sec(8) && B.tick - (B.fightT || 0) > sec(4)) sqd.seek = true;
+    if (sqd.seek) { o.seek = true; return o; }
     var st = sqd.st;
     if (sqd.fl.length && sqd.step >= sqd.fl.length && st === 'giu') st = 'tc';   // xong hết cờ → tự động tìm địch gần nhất
     if (sqd.step < sqd.fl.length) {
@@ -1000,8 +1051,8 @@
     if (B.tick === 0) { B.byId = {}; B.units.forEach(function (u) { B.byId[u.id] = u; }); updateAuras(B); updateOrders(B); }
     B.tick++;
     var us = B.units, i, u;
-    for (i = 0; i < us.length; i++) { u = us[i]; u.px = u.x; u.py = u.y; }
-    if (B.tick % 10 === 0) { updateAuras(B); updateTowers(B); updateFlags(B); updateOrders(B); }
+    var ug = B.ug = {}, UW = B.W; for (i = 0; i < us.length; i++) { u = us[i]; u.px = u.x; u.py = u.y; if (u.alive) { var gk = floor(u.x / M) + floor(u.y / M) * UW; (ug[gk] || (ug[gk] = [])).push(u); } }
+    if (B.tick % 10 === 0) { updateAuras(B); updateTowers(B); updateFlags(B); updateOrders(B); fearCheck(B); }
     // đạn bay tới
     if (B.proj.length) {
       var keep = [];
@@ -1028,7 +1079,14 @@
         // mỗi giây: đốt, hồi máu, đầm lầy
         if (u.burnT > 0) { u.burnT -= T; var src = B.byId[u.burnS]; hit(B, src && src.alive ? src : null, u, { flat: u.burnD, dt: 2, noMp: 1 }); if (!u.alive) continue; }
         if (u.ifx.pulse) { var pls = u.ifx.pulse; enemiesIn(B, u, u.x, u.y, mil(pls.r)).forEach(function (e) { hit(B, u, e, { pct: pls.pct, dt: 1, noMp: 1, noCrit: 1, aoe: 1 }); }); }
-        if (u.mpRegen && u.mmp > 0 && u.mp < u.mmp) u.mp = Math.min(u.mmp, u.mp + u.mpRegen);
+        if (u.mpRegen && u.mmp > 0 && u.mp < u.mmp) {
+          var rg0 = u.mpRegen;
+          if (u.marshal) { // ngoài giao tranh quá 4 giây: triệu hồi chậm thêm 3 giây (hồi MP chậm lại tương ứng)
+            var pm = pl(B, u), MCx = CFG.marshal; u.ooc = !!(pm && B.tick - pm.lastCmb > sec(MCx.oocAfter || 4));
+            if (u.ooc) { var cdS = u.mmp / u.mpRegen; u.mpC = (u.mpC || 0) + rg0 * cdS / (cdS + (MCx.oocExtra || 3)); rg0 = Math.floor(u.mpC); u.mpC -= rg0; }
+          }
+          u.mp = Math.min(u.mmp, u.mp + rg0);
+        }
         var reg = u.regen + floor(u.mhp * ((u.au ? u.au.regenPct : 0) + (u.bs ? u.bs.regenPct : 0) + (u.ifx.regenPct || 0)) / 100);
         if (u.ps.regenLow && u.hp * 100 < u.mhp * u.ps.regenLow.below) reg += floor(u.mhp * u.ps.regenLow.pct / 100);
         if (reg > 0 && u.hp < u.mhp) heal(B, u.race === 'demon' ? u : null, u, reg);
@@ -1048,6 +1106,17 @@
     }
     checkEnd(B);
     return !B.ended;
+  }
+  // Long Uy Tuyệt Đối (Lõi): lần đầu quân Rồng chạm trán, địch quanh họ bị choáng sợ
+  function fearCheck(B) {
+    B.pls.forEach(function (pl) {
+      var C = pl.cores.longuy; if (!C || pl.fearDone) return;
+      var r = mil(C.fx.fearStart.r), own = B.units.filter(function (u) { return u.alive && u.pl === pl.idx && u.race === 'dragon'; });
+      if (!own.some(function (u) { return !!nearestEnemy(B, u, r); })) return;
+      pl.fearDone = true;
+      B.units.forEach(function (e) { if (!e.alive || e.team === pl.team || e.monster && e.monsterBoss) return; for (var k = 0; k < own.length; k++) if (d2(own[k], e) <= sq(r)) { applySt(B, own[k], e, { stun: C.fx.fearStart.dur }); break; } });
+      ev(B, { e: 'order', seat: pl.seat, n: C.name });
+    });
   }
   function teamHpSnap(B) { var h = {}; B.units.forEach(function (u) { if (u.alive && !u.monster) h[u.team] = (h[u.team] || 0) + u.hp; }); B.hpSnap = h; }
   function checkEnd(B) {
@@ -1074,13 +1143,19 @@
         var alive = 0, hp = 0; B.units.forEach(function (u) { if (u.alive && u.pl === p.idx) { alive++; hp += u.hp; } });
         return { seat: p.seat, team: p.team, rank: rankOf[p.team], kills: p.kills, mkills: p.mkills, dmg: p.dmg, taken: p.taken, healed: p.healed, alive: alive, hp: hp, souls: p.souls, orders: p.used.slice() };
       }),
-      squads: B.squads.filter(function (s) { return !s.monster && !s.temp; }).map(function (s) { return { seat: s.seat, id: s.id, role: s.role, name: s.name, n: s.n0, alive: s.units.filter(function (u) { return u.alive; }).length, dmg: s.dmg, taken: s.taken, healed: s.healed, kills: s.kills }; })
+      squads: B.squads.filter(function (s) { return !s.monster && !s.temp; }).map(function (s) { return { seat: s.seat, id: s.id, role: s.role, name: s.name, n: s.n0, alive: s.units.filter(function (u) { return u.alive; }).length, dmg: s.dmg, taken: s.taken, healed: s.healed, kills: s.kills, sp: Battle.squadSplit(s) }; })
     };
     var sum = B.units.map(function (u) { return [u.id, u.alive ? 1 : 0, u.hp, u.x >> 4, u.y >> 4]; });
     res.hash = TT.fnv64(TT.stable({ r: res.players, t: B.tick, u: sum }));
     return res;
   }
   /* Chỉ số thực của một quân (đội trưởng hoặc lính thường) với Lõi, trang bị, thiên phú, ngày/đêm — cho bảng đội và tooltip */
+  /* sát thương gây ra / nhận vào của tướng và của lính trong một đạo quân (để hiện thống kê) */
+  Battle.squadSplit = function (s) {
+    var o = { gd: 0, gt: 0, sd: 0, st: 0, ga: 0, sa: 0, sn: 0 };
+    s.units.forEach(function (u) { if (u.cap) { o.gd += u.dmgDone; o.gt += u.dmgTaken; o.ga = u.alive ? 1 : 0; } else { o.sd += u.dmgDone; o.st += u.dmgTaken; o.sn++; if (u.alive) o.sa++; } });
+    return o;
+  };
   Battle.previewStats = function (ctx, p, q, cap) {
     var cf = {}; (p.cores || []).forEach(function (c) { if (TT.CORES[c]) cf[c] = TT.CORES[c]; });
     var items = 0; (p.squads || []).forEach(function (s) { items += s.it.length; });

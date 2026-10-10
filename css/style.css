@@ -1,4 +1,4 @@
-/* Tứ Tộc Kỳ Chiến — giao diện fantasy tươi sáng (cảm hứng Ragnarok Online 1/2/3):
+/* vChess — giao diện fantasy tươi sáng (cảm hứng Ragnarok Online 1/2/3):
    cửa sổ trắng–xanh nhạt bo tròn, thanh tiêu đề xanh, nút kẹo vàng–cam, chữ tròn Baloo 2 / Nunito. */
 :root {
   --sky1: #4aa3ff; --sky2: #bfe6ff; --sky3: #eaf7ff;
@@ -981,7 +981,7 @@ body.in-battle #btn-menu { opacity: .75; }
   .gb-me { order: 2; border-right: none; padding: 0; }
   .gb-buy { order: 1; flex: 1 1 100%; }
   .gb-cards { max-width: none; }
-  .gb-inv { order: 3; grid-template-columns: repeat(9, 1fr); grid-template-rows: 26px; flex: 1; border-left: none; padding-left: 0; gap: 2px; }
+  .gb-inv { order: 3; grid-template-columns: repeat(10, 1fr); grid-template-rows: 26px; flex: 1; border-left: none; padding-left: 0; gap: 2px; }
   .inv-slot { width: auto; height: 26px; }
   .gb-shop { order: 4; width: 54px; height: 46px; }
   .age-ring { width: 46px; height: 46px; } .age-ring .ar-lv { font-size: 16px; } .age-ring .ar-l { top: 6px; font-size: 8px; }
@@ -1196,7 +1196,7 @@ body.mode-bottom .mode-pill { top: auto; bottom: 14px; }
 
 /* 3.2b — ô đồ nằm TRÊN bảng mua sắm: hàng riêng, thanh mua có thêm chỗ */
 .game-bar { flex-wrap: wrap; row-gap: 5px; }
-.gb-inv, .gb-inv { order: -1; flex: 1 1 100%; display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); grid-template-rows: 30px; gap: 4px; padding: 0 0 5px; border-left: none; border-bottom: 2px solid var(--line2); max-width: 100%; }
+.gb-inv, .gb-inv { order: -1; flex: 1 1 100%; display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); grid-template-rows: 30px; gap: 4px; padding: 0 0 5px; border-left: none; border-bottom: 2px solid var(--line2); max-width: 100%; }
 .inv-slot { width: auto; height: 30px; }
 .inv-slot .it-ic, .inv-slot .core-ic { width: 100%; max-width: 44px; height: 26px; }
 .inv-slot .it-ic svg, .inv-slot .core-ic svg { width: 17px; height: 17px; }
@@ -1337,7 +1337,7 @@ html.is-touch img, html.is-touch svg, html.is-touch canvas { -webkit-user-drag: 
   /* ----- cột phải: bảng mua sắm ----- */
   html body .game-bar, html body #g-bar { left: auto !important; right: 4px !important; top: 4px !important; bottom: 4px !important; transform: none !important; width: var(--rc) !important; max-width: none !important; flex-direction: column !important; flex-wrap: nowrap !important; gap: 3px !important; padding: 4px !important; border-radius: 12px !important; border-width: 1.5px; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; align-items: stretch; transition: transform .3s ease, opacity .25s ease; }
   html body.in-battle #g-bar, html body[data-focus="tac"] #g-bar, html body[data-focus="move"] #g-bar, html body[data-focus="flag"] #g-bar { transform: translateX(115%) !important; opacity: 0; pointer-events: none; }
-  html body .gb-inv { order: 0; flex: none !important; grid-template-rows: 22px !important; max-width: none !important; display: grid !important; grid-template-columns: repeat(9, 1fr); gap: 2px !important; padding: 0 !important; margin: 0 !important; border: none !important; background: none !important; }
+  html body .gb-inv { order: 0; flex: none !important; grid-template-rows: 22px !important; max-width: none !important; display: grid !important; grid-template-columns: repeat(10, 1fr); gap: 2px !important; padding: 0 !important; margin: 0 !important; border: none !important; background: none !important; }
   .inv-slot { width: auto !important; height: 22px !important; border-radius: 6px; } .inv-slot .it-ic, .inv-slot .core-ic { width: 17px !important; height: 17px !important; }
   .gb-me { order: 1; flex: none; padding: 0 !important; gap: 4px !important; border: none !important; align-items: center; }
   .age-ring { width: 36px; height: 36px; } .age-ring::before { inset: 3px; } .age-ring .ar-lv { font-size: 13px; margin-top: 4px; } .age-ring .ar-l { font-size: 6.5px; top: 6px; } .age-ring .ar-buy { font-size: 8px; bottom: -4px; padding: 0 4px 0 2px; }
@@ -1675,3 +1675,258 @@ html body .hud-top .speed button { flex: 1; }
 .ga-b svg { width: 62%; height: 62%; }
 .ga-b .price-b { top: -6px; left: -6px; }
 @media (max-width: 760px), (max-height: 520px) { .act-menu { padding: 3px; gap: 4px; } .ga-b { width: 32px; height: 32px; } .act-menu button { padding: 0 !important; } .act-menu button svg { width: 62%; height: 62%; } }
+
+/* ===== cuộn nội dung dài: thanh cuộn mảnh, mờ mép, nút gợi ý ===== */
+* { scrollbar-width: thin; scrollbar-color: rgba(70, 120, 190, .45) transparent; }
+*::-webkit-scrollbar { width: 7px; height: 7px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: rgba(70, 120, 190, .38); border-radius: 99px; border: 1.5px solid transparent; background-clip: padding-box; }
+*::-webkit-scrollbar-thumb:hover { background-color: rgba(50, 100, 180, .62); }
+*::-webkit-scrollbar-corner { background: transparent; }
+@media (pointer: coarse) { *::-webkit-scrollbar { width: 3px; height: 3px; } }
+.modal-box, .tip-box, .hud-info, .hud-unit, .shop-panel, .dock-body, .lb-sheet-body, .room-list, .chat-log, .result-box, .tac-pop, .info-pop, .mp-main, .room-main, .lobby-main { overscroll-behavior: contain; -webkit-overflow-scrolling: touch; scroll-behavior: smooth; }
+.tip-box { max-height: min(72vh, 480px); overflow-y: auto; }
+.chat-log[data-sc="top"], .room-list[data-sc="top"], .lb-sheet-body[data-sc="top"], .mp-main[data-sc="top"], .dock-body[data-sc="top"], .room-main[data-sc="top"], .lobby-main[data-sc="top"] { -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 26px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 26px), transparent); }
+.chat-log[data-sc="mid"], .room-list[data-sc="mid"], .lb-sheet-body[data-sc="mid"], .mp-main[data-sc="mid"], .dock-body[data-sc="mid"], .room-main[data-sc="mid"], .lobby-main[data-sc="mid"] { -webkit-mask-image: linear-gradient(to bottom, transparent, #000 20px, #000 calc(100% - 26px), transparent); mask-image: linear-gradient(to bottom, transparent, #000 20px, #000 calc(100% - 26px), transparent); }
+.chat-log[data-sc="end"], .room-list[data-sc="end"], .lb-sheet-body[data-sc="end"], .mp-main[data-sc="end"], .dock-body[data-sc="end"], .room-main[data-sc="end"], .lobby-main[data-sc="end"] { -webkit-mask-image: linear-gradient(to bottom, transparent, #000 20px); mask-image: linear-gradient(to bottom, transparent, #000 20px); }
+.sc-cue { position: sticky; bottom: 0; height: 0; display: flex; justify-content: center; pointer-events: none; z-index: 5; overflow: visible; }
+.sc-cue span { pointer-events: auto; position: relative; top: -24px; width: 28px; height: 20px; border-radius: 10px; background: rgba(255, 255, 255, .95); border: 1.5px solid #cfe0f7; box-shadow: 0 3px 10px rgba(30, 60, 120, .22); color: #2a5fae; display: grid; place-items: center; cursor: pointer; animation: cueB 1.6s ease-in-out infinite; }
+.sc-cue span:hover { background: #fff; color: #1c4f9e; }
+.tip-box:not(.pinned) .sc-cue span { pointer-events: none; }
+@keyframes cueB { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(3px); } }
+.modal-box > .btns { position: sticky; z-index: 6; margin-bottom: -10px; padding: 8px 0 10px; background: linear-gradient(180deg, rgba(240, 247, 255, 0), var(--win-solid, #f3f8ff) 34%); }
+.modal-box[data-sc="top"] > .btns, .modal-box[data-sc="mid"] > .btns { box-shadow: 0 -12px 14px -12px rgba(30, 60, 120, .4); }
+
+/* ===== 4.0 · thang chữ & kích thước nút thống nhất cho giao diện trong trận =====
+   PC: chữ thường 12px · phụ 11px · tiêu đề 15px · số nổi bật 17px · nút 28–30px · nút chính 36px
+   Điện thoại ngang: chữ thường 10.5px · phụ 10px · tiêu đề 12.5px · nút 24–26px · nút chính 28px (không dưới 10px) */
+html body #screen-game .day-banner .dn { font-size: 14px !important; }
+html body #screen-game .day-banner .dn b { font-size: 16px !important; }
+html body #screen-game #btn-go { font-size: 14.5px !important; min-height: 36px; height: 36px; padding: 0 20px !important; letter-spacing: .01em; }
+html body #screen-game #btn-undo, html body #screen-game #btn-auto { width: 36px !important; height: 36px !important; }
+html body #screen-game #btn-undo svg, html body #screen-game #btn-auto svg { width: 17px; height: 17px; }
+html body #screen-game #phase-timer span { font-size: 12.5px !important; }
+html body #screen-game #me-gold b { font-size: 18px !important; }
+html body #screen-game .ar-lv { font-size: 17px !important; }
+html body #screen-game .gi-n { font-size: 15px !important; line-height: 1.15; }
+html body #screen-game .gi-s { font-size: 11px !important; }
+html body #screen-game .gi-txt, html body #screen-game .gi-row { font-size: 11.5px !important; }
+html body #screen-game .gi-stats span { font-size: 11.5px !important; }
+html body #screen-game #gi-more { white-space: nowrap; height: 24px !important; padding: 0 9px !important; font-size: 11px !important; display: inline-flex !important; align-items: center; gap: 4px; }
+html body #screen-game .gi-sell .btn, html body #screen-game #gi-add { height: 28px; min-height: 0; font-size: 12px !important; padding: 0 10px !important; display: inline-flex; align-items: center; justify-content: center; gap: 4px; }
+html body #screen-game .sol-info b { font-size: 13px !important; }
+html body #screen-game .sol-info small { font-size: 11px !important; }
+html body #screen-game .sol-q { height: 30px !important; min-height: 0 !important; padding: 0 12px !important; font-size: 12.5px !important; align-self: center; }
+html body #screen-game #gb-tabs button { height: 26px; font-size: 12px !important; padding: 0 10px !important; display: inline-flex; align-items: center; gap: 4px; }
+html body #screen-game #gb-tabs .gb-ctx b { font-size: 12px !important; }
+html body #screen-game .pchip .pc-pts { font-size: 13px !important; }
+html body #screen-game .pchip .pc-name { font-size: 11.5px !important; }
+html body #screen-game #pl-score { font-size: 12px !important; height: 30px; }
+html body #screen-game .me-xp, html body #screen-game #me-gold small { font-size: 10.5px !important; }
+html body #screen-game .bcard .bc-n, html body #screen-game .bcard b { font-size: 11px; }
+@media (max-height: 520px) {
+  html body #screen-game .day-banner .dn { font-size: 11.5px !important; }
+  html body #screen-game .day-banner .dn b { font-size: 13px !important; }
+  html body #screen-game #btn-go { font-size: 12px !important; min-height: 28px; height: 28px; padding: 0 14px !important; }
+  html body #screen-game #btn-undo, html body #screen-game #btn-auto { width: 28px !important; height: 28px !important; }
+  html body #screen-game #btn-undo svg, html body #screen-game #btn-auto svg { width: 14px; height: 14px; }
+  html body #screen-game #phase-timer span { font-size: 10.5px !important; }
+  html body #screen-game #me-gold b { font-size: 14px !important; }
+  html body #screen-game .ar-lv { font-size: 13px !important; }
+  html body #screen-game .gi-n { font-size: 12.5px !important; }
+  html body #screen-game .gi-s { font-size: 10px !important; }
+  html body #screen-game .gi-txt, html body #screen-game .gi-row, html body #screen-game .gi-stats span { font-size: 10px !important; }
+  html body #screen-game #gi-more { height: 20px !important; padding: 0 7px !important; font-size: 10px !important; }
+  html body #screen-game .gi-sell .btn, html body #screen-game #gi-add { height: 24px; font-size: 10.5px !important; padding: 0 8px !important; }
+  html body #screen-game .sol-info b { font-size: 11px !important; }
+  html body #screen-game .sol-info small { font-size: 10px !important; }
+  html body #screen-game .sol-q { height: 26px !important; padding: 0 10px !important; font-size: 11px !important; }
+  html body #screen-game #gb-tabs button { height: 22px; font-size: 10.5px !important; padding: 0 8px !important; }
+  html body #screen-game #gb-tabs .gb-ctx b { font-size: 10.5px !important; }
+  html body #screen-game .pchip .pc-pts { font-size: 11px !important; }
+  html body #screen-game .pchip .pc-name { font-size: 10px !important; }
+  html body #screen-game #pl-score { font-size: 10px !important; }
+  html body #screen-game .me-xp, html body #screen-game #me-gold small { font-size: 9.5px !important; }
+}
+html body #screen-game #gb-tabs button, html body #screen-game .sol-q, html body #screen-game .gi-sell .btn { white-space: nowrap; }
+html body #screen-game #gi-more { width: 24px; padding: 0 !important; justify-content: center; border-radius: 50%; }
+html body #screen-game #gi-more span { display: none; }
+@media (max-height: 520px) {
+  html body #screen-game #gb-tabs { gap: 3px; }
+  html body #screen-game #gb-tabs button { font-size: 10px !important; padding: 0 6px !important; gap: 3px; flex: none; }
+  html body #screen-game #gb-tabs button svg { width: 11px; height: 11px; }
+  html body #screen-game .sol-q { flex: 1 1 0; padding: 0 6px !important; }
+  html body #screen-game #gi-more { width: 20px; }
+}
+@media (max-height: 520px) {
+  html body #screen-game #gb-tabs button[data-t]:not(.active) { font-size: 0 !important; padding: 0 7px !important; gap: 0; }
+  html body #screen-game #gb-tabs button[data-t]:not(.active) svg { width: 13px; height: 13px; }
+}
+
+/* ===== Hướng dẫn tân thủ (coach marks) ===== */
+#tut { position: fixed; inset: 0; z-index: 9000; pointer-events: none; }
+#tut.idle { display: none; }
+#tut.dimall::before { content: ''; position: absolute; inset: 0; background: rgba(8, 20, 48, .55); }
+.tut-block { position: absolute; inset: 0; pointer-events: auto; background: transparent; }
+.tut-hole { position: absolute; border-radius: 14px; box-shadow: 0 0 0 9999px rgba(8, 20, 48, .55), 0 0 0 3px #ffd34a, 0 0 18px 4px rgba(255, 211, 74, .75); transition: left .25s, top .25s, width .25s, height .25s; animation: tutPulse 1.5s ease-in-out infinite; }
+.tut-hole.nodim { box-shadow: 0 0 0 3px #ffd34a, 0 0 18px 4px rgba(255, 211, 74, .75); }
+@keyframes tutPulse { 0%, 100% { outline: 0 solid rgba(255, 211, 74, 0); } 50% { outline: 6px solid rgba(255, 211, 74, .28); } }
+.tut-bub { position: absolute; pointer-events: auto; width: min(340px, calc(100vw - 20px)); padding: 11px 13px 10px; border-radius: 16px; background: linear-gradient(180deg, #ffffff, #eef6ff); border: 2px solid #8fb6e8; box-shadow: 0 14px 36px rgba(10, 30, 80, .4); color: #22324f; font-size: 12.5px; line-height: 1.45; transition: left .25s, top .25s; z-index: 2; }
+.tut-bub.in { animation: tutIn .25s cubic-bezier(.2, .8, .2, 1.2); }
+@keyframes tutIn { from { opacity: 0; transform: translateY(6px) scale(.96); } to { opacity: 1; transform: none; } }
+.tut-arr { position: absolute; width: 14px; height: 14px; background: #fff; border: 2px solid #8fb6e8; transform: rotate(45deg); display: none; }
+.tut-bub[data-side="b"] .tut-arr { display: block; top: -9px; margin-left: -7px; border-right: 0; border-bottom: 0; }
+.tut-bub[data-side="t"] .tut-arr { display: block; bottom: -9px; top: auto !important; margin-left: -7px; border-left: 0; border-top: 0; background: #eef6ff; }
+.tut-bub[data-side="r"] .tut-arr { display: block; left: -9px; margin-top: -7px; border-right: 0; border-top: 0; }
+.tut-bub[data-side="l"] .tut-arr { display: block; right: -9px; left: auto !important; margin-top: -7px; border-left: 0; border-bottom: 0; }
+.tut-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 3px; }
+.tut-ch { font: 800 10.5px var(--head); color: #fff; background: linear-gradient(180deg, #5b9df5, #3474d6); padding: 2px 9px; border-radius: 999px; letter-spacing: .02em; }
+.tut-pg { font: 800 10.5px var(--head); color: #7a8aa6; }
+.tut-t { display: block; font: 800 15px var(--head); color: #1c2f55; margin-bottom: 3px; }
+.tut-x b { color: #b05a00; }
+.tut-x svg { vertical-align: -2px; color: #3474d6; }
+.tut-f { display: flex; align-items: center; gap: 8px; margin-top: 9px; }
+.tut-skip { border: 0; background: none; padding: 0; color: #7a8aa6; font: 700 11px var(--body); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.tut-skip:hover { color: #c43440; }
+.tut-wait { flex: 1; text-align: right; font: 800 11px var(--head); color: #3474d6; display: inline-flex; align-items: center; justify-content: flex-end; gap: 6px; }
+.tut-wait:empty { display: none; }
+.tut-dot { width: 8px; height: 8px; border-radius: 50%; background: #ffb300; box-shadow: 0 0 0 0 rgba(255, 179, 0, .6); animation: tutDot 1.2s infinite; }
+@keyframes tutDot { 0% { box-shadow: 0 0 0 0 rgba(255, 179, 0, .6); } 100% { box-shadow: 0 0 0 9px rgba(255, 179, 0, 0); } }
+.tut-next { margin-left: auto; padding: 0 16px !important; height: 30px; font-size: 13px !important; border-radius: 999px; }
+@media (max-height: 520px), (max-width: 600px) {
+  .tut-bub { width: min(290px, calc(100vw - 16px)); padding: 8px 10px 8px; font-size: 11px; line-height: 1.38; border-radius: 13px; }
+  .tut-t { font-size: 13px; }
+  .tut-ch, .tut-pg { font-size: 9.5px; }
+  .tut-f { margin-top: 6px; }
+  .tut-next { height: 26px; font-size: 11.5px !important; padding: 0 12px !important; }
+  .tut-skip, .tut-wait { font-size: 10px; }
+}
+/* hướng dẫn 4.0: bong bóng trong suốt ~70%, mũi tên nhấp nhô, vùng trên sân nổi bật */
+.tut-bub { background: #fff !important; border-color: rgba(120, 165, 225, .9); box-shadow: 0 10px 30px rgba(10, 30, 80, .32); transition: left .28s cubic-bezier(.2, .8, .2, 1), top .28s cubic-bezier(.2, .8, .2, 1); }
+.tut-bub .tut-x, .tut-bub .tut-t { text-shadow: none; }
+.tut-arw { position: absolute; z-index: 3; pointer-events: none; filter: drop-shadow(0 3px 4px rgba(60, 30, 0, .45)); }
+.tut-arw svg { width: 100%; height: 100%; display: block; }
+.tut-arw[data-dir="d"] { animation: arwD .9s ease-in-out infinite; }
+.tut-arw[data-dir="u"] { animation: arwU .9s ease-in-out infinite; } .tut-arw[data-dir="u"] svg { transform: rotate(180deg); }
+.tut-arw[data-dir="r"] { animation: arwR .9s ease-in-out infinite; } .tut-arw[data-dir="r"] svg { transform: rotate(-90deg); }
+.tut-arw[data-dir="l"] { animation: arwL .9s ease-in-out infinite; } .tut-arw[data-dir="l"] svg { transform: rotate(90deg); }
+@keyframes arwD { 0%, 100% { transform: translateY(-6px); } 50% { transform: translateY(4px); } }
+@keyframes arwU { 0%, 100% { transform: translateY(6px); } 50% { transform: translateY(-4px); } }
+@keyframes arwR { 0%, 100% { transform: translateX(-6px); } 50% { transform: translateX(4px); } }
+@keyframes arwL { 0%, 100% { transform: translateX(6px); } 50% { transform: translateX(-4px); } }
+.tut-hole.field { border-radius: 10px; border: 3px dashed #ffe066; background: rgba(255, 224, 102, .16); animation: tutField 1.1s ease-in-out infinite; }
+@keyframes tutField { 0%, 100% { background: rgba(255, 224, 102, .10); } 50% { background: rgba(255, 224, 102, .30); } }
+/* đăng nhập trên điện thoại ngang: logo trái, bảng đăng nhập phải, vừa một màn hình */
+@media (max-height: 520px) and (min-width: 600px) {
+  #screen-auth { overflow: hidden; }
+  html body .auth-wrap { grid-template-columns: minmax(0, 1fr) minmax(300px, 380px) !important; gap: 18px !important; padding: 10px 16px !important; height: 100vh; align-content: center; }
+  html body .logo { font-size: clamp(34px, 7vh, 52px) !important; -webkit-text-stroke: 2px #2a5fae; }
+  html body .logo span { font-size: .42em; letter-spacing: .16em; margin-top: 6px; }
+  html body .logo-crests { gap: 6px; } html body .logo-crests .crest { width: 38px !important; height: 38px !important; }
+  html body .auth-panel { padding: 10px 14px !important; max-height: calc(100vh - 20px); overflow-y: auto; }
+  html body .auth-panel .tabs button { padding: 5px 8px; font-size: 12px; }
+  html body .auth-panel label { font-size: 11.5px; margin-bottom: 5px; } html body .auth-panel input { padding: 6px 10px; font-size: 13px; }
+  html body .auth-panel .btn.big { padding: 8px 14px; font-size: 15px; }
+}
+/* khung chat trong trận không tràn đáy màn hình ngắn */
+@media (max-height: 520px) { html body #g-chatbox { max-height: calc(100vh - 110px); } }
+.logo span { letter-spacing: .14em !important; white-space: nowrap; }
+
+/* ===== 4.1: menu tròn xòe quanh tướng ===== */
+.act-menu { width: 0 !important; height: 0 !important; padding: 0 !important; background: none !important; border: 0 !important; box-shadow: none !important; border-radius: 0 !important; display: block !important; pointer-events: none; }
+.act-menu::after { display: none !important; }
+.act-menu .ga-b { position: absolute !important; left: -19px; top: -19px; width: 38px !important; height: 38px !important; pointer-events: auto; background: #fff !important; border: 2px solid #8fb6e8 !important; box-shadow: 0 3px 8px rgba(30, 60, 120, .35); opacity: 0; transform: translate(0, 0) scale(.25); transition: transform .42s cubic-bezier(.34, 1.56, .64, 1) var(--d, 0ms), opacity .18s ease var(--d, 0ms), background .12s, border-color .12s !important; }
+.act-menu.open .ga-b { opacity: 1; transform: translate(var(--x, 0), var(--y, 0)) scale(1); }
+.act-menu .ga-b:hover { border-color: #3d84e0 !important; background: #eef6ff !important; }
+.act-menu.open .ga-b:hover { transform: translate(var(--x), var(--y)) scale(1.12); }
+.act-menu .ga-b:active { transform: translate(var(--x), var(--y)) scale(.94) !important; }
+@media (max-width: 760px), (max-height: 520px) { .act-menu .ga-b { left: -16px; top: -16px; width: 32px !important; height: 32px !important; } }
+
+/* nút đóng mềm (thay cho dấu x trắng viền) */
+.x-soft { flex: none; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 50%; background: #e9f0fa; color: #6a82a3; display: inline-grid; place-items: center; cursor: pointer; transition: background .15s, color .15s, transform .15s; margin-left: auto; align-self: flex-start; }
+.x-soft:hover { background: #ffdfe2; color: #d23c4c; transform: rotate(90deg); }
+.x-soft svg { width: 10px; height: 10px; display: block; }
+.result-box > .x-soft { position: absolute; top: 10px; right: 10px; width: 26px; height: 26px; }
+.su-head .x-soft { margin-left: auto; align-self: center; }
+
+/* nút thêm lính: tách rõ +1 lính / + Tối đa */
+.sol-q.one, .sol-q.max { gap: 5px; white-space: nowrap; }
+.sol-q.one { border-color: #2fbfae; background: linear-gradient(180deg, #e9fbf7, #cdf3ec); }
+.sol-q.max em { font-style: normal; font-size: .8em; background: #0f8f80; color: #fff; border-radius: 9px; padding: 0 5px; line-height: 1.5; }
+.su-btns { display: flex; gap: 5px; flex: none; }
+.su-btns .btn { white-space: nowrap; }
+.su-btns .btn span { position: relative; }
+
+/* nút camera tự động */
+.cam-bar [data-c=auto] { display: none !important; }
+.cam-bar.bt [data-c=auto] { display: grid !important; }
+.cam-bar [data-c=auto].on { background: #ff6b6b; border-color: #e24b4b; color: #fff; box-shadow: 0 0 0 3px rgba(255, 107, 107, .3); }
+
+/* chế độ mua tướng: giao diện khác trượt ra khỏi màn hình */
+#g-players, .chat-btn { transition: transform .35s cubic-bezier(.4, 0, .2, 1), opacity .3s; }
+#g-info, #solup-pop, #g-chatbox { transition: opacity .3s; }
+body.buy-mode #g-players { transform: translateX(-130%); opacity: 0; pointer-events: none; }
+body.buy-mode #g-info, body.buy-mode #solup-pop, body.buy-mode #g-act { opacity: 0; pointer-events: none; }
+body.buy-mode .chat-btn { transform: translateX(-130%); opacity: 0; pointer-events: none; }
+body.buy-mode #g-chatbox { opacity: 0; pointer-events: none; }
+body.buy-mode #g-mode { display: flex !important; }
+
+/* thông tin tướng: bỏ nút Chi tiết, luôn hiện kỹ năng (cuộn được), ẩn dòng tóm tắt trên điện thoại */
+@media (max-width: 760px) { .hud-info:not(.more) .gi-txt { display: block !important; } .hud-info .gi-row { display: none !important; } }
+
+/* hướng dẫn: hộp xác nhận luôn nằm trên bong bóng; bong bóng ẩn đi khi có hộp thoại */
+body.tut-on .modal { z-index: 9600; }
+#tut.under .tut-bub, #tut.under .tut-hole, #tut.under .tut-arw { opacity: 0 !important; pointer-events: none !important; transition: opacity .15s; }
+#tut.under .tut-block { display: none; }
+
+/* điện thoại: thanh mua lính — thẻ lính + 2 nút rõ ràng, nút Bán lính xuống hàng riêng */
+@media (max-width: 760px), (max-height: 520px) {
+  html body .gb-cards .sol-q { grid-column: span 2; width: 100%; min-width: 0; height: 28px !important; padding: 0 4px !important; font-size: 11px !important; justify-content: center; }
+  html body .gb-cards .sol-q.sell { grid-column: 1 / -1; }
+  html body .gb-cards .sol-q.max em { font-size: 9px; padding: 0 4px; }
+  html body .gb-cards .sol-info { font-size: 10px; }
+}
+
+/* chế độ cắm cờ: chỉ còn đồng hồ + thanh cờ; mọi bảng / tooltip / nút khác ẩn hẳn cho đến khi thoát */
+body[data-focus="flag"] #g-act, body[data-focus="flag"] #g-info, body[data-focus="flag"] #solup-pop, body[data-focus="flag"] #tac-pop, body[data-focus="flag"] #g-chatbox, body[data-focus="flag"] .chat-btn, body[data-focus="flag"] #tip-box, body[data-focus="flag"] .cam-bar, body[data-focus="flag"] #g-players, body[data-focus="flag"] .hud-players, body[data-focus="flag"] #g-bar, body[data-focus="flag"] .day-banner, body[data-focus="flag"] #btn-menu { opacity: 0 !important; pointer-events: none !important; visibility: hidden; }
+body[data-focus="flag"] .top-ctrl #prep-ctrl, body[data-focus="flag"] .top-ctrl > :not(#phase-timer) { visibility: hidden; pointer-events: none; }
+body[data-focus="flag"] .hud-top { pointer-events: none; }
+.fb-time { display: inline-flex; align-items: center; gap: 3px; margin-left: 8px; padding: 1px 8px; border-radius: 999px; background: #eef4ff; color: #2a5fae; font: 800 12px var(--head); }
+.fb-time svg { width: 11px; height: 11px; }
+
+/* hướng dẫn: chạm ra ngoài vùng được chỉ → viền nháy nhắc */
+#tut.nudge .tut-hole { animation: tutNudge .45s ease-out 1; }
+@keyframes tutNudge { 0% { transform: scale(1); } 30% { transform: scale(1.06); box-shadow: 0 0 0 9999px rgba(8, 20, 48, .55), 0 0 0 5px #ff9d2e, 0 0 26px 8px rgba(255, 160, 40, .95); } 100% { transform: scale(1); } }
+
+/* không cho bôi đen chữ trong game (PC + mobile); ô nhập liệu vẫn chọn được */
+html, body, body * { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
+input, textarea, [contenteditable="true"], .allow-select, .allow-select * { -webkit-user-select: text; user-select: text; }
+
+.tut-link { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
+.tut-link .tl-l { stroke: #ffd34a; stroke-width: 3; stroke-dasharray: 8 7; stroke-linecap: round; filter: drop-shadow(0 0 4px rgba(255, 200, 60, .9)); animation: tlDash 1s linear infinite; }
+.tut-link .tl-d { fill: #fff; stroke: #ff9d2e; stroke-width: 3; }
+@keyframes tlDash { to { stroke-dashoffset: -30; } }
+.tut-hole.xtra.hidden { display: none; }
+
+/* ===== kết quả ngày: chọn người chơi xem thống kê, xác nhận, đang đợi ===== */
+.over-table tr.pick { cursor: pointer; transition: background .15s; }
+.over-table tr.pick:hover { background: rgba(70, 130, 220, .1); }
+.over-table tr.pick.sel td { background: rgba(255, 214, 90, .28); }
+.res-tip { margin: 4px 2px 0; font-size: 11px; color: var(--muted); display: flex; gap: 4px; align-items: center; }
+.rep-r { position: relative; }
+.rep-r.best { background: linear-gradient(90deg, rgba(255, 214, 90, .28), transparent); border-radius: 8px; }
+.rep-bar { display: block; position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: rgba(60, 100, 160, .12); border-radius: 2px; overflow: hidden; }
+.rep-bar > i { display: block; height: 100%; background: linear-gradient(90deg, #4f9bf0, #7fd0ff); }
+.res-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; }
+.res-wait { position: absolute; left: 50%; top: 100%; transform: translateX(-50%); margin-top: 6px; display: flex; align-items: center; gap: 8px; padding: 4px 8px 4px 12px; border-radius: 999px; background: rgba(255, 255, 255, .94); border: 2px solid #8fb6e8; box-shadow: 0 4px 14px rgba(20, 50, 110, .25); white-space: nowrap; font: 800 12px var(--head); color: #2a5fae; z-index: 8; pointer-events: auto; }
+.res-wait.hidden { display: none; }
+.res-wait .rw-n { font-size: 11px; color: #6a82a3; }
+.res-wait .btn.small { height: 26px; padding: 0 10px; font-size: 11.5px; }
+.dots::after { content: '.'; display: inline-block; width: 1.4em; text-align: left; animation: dotsAn 1.2s steps(1) infinite; }
+@keyframes dotsAn { 0% { content: '.'; } 33% { content: '..'; } 66% { content: '...'; } }
+#result-overlay .result-box { max-height: calc(100vh - 24px); overflow-y: auto; }
+#result-overlay .res-foot { position: sticky; bottom: -6px; z-index: 3; padding: 8px 2px 4px; background: linear-gradient(to top, rgba(240,247,255,.98) 70%, rgba(240,247,255,0)); }
+.tip-box .tt-s.ar { display: grid; grid-template-columns: 38px 1fr 1fr; gap: 2px 8px; align-items: center; margin-top: 2px; }
+.tip-box .tt-s.ar b { color: var(--ink); } .tip-box .tt-s.ar em { grid-column: 2 / 4; font-style: normal; font-size: 10px; opacity: .7; margin-top: -2px; }
+.tip-box .ar-h { display: grid; grid-template-columns: 38px 1fr 1fr; gap: 0 8px; font-size: 10px; font-weight: 800; opacity: .65; } .tip-box .ar-h span:first-child { grid-column: 2; } .tip-box .ar-h span { display: inline-flex; align-items: center; gap: 3px; }
+#result-overlay .over-table td, #result-overlay .over-table th { padding-left: 6px; padding-right: 6px; }

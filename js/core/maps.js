@@ -235,18 +235,24 @@
     if (extraTowers) { if (big) tw(cx + 8, cy - 8); else tw(W - 6, cj + 5); }
     // góc bản đồ 4 người: đồi đá trang trí
     if (big) { for (var q = 0; q < 6; q++) circ(3 + R(14), 3 + R(14), 1.5 + R(2), R(3) ? 'F' : 'H', false, 85); circ(4, 4, 2.5, '#'); }
+    // tường thấp / rào chắn rải rác (đối xứng): chặn đường đi, nhưng quân tầm xa vẫn bắn qua được
+    var nWall = big ? 6 : 4, hh = Math.floor(H / 2);
+    for (var wq = 0; wq < nWall; wq++) {
+      var horiz = R(2) === 0, wl = 2 + R(3), wx0 = big ? 10 + R(Math.floor(W / 2) - 12) : 3 + R(W - 9), wy0 = big ? 13 + R(hh - 16) : hh + 3 + R(Math.max(1, hh - 19));
+      for (var wl2 = 0; wl2 < wl; wl2++) { var xx = wx0 + (horiz ? wl2 : 0), yy = wy0 + (horiz ? 0 : wl2); if (xx >= 0 && yy >= 0 && xx < W && yy < H && g[yy * W + xx] === '.') S(xx, yy, 'W'); }
+    }
     // dọn sạch vùng xuất quân + 2 ô đệm
     var sides = mode === 2 ? [0, 2] : [0, 1, 2, 3];
-    sides.forEach(function (s) { var z = TT.zoneOf(mode, s); for (var y = z.y0 - 2; y <= z.y1 + 2; y++) for (var x = z.x0 - 2; x <= z.x1 + 2; x++) if (x >= 0 && y >= 0 && x < W && y < H) { var kk = y * W + x; if (g[kk] !== '.' && (TT.inZone(z, x, y) || g[kk] === '#')) g[kk] = '.'; } });
+    sides.forEach(function (s) { var z = TT.zoneOf(mode, s); for (var y = z.y0 - 2; y <= z.y1 + 2; y++) for (var x = z.x0 - 2; x <= z.x1 + 2; x++) if (x >= 0 && y >= 0 && x < W && y < H) { var kk = y * W + x; if (g[kk] !== '.' && (TT.inZone(z, x, y) || g[kk] === '#' || g[kk] === 'W')) g[kk] = '.'; } });
     // đảm bảo mọi vùng nối được với tâm (đổi vực chặn thành cầu)
     var ok = connect(g, W, H, Math.floor(cx), Math.floor(cy), sides.map(function (s) { var z = TT.zoneOf(mode, s); return [(z.x0 + z.x1) >> 1, (z.y0 + z.y1) >> 1]; }));
-    if (!ok) for (var i2 = 0; i2 < g.length; i2++) if (g[i2] === '#') g[i2] = '.';
+    if (!ok) for (var i2 = 0; i2 < g.length; i2++) if (g[i2] === '#' || g[i2] === 'W') g[i2] = '.';
     var towers = []; for (var i3 = 0; i3 < g.length; i3++) if (g[i3] === 'T') towers.push([i3 % W, (i3 / W) | 0]);
     return { key: key, name: (TT.MAPS[key] || {}).name || key, W: W, H: H, g: g.join(''), towers: towers, center: [Math.floor(cx), Math.floor(cy)] };
   };
   function connect(g, W, H, sx, sy, pts) {
-    var seen = new Uint8Array(W * H), q = [sy * W + sx]; if (g[q[0]] === '#') g[q[0]] = '.'; seen[q[0]] = 1;
-    while (q.length) { var k = q.pop(), x = k % W, y = (k / W) | 0; [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(function (d) { var nx = x + d[0], ny = y + d[1]; if (nx < 0 || ny < 0 || nx >= W || ny >= H) return; var nk = ny * W + nx; if (seen[nk] || g[nk] === '#') return; seen[nk] = 1; q.push(nk); }); }
+    var seen = new Uint8Array(W * H), q = [sy * W + sx]; if (g[q[0]] === '#' || g[q[0]] === 'W') g[q[0]] = '.'; seen[q[0]] = 1;
+    while (q.length) { var k = q.pop(), x = k % W, y = (k / W) | 0; [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(function (d) { var nx = x + d[0], ny = y + d[1]; if (nx < 0 || ny < 0 || nx >= W || ny >= H) return; var nk = ny * W + nx; if (seen[nk] || g[nk] === '#' || g[nk] === 'W') return; seen[nk] = 1; q.push(nk); }); }
     return pts.every(function (p) { return seen[p[1] * W + p[0]]; });
   }
   TT.mapForDay = function (seed, day, mode, eventKey, lock) {

@@ -1,4 +1,4 @@
-/* Tứ Tộc Kỳ Chiến 2.0 — logic giai đoạn Chuẩn bị (thuần, xác định). Một loại tiền: Vàng. Mỗi đạo quân = 1 tướng + lính cùng binh chủng. */
+/* vChess 2.0 — logic giai đoạn Chuẩn bị (thuần, xác định). Một loại tiền: Vàng. Mỗi đạo quân = 1 tướng + lính cùng binh chủng. */
 (function (G) {
   'use strict';
   var TT = G.TT, CFG = TT.CONFIG;
@@ -29,6 +29,14 @@
   P.usedPop = function (p) { var s = 0; p.squads.forEach(function (q) { s += q.n * TT.ROLES[q.t].pop; }); return s; };
   P.invUsed = function (p) { return p.inv.length + p.cores.length; };
   P.invFree = function (p) { return CFG.invSize - P.invUsed(p); };
+  /* thông số triệu hồi thực tế của Nguyên soái (giây hồi, số lính, % sức mạnh) theo Nguyên soái + Lõi */
+  P.summonInfo = function (p, r) {
+    var S0 = TT.CONFIG.marshal.summon[r] || TT.CONFIG.marshal.summon.linh, ms = TT.marshalOf(p.race, p.mar).sum || {};
+    var red = Math.min(60, (P.hasCoreFx(p, 'summonMp') || 0) + (ms.cd || 0)), mmp = Math.max(30, Math.floor(S0.cd * 10 * (100 - red) / 100)), reg = 10 + (P.hasCoreFx(p, 'mpRegen') || 0);
+    return { cd: Math.round(mmp / reg * 10) / 10, n: S0.n + (P.hasCoreFx(p, 'summonN') || 0), pct: S0.pct + (P.hasCoreFx(p, 'summonPct') || 0) + (ms.pct || 0) };
+  };
+  /* tiền hoàn khi bán Lõi: Lõi kinh tế (sinh Vàng) chỉ hoàn nửa giá, trừ phần Vàng đã nhận ngay — tránh mua giữ rồi bán lại không mất gì */
+  P.coreRefund = function (id) { var C = TT.CORES[id], pr = CFG.corePrice[C.tier]; return C.scope === 'econ' ? Math.max(0, Math.floor(pr / 2) - (C.fx.goldNow || 0)) : pr - (C.fx.goldNow || 0); };
   P.hasCoreFx = function (p, k) { var s = 0; p.cores.forEach(function (c) { var f = TT.CORES[c].fx; if (f[k]) s += f[k] === true ? 1 : f[k]; }); return s; };
   P.flagSteps = function () { return CFG.flagMax; };
   /* Mua dân: giá tăng dần theo số lần đã mua */
@@ -239,7 +247,7 @@
       case 'sellCore': {
         var ci = c.id != null ? p.cores.indexOf(c.id) : c.idx, cid = p.cores[ci]; if (!cid) return err('Không có Lõi');
         var cf = TT.CORES[cid].fx;
-        p.cores.splice(ci, 1); p.gold += CFG.corePrice[TT.CORES[cid].tier] - (cf.goldNow || 0); if (cf.freeReroll) p.freeRr = Math.max(0, p.freeRr - cf.freeReroll);
+        p.cores.splice(ci, 1); p.gold += P.coreRefund(cid); if (cf.freeReroll) p.freeRr = Math.max(0, p.freeRr - cf.freeReroll);
         return { ok: true, log: [{ c: 'sellCore', id: cid }] };
       }
       case 'reroll': {

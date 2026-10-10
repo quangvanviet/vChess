@@ -1,4 +1,4 @@
-/* Tứ Tộc Kỳ Chiến 2.0 — quản lý ván: ngày, thu nhập, bản đồ, sự kiện, điểm. Thuần và xác định. */
+/* vChess 2.0 — quản lý ván: ngày, thu nhập, bản đồ, sự kiện, điểm. Thuần và xác định. */
 (function (G) {
   'use strict';
   var TT = G.TT, CFG = TT.CONFIG, P = TT.Prep;

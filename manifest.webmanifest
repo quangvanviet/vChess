@@ -1,6 +1,6 @@
 {
-  "name": "Tứ Tộc Kỳ Chiến",
-  "short_name": "Tứ Tộc",
+  "name": "vChess",
+  "short_name": "vChess",
   "start_url": "./index.html",
   "display": "fullscreen",
   "orientation": "landscape",
